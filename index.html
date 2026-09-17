@@ -980,8 +980,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
   .bigclick{width:142px;height:142px;font-size:3.4rem}
   .toasts{right:.5rem;left:auto;bottom:4.9rem;align-items:flex-end;max-width:80vw}
   .steamtoast{width:min(210px,66vw);max-width:min(210px,66vw)}
-  .isowrap{padding:7px;border-radius:13px}
-  .isowrap::after{inset:7px}
+  .isowrap{padding:8px;border-width:2px}
   .foecard{width:106px}
   .pstage{height:240px}
   .profilehead{min-height:auto}
@@ -1075,65 +1074,69 @@ details.fold .in{padding-top:.6rem}
   .hpbar .spray{display:none}
 }
 /* ---------- donjon ---------- */
-/* ---------- donjon : plateau de jeu à plat, façon carte de campagne ---------- */
-.isowrap{position:relative;margin:.9rem auto;max-width:720px;padding:10px;border-radius:16px;
-  border:1px solid #5A4A3A;
-  background:
-    radial-gradient(120% 90% at 50% 0%, #2A211B 0%, #14100E 78%);
-  box-shadow:inset 0 0 60px -14px #000, 0 14px 30px -22px #000}
-.isowrap::after{content:"";position:absolute;inset:10px;border-radius:10px;pointer-events:none;
-  box-shadow:inset 0 0 44px -6px #000;}
-.djgrid{display:grid;gap:1px;background:#0E0B09;border-radius:10px;overflow:hidden;
-  border:1px solid #241C16}
-.dc{aspect-ratio:1/1;position:relative;display:grid;place-items:center;background:#120F0D}
+/* ---------- donjon : carte vue du dessus, dessinée à plat ---------- */
+.isowrap{position:relative;margin:.9rem auto;max-width:700px;padding:12px;border-radius:6px;
+  background:#20180F;
+  border:3px solid #6A5436;
+  outline:1px solid #2A2016;outline-offset:3px}
+.djgrid{display:grid;gap:0;background:#241C15;border:2px solid #4A3823}
+.dc{aspect-ratio:1/1;position:relative;display:grid;place-items:center;background:#1A1410}
 
-/* dalles : pierre taillée, légère variation d'une dalle à l'autre */
-.dc.room{background:
-  linear-gradient(145deg,#ffffff0e 0 38%,transparent 38%),
-  linear-gradient(#584A3D,#46392E);
-  box-shadow:inset 0 1px 0 #ffffff12, inset 0 -1px 0 #00000055}
-.dc.cor{background:
-  linear-gradient(145deg,#ffffff09 0 38%,transparent 38%),
-  linear-gradient(#41362C,#332A22);
-  box-shadow:inset 0 1px 0 #ffffff0d, inset 0 -1px 0 #00000055}
-.dc.room.v1{filter:brightness(1.05)}
-.dc.room.v2{filter:brightness(.93)}
-.dc.room.v3{background:linear-gradient(145deg,#ffffff10 0 38%,transparent 38%),linear-gradient(#62523F,#4B3C30)}
-.dc.cor.v1{filter:brightness(1.04)}
-.dc.cor.v2{filter:brightness(.92)}
-.dc.cor.v3{filter:brightness(.97)}
+/* sol des salles : pierre claire, jointoiement à peine marqué */
+.dc.room{
+  background-color:#A3907A;
+  background-image:linear-gradient(#00000010 1px, transparent 1px),
+                   linear-gradient(90deg,#00000010 1px, transparent 1px);
+  background-size:100% 100%, 100% 100%}
+.dc.room.v1{background-color:#AC9880}
+.dc.room.v2{background-color:#9C8974}
+.dc.room.v3{background-color:#B29D83}
 
-/* murs : blocs de pierre en relief */
-.dc.wall{background:
-  linear-gradient(#3A2F26,#241C16);
-  box-shadow:inset 1px 1px 0 #ffffff14, inset -1px -2px 2px -1px #000, 0 0 0 1px #17120E}
-.dc.wall.face{background:linear-gradient(#4A3B2E,#2A211A);
-  box-shadow:inset 0 2px 0 #ffffff1f, inset 0 -3px 4px -2px #000, 0 0 0 1px #17120E}
+/* couloirs : même pierre, un ton plus sourd, sans trame */
+.dc.cor{background-color:#8E7C66;background-image:none}
+.dc.cor.v1{background-color:#93816A}
+.dc.cor.v2{background-color:#89785F}
+.dc.cor.v3{background-color:#907E68}
 
-/* zones non explorées */
-.dc.dark{background:#0C0A09;box-shadow:inset 0 0 0 1px #00000066;filter:none}
+/* seuils de porte : pierre claire soulignée d'un liseré chaud */
+.dc.door{background-color:#B9A484;
+  box-shadow:inset 0 0 0 2px #7A6038}
+
+/* murs : masse sombre et unie, franchement détachée du sol */
+.dc.wall{background-color:#2A211A;background-image:none;
+  box-shadow:inset 0 0 0 1px #1A140F}
+.dc.wall.face{background-color:#332921}
+
+/* quadrillage très léger, juste de quoi lire les cases */
+.dc.room::before,.dc.cor::before,.dc.door::before{content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 0 1px #00000016}
+
+/* zones non explorées : brouillard opaque */
+.dc.dark{background:#15100C;background-image:none}
+.dc.dark::before{content:"";position:absolute;inset:0;
+  background-image:radial-gradient(circle at 30% 30%, #ffffff06 0 2px, transparent 3px),
+                   radial-gradient(circle at 70% 60%, #ffffff05 0 2px, transparent 3px)}
 .dc.dark .m{display:none}
 
 /* case accessible */
 .dc.near{cursor:pointer}
-.dc.near::after{content:"";position:absolute;inset:2px;border-radius:3px;pointer-events:none;
-  box-shadow:inset 0 0 0 2px #E8B44C99, 0 0 10px -3px #E8B44C}
-.dc.near:hover{filter:brightness(1.28)}
+.dc.near::after{content:"";position:absolute;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 0 2px #E8B44Ccc}
+.dc.near:hover{filter:brightness(1.18)}
 
-/* jetons */
-.dc .m{width:86%;height:86%;display:block;position:relative;z-index:2}
-.dc .m.you{filter:drop-shadow(0 2px 3px #000b) drop-shadow(0 0 6px #E8B44C);animation:youpulse 1.9s ease-in-out infinite}
-.dc .m.foe{filter:drop-shadow(0 2px 3px #000b) drop-shadow(0 0 5px #E2574C)}
-.dc .m.foe.elite{filter:drop-shadow(0 2px 3px #000b) drop-shadow(0 0 8px #E8B44C)}
-.dc .m.chest{filter:drop-shadow(0 2px 3px #000a)}
-.dc .m.chest.open{opacity:.6;filter:none}
-.dc .m.exit{filter:drop-shadow(0 0 7px #4FB3A5)}
-.dc .m.lock{filter:drop-shadow(0 2px 3px #000a)}
-.dc .m.trap{opacity:.8}
-.dc .m.fire{filter:drop-shadow(0 0 8px #E8894C)}
-.dc .m.shrine{filter:drop-shadow(0 0 8px #C9A2E8)}
-@keyframes youpulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
-@media (prefers-reduced-motion:reduce){.dc .m.you{animation:none}}
+/* jetons posés à plat, façon pion de plateau */
+.dc .m{width:78%;height:78%;display:block;position:relative;z-index:2}
+.dc .m.you{filter:none}
+.dc .m.foe,.dc .m.foe.elite,.dc .m.chest,.dc .m.exit,.dc .m.lock,.dc .m.trap,
+.dc .m.fire,.dc .m.shrine{filter:none}
+.dc.tok::before{content:"";position:absolute;inset:11%;border-radius:50%;z-index:1;
+  background:#00000033;box-shadow:inset 0 0 0 2px #00000055}
+.dc.tok-you::before{background:#E8B44C33;box-shadow:inset 0 0 0 2px #E8B44C}
+.dc.tok-foe::before{background:#C4553A33;box-shadow:inset 0 0 0 2px #C4553A}
+.dc.tok-elite::before{background:#E8B44C2e;box-shadow:inset 0 0 0 2px #E8B44C, 0 0 0 1px #C4553A}
+.dc.tok-chest::before{background:#8A6A2A2e;box-shadow:inset 0 0 0 2px #B08A3A}
+.dc.tok-exit::before{background:#4FB3A52e;box-shadow:inset 0 0 0 2px #4FB3A5}
+.dc .m.chest.open{opacity:.55}
 
 /* dalle piégée : tressaillement à peine perceptible */
 .dc.rigged{animation:rig 7s ease-in-out infinite}
@@ -1142,7 +1145,7 @@ details.fold .in{padding-top:.6rem}
 @keyframes rig{
   0%,88%,100%{transform:none;filter:none}
   90%{transform:translate(.7px,-.5px)}
-  92%{transform:translate(-.6px,.6px);filter:brightness(1.06)}
+  92%{transform:translate(-.6px,.6px);filter:brightness(1.05)}
   94%{transform:translate(.5px,.3px)}
   96%{transform:translate(-.3px,0)}
 }
@@ -1187,6 +1190,15 @@ details.fold .in{padding-top:.6rem}
 .foecard .fbar{height:6px;border-radius:4px;background:#00000066;margin:.3rem 0 .15rem;overflow:hidden}
 .foecard .fbar i{display:block;height:100%;background:linear-gradient(90deg,#C4553A,#F0947A);transition:width .35s ease}
 .foecard .fh{font-size:.64rem;color:#F5C3A6}
+.fst{display:flex;flex-wrap:wrap;gap:.15rem;justify-content:center;margin-top:.15rem}
+.st{font-size:.56rem;font-weight:700;border-radius:5px;padding:0 .25rem;border:1px solid}
+.st.stun{color:#C9A2E8;border-color:#C9A2E866;background:#2A1E3A66}
+.st.dot{color:#B7E6B0;border-color:#7FB88A66;background:#1E2E2066}
+.st.burn{color:#FFB48C;border-color:#E2754C66;background:#3A201466}
+.st.vuln{color:#FFE39A;border-color:#E8B44C66;background:#3A2E1466}
+.st.weak{color:#9FE0D2;border-color:#4FB3A566;background:#16302C66}
+.st.shield{color:#E5D6C4;border-color:#C6B7A866;background:#2E271F66}
+.st.heal{color:#9FE0D2;border-color:#4FB3A566;background:#16302C66}
 
 .skills{display:grid;grid-template-columns:repeat(2,1fr);gap:.45rem;margin:.2rem 0 .6rem}
 @media (max-width:700px){.skills{grid-template-columns:1fr}}
@@ -4278,7 +4290,7 @@ function makeFoe(floor, elite){
   const role = FOE_ROLES[rnd(FOE_ROLES.length)];
   const lvl = 1 + (floor-1)*0.35 + (elite?0.75:0);
   const boost = (1 + RARITIES.indexOf(c.rarity)*0.12) * lvl;
-  const hp = Math.round((c.def/12) * boost * role.hp) + 120;
+  const hp = Math.round((c.def/14.5) * boost * role.hp) + 100;
   return {
     id:"f"+Math.random().toString(36).slice(2,8),
     title:(elite?"⚑ ":"") + c.title, univ:c.univ, img:c.img, rarity:c.rarity, variant:c.variant,
@@ -4302,7 +4314,24 @@ const SKILL_KINDS = [
   {key:"drain",   name:c=>`Morsure ${of(c.univ)}`,             mult:1.15, cd:3, drain:true,  txt:"vole la moitié des dégâts en vie"},
   {key:"salve",   name:c=>`Salve de ${short2(c.title)}`,       mult:0.48, cd:2, hits:3,      txt:"trois coups rapides"},
   {key:"brise",   name:c=>`Brise-garde ${of(c.univ)}`,         mult:1.35, cd:3, pierce:true, txt:"ignore l'armure adverse"},
-  {key:"givre",   name:c=>`Étreinte ${of(c.univ)}`,            mult:0.80, cd:3, weaken:true, txt:"affaiblit durablement la cible"}
+  {key:"givre",   name:c=>`Étreinte ${of(c.univ)}`,            mult:0.80, cd:3, weaken:true, txt:"affaiblit durablement la cible"},
+
+  /* — manœuvres avancées — */
+  {key:"brasier", name:c=>`Brasier ${of(c.univ)}`,             mult:0.70, cd:3, burn:3,      txt:"embrase la cible trois tours"},
+  {key:"saignee", name:c=>`Saignée de ${short2(c.title)}`,     mult:0.60, cd:3, bleed:3,     txt:"hémorragie liée à la vigueur de la cible"},
+  {key:"gel",     name:c=>`Gel ${of(c.univ)}`,                 mult:0.45, cd:4, freeze:2,    txt:"fige la cible deux tours"},
+  {key:"cecite",  name:c=>`Poussière ${of(c.univ)}`,           mult:0.35, cd:3, blind:2,     txt:"aveugle : la cible rate un coup sur deux"},
+  {key:"malefice",name:c=>`Maléfice ${of(c.univ)}`,            mult:0.55, cd:3, vuln:3,      txt:"la cible encaisse 30 % de plus"},
+  {key:"marque",  name:c=>`Marque de ${short2(c.title)}`,      mult:0.30, cd:3, mark:true,   txt:"le prochain coup porté est doublé"},
+  {key:"ralliement",name:c=>`Cri ${of(c.univ)}`,               mult:0,    cd:4, rally:true,  txt:"l'escouade frappe 18 % plus fort"},
+  {key:"regain",  name:c=>`Souffle ${of(c.univ)}`,             mult:0,    cd:4, regen:3,     txt:"régénère l'escouade trois tours"},
+  {key:"barriere",name:c=>`Barrière ${of(c.univ)}`,            mult:0,    cd:4, barrier:true,txt:"absorbe une part des coups reçus"},
+  {key:"purge",   name:c=>`Purge ${of(c.univ)}`,               mult:0,    cd:3, cleanse:true,txt:"dissipe le venin et soigne un peu"},
+  {key:"execution",name:c=>`Exécution de ${short2(c.title)}`,  mult:1.10, cd:3, execute:true,txt:"dévastateur sur une cible affaiblie"},
+  {key:"chaine",  name:c=>`Chaîne ${of(c.univ)}`,              mult:0.95, cd:3, chain:true,  txt:"rebondit d'un ennemi à l'autre"},
+  {key:"epines",  name:c=>`Épines ${of(c.univ)}`,              mult:0,    cd:4, thorns:2,    txt:"renvoie la moitié des coups reçus"},
+  {key:"faille",  name:c=>`Faille ${of(c.univ)}`,              mult:0.85, cd:3, stagger:true,txt:"brise l'armure de la cible pour de bon"},
+  {key:"siphon",  name:c=>`Siphon ${of(c.univ)}`,              mult:0.55, cd:4, siphon:true, txt:"draine tous les ennemis à la fois"}
 ];
 function of(u){
   const t = (u||"").trim();
@@ -4446,6 +4475,7 @@ function loadFloor(n){
   const d = state.dj;
   const g = genDungeon(n);
   g.foes.forEach(f=>f.card = makeFoe(n, f.elite));
+  d.deepest = Math.max(d.deepest||1, n);
   Object.assign(d, g, {
     floor:n,
     pos:{x:g.start.cx, y:g.start.cy},
@@ -4473,7 +4503,7 @@ const ICON_TRAP = `<svg class="m trap" viewBox="0 0 24 24"><circle cx="12" cy="1
 const ICON_FIRE = `<svg class="m fire" viewBox="0 0 24 24"><path d="M12 2c3 5-2 6-2 9a2 2 0 0 0 4 0c0-1 1-2 1-2 3 3 4 5 4 8a7 7 0 0 1-14 0c0-6 6-9 7-15z" fill="#E8894C"/><path d="M12 12c1.6 2 2.4 3 2.4 4.6a2.4 2.4 0 0 1-4.8 0c0-1.6.8-2.6 2.4-4.6z" fill="#FFD36A"/></svg>`;
 const ICON_SHRINE = `<svg class="m shrine" viewBox="0 0 24 24"><path d="M6 20h12l-2-9H8z" fill="#7A6A9A"/><circle cx="12" cy="7" r="3.4" fill="#C9A2E8"/><path d="M12 2v2M9 4l1 1M15 4l-1 1" stroke="#E8D8FF" stroke-width="1.4"/></svg>`;
 const ICON_ELITE = `<svg class="m foe elite" viewBox="0 0 24 24"><path d="M12 2c5 0 8 3.4 8 8 0 3-1.6 4.6-1.6 6.4V19H5.6v-2.6C5.6 14.6 4 13 4 10c0-4.6 3-8 8-8z" fill="#E8B44C"/><circle cx="9" cy="10" r="2" fill="#2A1A08"/><circle cx="15" cy="10" r="2" fill="#2A1A08"/><path d="M10.4 15h3.2l-1.6 3z" fill="#2A1A08"/><path d="M4 4l2 3M20 4l-2 3" stroke="#FFE39A" stroke-width="1.6"/></svg>`;
-const ICON_YOU = `<svg class="m you" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="#FFE39A"/><path d="M5 21c0-4 3.2-7 7-7s7 3 7 7z" fill="#E8B44C"/></svg>`;
+const ICON_YOU = `<svg class="m you" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6" fill="#2A1E08"/><path d="M5.5 20c0-3.6 3-6.4 6.5-6.4s6.5 2.8 6.5 6.4z" fill="#2A1E08"/></svg>`;
 
 /* ---------- carte du donjon ---------- */
 function renderDungeon(){
@@ -4499,7 +4529,10 @@ function renderDungeon(){
     const lurking = trapAny && !trapAny.sprung;
     const isExit = d.exit.cx===x && d.exit.cy===y;
     const near = Math.abs(x-d.pos.x) + Math.abs(y-d.pos.y) === 1 && floor;
-    let cls = floor ? (d.g[y][x]===2 ? "cor" : "room") : "wall";
+    const doorway = floor && d.g[y][x] === 2 && d.rooms.some(r=>
+      x>=r.x-1 && x<=r.x+r.w && y>=r.y-1 && y<=r.y+r.h &&
+      !(x>=r.x && x<r.x+r.w && y>=r.y && y<r.y+r.h));
+    let cls = floor ? (doorway ? "door" : (d.g[y][x]===2 ? "cor" : "room")) : "wall";
     if(!seen) cls += " dark";
     if(floor) cls += " v" + ((x*7 + y*13) % 4);
     if(lurking && seen) cls += " rigged";
@@ -4514,6 +4547,12 @@ function renderDungeon(){
       if(foe) mark = foe.elite ? ICON_ELITE : ICON_FOE;
     }
     if(here) mark = ICON_YOU;
+    if(seen){
+      if(isExit) cls += " tok tok-exit";
+      if(chest && !chest.open) cls += " tok tok-chest";
+      if(foe) cls += foe.elite ? " tok tok-elite" : " tok tok-foe";
+    }
+    if(here) cls += " tok tok-you";
     cells.push(`<div class="dc ${cls} ${near?"near":""}" ${near?`data-go="${x},${y}"`:""}>${mark}</div>`);
   }
 
@@ -4555,7 +4594,7 @@ function renderDungeon(){
     const [dx,dy] = el.dataset.dir.split(",").map(Number);
     moveBy(dx,dy);
   });
-  view.querySelector("#flee").onclick = ()=>endDungeon(false, "Vous rebroussez chemin");
+  view.querySelector("#flee").onclick = ()=>endDungeon(false, "Vous rebroussez chemin", true);
   paintHp();
 }
 
@@ -4708,7 +4747,16 @@ function renderFight(){
       <span class="sub">Tour ${f.turn+1} · ${f.foes.filter(x=>x.hp>0).length} gardien(s) debout</span>
     </div>
     <div class="hpwrap">
-      <div class="row" style="justify-content:space-between"><span>Escouade${f.shield?" · protégée":""}</span><b>${Math.max(0,d.hp)} / ${d.maxhp} HP</b></div>
+      <div class="row" style="justify-content:space-between">
+        <span>Escouade ${[
+          f.shield?`<span class="st shield">garde ${f.shield}</span>`:"",
+          f.barrier?`<span class="st shield">barrière ${f.barrier}</span>`:"",
+          f.regen&&f.regen.turns?`<span class="st heal">régénération ${f.regen.turns}</span>`:"",
+          f.thorns?`<span class="st shield">épines ${f.thorns}</span>`:"",
+          f.rally?`<span class="st vuln">ralliement</span>`:"",
+          f.venom?`<span class="st dot">venin ${f.venom}</span>`:""
+        ].filter(Boolean).join("")}</span>
+        <b>${Math.max(0,d.hp)} / ${d.maxhp} HP</b></div>
       <div class="hpbar" id="hp-me"><i style="width:${Math.max(0,d.hp)/d.maxhp*100}%"></i><span class="embers"></span></div>
     </div>
 
@@ -4718,7 +4766,18 @@ function renderFight(){
         <div class="fn">${esc(short2(x.title))}</div>
         <div class="fu">${esc((x.role&&x.role.name)||"")} · ${esc(x.univ||"")}</div>
         <div class="fbar"><i style="width:${Math.max(0,x.hp)/x.max*100}%"></i></div>
-        <div class="fh">${Math.max(0,x.hp)} HP${x.stun?" · étourdi":""}${x.dot?" · plaie":""}${x.weak?" · affaibli":""}</div>
+        <div class="fh">${Math.max(0,x.hp)} HP</div>
+        <div class="fst">${[
+          x.stun?`<span class="st stun">figé ${x.stun}</span>`:"",
+          x.dot?`<span class="st dot">plaie</span>`:"",
+          x.burn?`<span class="st burn">feu ${x.burn}</span>`:"",
+          x.bleed?`<span class="st burn">saigne ${x.bleed}</span>`:"",
+          x.vuln?`<span class="st vuln">vulnérable</span>`:"",
+          x.blind?`<span class="st stun">aveuglé</span>`:"",
+          x.mark?`<span class="st vuln">marqué</span>`:"",
+          x.weak?`<span class="st weak">affaibli</span>`:"",
+          x.broken?`<span class="st weak">sans armure</span>`:""
+        ].filter(Boolean).join("")}</div>
       </div>`).join("")}
     </div>
 
@@ -4777,7 +4836,8 @@ function pickSkill(si){
   if(sk.ready > 0) return;
   const alive = f.foes.map((x,i)=>({x,i})).filter(o=>o.x.hp > 0);
   if(!alive.length) return;
-  if(sk.heal || sk.shield || sk.aoe) return useSkill(hero, sk, null);
+  if(sk.heal || sk.shield || sk.aoe || sk.rally || sk.regen || sk.barrier || sk.cleanse
+     || sk.thorns || sk.chain || sk.siphon) return useSkill(hero, sk, null);
   if(alive.length === 1) return useSkill(hero, sk, alive[0].i);
   // choix de la cible
   f.pending = {hero, sk};
@@ -4812,6 +4872,59 @@ function useSkill(hero, sk, target){
     f.foes.forEach(x=>{ if(x.hp>0) hitFoe(x, Math.round(hero.power*sk.mult)); });
     f.log.push(`<b class="who">${esc(short2(hero.title))}</b> déchaîne <b class="sk">${esc(sk.label)}</b> — <b class="aoe">frappe tous les gardiens</b>`);
     flashScreen("aoe");
+    sfx.cannon();
+  } else if(sk.rally){
+    f.rally = (f.rally||0) + 1;
+    d.party.forEach(h=>h.power = Math.round(h.power*1.18));
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> lance <b class="sk">${esc(sk.label)}</b> — <b class="aoe">l'escouade frappe plus fort</b>`);
+    flashScreen("aoe"); sfx.trumpet();
+  } else if(sk.regen){
+    f.regen = {turns:sk.regen, amount:Math.round(hero.power*0.9) + 12};
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> souffle <b class="sk">${esc(sk.label)}</b> — <b class="heal">régénération ${sk.regen} tours</b>`);
+    flashScreen("heal"); sfx.ach();
+  } else if(sk.barrier){
+    f.barrier = (f.barrier||0) + Math.round(hero.guard*6) + 60;
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">${f.barrier} points absorbés</b>`);
+    flashScreen("shield"); sfx.ach();
+  } else if(sk.cleanse){
+    const gain = Math.round(hero.power*1.2) + 15;
+    f.venom = 0;
+    d.hp = Math.min(d.maxhp, d.hp + gain);
+    fx(".hpwrap", gain, "heal");
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="heal">venin dissipé, +${gain} HP</b>`);
+    flashScreen("heal"); sfx.ach();
+  } else if(sk.thorns){
+    f.thorns = sk.thorns + 1;
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> hérisse <b class="sk">${esc(sk.label)}</b> — <b class="shield">les coups seront renvoyés</b>`);
+    flashScreen("shield"); sfx.ach();
+  } else if(sk.chain){
+    const alive = f.foes.filter(z=>z.hp > 0);
+    let m = 1, tot = 0;
+    alive.forEach(z=>{ tot += hitFoe(z, Math.round(hero.power*sk.mult*m)).real; m *= 0.65; });
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> rebondit : <b class="dmg">${tot} dégâts</b>`);
+    flashScreen("aoe"); sfx.cannon();
+  } else if(sk.siphon){
+    let tot = 0;
+    f.foes.forEach(z=>{ if(z.hp > 0) tot += hitFoe(z, Math.round(hero.power*sk.mult)).real; });
+    const back = Math.round(tot*0.25);
+    d.hp = Math.min(d.maxhp, d.hp + back);
+    fx(".hpwrap", back, "heal");
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${tot} dégâts</b> et <b class="heal">+${back} HP</b>`);
+    flashScreen("aoe"); sfx.cannon();
+  } else if(sk.burn || sk.bleed || sk.freeze || sk.blind || sk.vuln || sk.mark || sk.execute || sk.stagger){
+    const x = f.foes[target];
+    let base = Math.round(hero.power * sk.mult);
+    let note = "";
+    if(sk.execute && x.hp < x.max*0.35){ base = Math.round(base*1.8); note = ` · <b class="crit">achèvement</b>`; }
+    if(sk.stagger){ x.guard = 0; x.broken = true; note = ` · <b class="aoe">armure brisée</b>`; }
+    const r = base > 0 ? hitFoe(x, base, {pierce:!!sk.burn}) : {real:0, crit:false};
+    if(sk.burn){ x.burn = sk.burn; note += ` · <b class="dot">embrasée</b>`; }
+    if(sk.bleed){ x.bleed = sk.bleed; note += ` · <b class="dot">hémorragie</b>`; }
+    if(sk.freeze){ x.stun = Math.max(x.stun||0, sk.freeze); note += ` · <b class="stun">figée ${sk.freeze} tours</b>`; }
+    if(sk.blind){ x.blind = sk.blind; note += ` · <b class="stun">aveuglée</b>`; }
+    if(sk.vuln){ x.vuln = sk.vuln; note += ` · <b class="crit">vulnérable</b>`; }
+    if(sk.mark){ x.mark = true; note += ` · <b class="crit">marquée</b>`; }
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b>${note}`);
     sfx.cannon();
   } else if(sk.hits){
     const x = f.foes[target];
@@ -4852,7 +4965,10 @@ function hitFoe(x, dmg, opts){
   opts = opts || {};
   const crit = opts.crit !== false ? Math.random() < 0.12 : false;
   const armor = opts.pierce ? 0 : (x.guard||0);
-  const real = Math.max(1, Math.round(dmg * (crit?1.7:1)) - armor);
+  let mult = crit ? 1.7 : 1;
+  if(x.vuln > 0) mult *= 1.3;
+  if(x.mark){ mult *= 2; x.mark = false; }
+  const real = Math.max(1, Math.round(dmg * mult) - armor);
   x.hp -= real;
   if(x.hp <= 0) x.hp = 0;
   const i = state.dj.fight.foes.indexOf(x);
@@ -4903,8 +5019,24 @@ function flashScreen(kind){
 
 function foeStrike(x, mult, label){
   const d = state.dj, f = d.fight;
+  if(x.blind > 0 && Math.random() < 0.5){
+    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> frappe dans le vide — <b class="stun">aveuglée</b>`);
+    return;
+  }
   const crit = Math.random() < 0.1;
-  const dmg = Math.max(2, Math.round(x.atk * mult * (crit?1.6:1)) - f.shield);
+  let dmg = Math.max(2, Math.round(x.atk * mult * (crit?1.6:1)) - f.shield);
+  if(f.barrier > 0){
+    const absorbed = Math.min(f.barrier, dmg);
+    f.barrier -= absorbed;
+    dmg -= absorbed;
+    if(absorbed) f.log.push(`<b class="shield">Barrière</b> absorbe ${absorbed} points`);
+    if(dmg <= 0) return;
+  }
+  if(f.thorns > 0){
+    const back = Math.round(dmg*0.5);
+    hitFoe(x, back, {crit:false});
+    f.log.push(`<b class="shield">Épines</b> renvoient <b class="dmg">${back}</b> à ${esc(short2(x.title))}`);
+  }
   d.hp -= dmg;
   f.log.push(`${crit?`<b class="crit">Écrasant !</b> `:""}<b class="foe">${esc(short2(x.title))}</b> — <span class="sk">${esc(label)}</span> : <b class="dmg">${dmg} dégâts</b>`);
   sfx.hurt();
@@ -4965,15 +5097,37 @@ function nextTurn(){
     fx(".hpwrap", bleed, "dot");
     f.log.push(`<b class="dot">Venin</b> — l'escouade perd <b class="dmg">${bleed}</b> points`);
   }
-  // plaies
+  // plaies, brasiers, hémorragies
   f.foes.forEach(x=>{
-    if(x.hp > 0 && x.dot > 0){
+    if(x.hp <= 0) return;
+    const i = f.foes.indexOf(x);
+    if(x.dot > 0){
       x.dot--;
-      const bleed = 12 + rnd(10);
-      x.hp = Math.max(0, x.hp - bleed);
-      fx(`[data-foe="${f.foes.indexOf(x)}"]`, bleed, "dot");
+      const n = 12 + rnd(10);
+      x.hp = Math.max(0, x.hp - n);
+      fx(`[data-foe="${i}"]`, n, "dot");
     }
+    if(x.burn > 0){
+      x.burn--;
+      const n = 18 + rnd(14) + d.floor*3;
+      x.hp = Math.max(0, x.hp - n);
+      fx(`[data-foe="${i}"]`, n, "dot");
+    }
+    if(x.bleed > 0){
+      x.bleed--;
+      const n = Math.max(8, Math.round(x.max*0.05));
+      x.hp = Math.max(0, x.hp - n);
+      fx(`[data-foe="${i}"]`, n, "dot");
+    }
+    if(x.vuln > 0) x.vuln--;
+    if(x.blind > 0) x.blind--;
   });
+  if(f.regen && f.regen.turns > 0 && f.idx % f.order.length === f.order.length-1){
+    f.regen.turns--;
+    d.hp = Math.min(d.maxhp, d.hp + f.regen.amount);
+    fx(".hpwrap", f.regen.amount, "heal");
+  }
+  if(f.thorns > 0 && f.idx % f.order.length === f.order.length-1) f.thorns--;
   if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
   if(f.foes.every(x=>x.hp <= 0)) return winFight();
 
@@ -5093,11 +5247,15 @@ function hitSpray(id){
 }
 
 /* ---------- sortie ---------- */
-async function endDungeon(won, why){
+async function endDungeon(won, why, abandon){
   const d = state.dj;
   if(!d) return;
+  // on ne repart avec le butin qu'en sortant vivant, ou en étant tombé après le deuxième étage
+  const deep = (d.deepest || d.floor) > 2;
+  const keep = won || (!abandon && deep);
   const bonus = won ? EXIT_GOLD : 0;
-  const total = d.gold + bonus;
+  const total = keep ? d.gold + bonus : 0;
+  const lost = keep ? 0 : d.gold;
   state.profile.coins += total;
   state.profile.duels = (state.profile.duels||0) + 1;
   if(won){
@@ -5114,13 +5272,17 @@ async function endDungeon(won, why){
   await checkAch();
   document.getElementById("coins").textContent = short(state.profile.coins);
 
-  const stats = `${d.chestsOpen} coffre(s) · ${d.kills} gardien(s) · ${d.gold} ◆ ramassés${won?` · prime de sortie ${EXIT_GOLD} ◆`:""}`;
+  const stats = `${d.chestsOpen} coffre(s) · ${d.kills} gardien(s) · étage ${d.deepest||d.floor}`
+    + (lost ? ` · ${lost} ◆ abandonnés sur place` : "")
+    + (won ? ` · prime de sortie ${EXIT_GOLD} ◆` : "");
   state.dj = null;
   view.innerHTML = `
     <div class="inner arcade ${won?"win":"lose"}" style="max-width:520px;margin:1rem auto">
       <div class="verdict">${won?"SORTIE !":"DÉFAITE."}</div>
       <p class="sub" style="text-align:center;margin:.2rem 0 .8rem">${esc(why || (won?"Vous quittez le donjon vivant.":"Le donjon vous recrache."))}</p>
-      <div class="lootlist"><div class="lootrow"><span class="i">◆</span><span>${total} Fandominus</span></div></div>
+      <div class="lootlist"><div class="lootrow"><span class="i">◆</span><span>${total} Fandominus${
+        keep?"":" — le butin reste dans le donjon"}</span></div></div>
+      ${keep?"":`<p class="sub" style="text-align:center;margin:.4rem 0 0;font-size:.82rem">Il faut franchir le deuxième étage pour emporter quoi que ce soit, ou ressortir vivant.</p>`}
       <p class="sub" style="text-align:center;margin:.6rem 0 0">${esc(stats)}</p>
       <div class="row" style="justify-content:center;margin-top:.9rem">
         <button class="btn" id="again">Nouveau donjon</button>
