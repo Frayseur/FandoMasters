@@ -106,6 +106,10 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card .noart{width:100%;height:100%;display:grid;place-items:center;font-size:2.6rem;
   font-family:"Bricolage Grotesque",sans-serif;color:var(--g2);opacity:.45;
   background:linear-gradient(160deg,#F2F3F6,#D9DBE3)}
+.card .gem.role{font-size:1rem;padding:0;min-width:26px;text-shadow:none;
+  background:linear-gradient(150deg,#1A1614EE,#0E0B0AEE);
+  box-shadow:0 3px 8px -3px #000A, inset 0 0 0 1.5px var(--g1)}
+.card.compact .gem.role{font-size:.8rem}
 .card .gem{
   position:absolute;top:7px;left:7px;z-index:3;min-width:26px;height:26px;padding:0 .32rem;
   border-radius:8px;display:grid;place-items:center;
@@ -1045,7 +1049,6 @@ details.fold .in{padding-top:.6rem}
 .oddsrow:last-child{border-bottom:none}
 .oddsrow b{font-variant-numeric:tabular-nums}
 
-.duelboard{display:grid;gap:.8rem}
 .hpbar{position:relative;height:12px;border-radius:7px;background:var(--ink-2);border:1px solid var(--line);overflow:visible}
 .hpbar i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#6FB394,#A6E0C4);transition:width .45s ease}
 .hpbar.foe i{background:linear-gradient(90deg,#C4553A,#EE9A78)}
@@ -1098,7 +1101,6 @@ details.fold .in{padding-top:.6rem}
 .dc.door{background-color:#3B5C7E;box-shadow:inset 0 0 0 2px #1E304A}
 
 /* halo des torches sur le sol */
-.dc.lit{box-shadow:inset 0 14px 22px -12px #6FD8FF80}
 
 /* ---- murs : appareil de briques avec arête supérieure claire ---- */
 .dc.wall{
@@ -1212,6 +1214,17 @@ details.fold .in{padding-top:.6rem}
 .st.shield{color:#E5D6C4;border-color:#C6B7A866;background:#2E271F66}
 .st.heal{color:#9FE0D2;border-color:#4FB3A566;background:#16302C66}
 
+.energy{display:flex;align-items:center;gap:.25rem;margin-top:.35rem}
+.energy .pip{width:13px;height:13px;border-radius:50%;border:1px solid var(--line);background:var(--ink-2)}
+.energy .pip.on{background:linear-gradient(150deg,#7DE3FF,#2E86C8);border-color:#7DE3FF;box-shadow:0 0 8px -2px #7DE3FF}
+.party{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem;max-width:520px;margin:.8rem auto 0}
+.hero{position:relative;background:var(--ink-2);border:1px solid var(--line);border-radius:10px;padding:.35rem;
+  text-align:center;color:var(--text);cursor:pointer}
+.hero.active{border-color:var(--brass);box-shadow:0 0 16px -6px var(--brass)}
+.hero.spent{opacity:.45}
+.hero .hrole{position:absolute;left:4px;top:4px;font-size:.78rem;z-index:2}
+.skill .cost{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;
+  background:linear-gradient(150deg,#7DE3FF,#2E86C8);color:#08202E;font-size:.7rem;vertical-align:middle}
 .skills{display:grid;grid-template-columns:repeat(2,1fr);gap:.45rem;margin:.2rem 0 .6rem}
 @media (max-width:700px){.skills{grid-template-columns:1fr}}
 .skill{display:flex;flex-direction:column;align-items:flex-start;gap:.1rem;background:var(--ink-2);
@@ -1267,7 +1280,6 @@ details.fold .in{padding-top:.6rem}
 .skill.k-weak{border-left:3px solid #7FD0C2}
 .fightlog{margin-top:.6rem;font-size:.82rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:.5rem}
 
-.timebar{height:7px;border-radius:5px;background:var(--ink-2);border:1px solid var(--line);overflow:hidden}
 .timebar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#E8B44C,#E2574C)}
 .pickwrap{position:relative;cursor:pointer;border-radius:16px;transition:transform .12s ease}
 .pickwrap.on{outline:3px solid var(--brass);outline-offset:2px;transform:translateY(-3px)}
@@ -1425,14 +1437,6 @@ function rollRarity(kind){
   for(const [name,p] of table){ acc += p; if(r <= acc) return name; }
   return table[0][0];
 }
-function rollRarityMin(min){
-  const i = RARITIES.indexOf(min);
-  const sub = ODDS.filter(([n])=>RARITIES.indexOf(n) >= i);
-  const tot = sub.reduce((s,[,p])=>s+p,0);
-  let r = Math.random()*tot, acc = 0;
-  for(const [name,p] of sub){ acc += p; if(r <= acc) return name; }
-  return min;
-}
 
 /* Réserve d'univers. Chaque paquet pioche dans plusieurs d'entre eux.
    path "/fr" est tenté en premier, avec repli sur la version anglaise. */
@@ -1566,7 +1570,11 @@ const UNIVERSES = [
   {label:"Kingdom",            host:"kingdom.fandom.com",       cat:"Livres & mangas"},
   {label:"Discworld",          host:"discworld.fandom.com",     cat:"Livres & mangas"},
   {label:"Nana",               host:"nana.fandom.com",          cat:"Livres & mangas"},
-  {label:"SCP Foundation",     host:"scp-fondation.fandom.com", cat:"Livres & mangas"}
+  {label:"SCP Foundation",     host:"scp-fondation.fandom.com", cat:"Livres & mangas"},
+  {label:"Peaky Blinders",     host:"peaky-blinders.fandom.com", cat:"Films & séries"},
+  {label:"Avatar",             host:"avatar.fandom.com",         cat:"Films & séries"},
+  {label:"Barbie",             host:"barbie.fandom.com",         cat:"Films & séries"},
+  {label:"Tarantino",          host:"tarantino.fandom.com",      cat:"Films & séries"}
 ];
 const CATS = ["Jeux vidéo","Films & séries","Livres & mangas"];
 
@@ -1916,6 +1924,32 @@ function owned(c){
   const ex = state.collection.find(x=>x.id===c.id);
   return ex ? ex.count : 0;
 }
+/* ---------- rôles de donjon ---------- */
+const ROLES = {
+  soigneur: {name:"Soigneuse", emoji:"\u{1F469}\u{1F3FD}\u200D\u2695\uFE0F", txt:"soutient l'escouade"},
+  tank:     {name:"Tank",      emoji:"\u{1F468}\u{1F3FD}\u200D\u{1F692}",     txt:"encaisse et protège"},
+  ninja:    {name:"Ninja",     emoji:"\u{1F977}",                              txt:"frappe vite et souvent"},
+  magicien: {name:"Magicien",  emoji:"\u{1F9D9}\u{1F3FC}",                     txt:"altère et brûle"}
+};
+function hashId(t){
+  let h = 0;
+  for(let i=0;i<(t||"").length;i++) h = (h*31 + t.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+/* le rôle découle des statistiques : il ne change jamais pour une carte donnée */
+function roleOf(c){
+  if(!c) return "tank";
+  const a = c.atk||1, d = c.def||1;
+  const r = a/(a+d);
+  if(r >= 0.545) return "ninja";
+  if(r <= 0.455) return "tank";
+  return (hashId(c.id) % 2) ? "magicien" : "soigneur";
+}
+function roleBadge(c){
+  const k = roleOf(c);
+  return `<span class="gem role" title="${ROLES[k].name} — ${ROLES[k].txt}">${ROLES[k].emoji}</span>`;
+}
+
 function cardHTML(c, opts={}){
   const art = c.img
     ? `<img src="${esc(c.img)}" alt="" loading="lazy" onerror="this.remove()">`
@@ -1925,7 +1959,7 @@ function cardHTML(c, opts={}){
     return `<article class="card compact ${c.stars?("st"+c.stars):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
       <div class="inner">
         <div class="art">
-          <span class="gem">${RAR_SHORT[c.rarity]}</span>
+          ${roleBadge(c)}
           ${n>1?`<span class="dupe">×${n}</span>`:""}
           ${art}
           ${c.variant? `<span class="vtag">${esc(varName(c.variant))}</span>`:""}
@@ -1945,7 +1979,7 @@ function cardHTML(c, opts={}){
   return `<article class="card ${c.stars?("st"+c.stars):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""}${relicStyle} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
     <div class="inner">
       <div class="art">
-        <span class="gem">${RAR_SHORT[c.rarity]}</span>
+        ${roleBadge(c)}
         ${n>1?`<span class="dupe">×${n}</span>`:""}
         ${art}
         ${c.stars? `<span class="stars">${"★".repeat(c.stars)}</span>`:""}
@@ -2557,6 +2591,7 @@ const ICONIC = {
   "Astérix":"Astérix", "Tintin":"Tintin", "Evangelion":"Shinji Ikari", "Saint Seiya":"Seiya",
   "Sailor Moon":"Sailor Moon", "One Punch Man":"Saitama", "Tokyo Ghoul":"Ken Kaneki",
   "Chainsaw Man":"Denji", "Fairy Tail":"Natsu Dragnir", "SCP Foundation":"SCP-173",
+  "Peaky Blinders":"Thomas Shelby", "Avatar":"Jake Sully", "Barbie":"Barbie", "Tarantino":"Beatrix Kiddo",
   "Terminator":"T-800", "Mad Max":"Max Rockatansky", "Arcane":"Jinx", "Avatar TLA":"Aang",
   "Stranger Things":"Eleven", "Breaking Bad":"Walter White", "Doctor Who":"Le Docteur",
   "Star Trek":"Spock", "Matrix":"Neo", "Jurassic Park":"Tyrannosaurus rex", "Disney":"Mickey Mouse"
@@ -4343,7 +4378,17 @@ const SKILL_KINDS = [
   {key:"chaine",  name:c=>`Chaîne ${of(c.univ)}`,              mult:0.95, cd:3, chain:true,  txt:"rebondit d'un ennemi à l'autre"},
   {key:"epines",  name:c=>`Épines ${of(c.univ)}`,              mult:0,    cd:4, thorns:2,    txt:"renvoie la moitié des coups reçus"},
   {key:"faille",  name:c=>`Faille ${of(c.univ)}`,              mult:0.85, cd:3, stagger:true,txt:"brise l'armure de la cible pour de bon"},
-  {key:"siphon",  name:c=>`Siphon ${of(c.univ)}`,              mult:0.55, cd:4, siphon:true, txt:"draine tous les ennemis à la fois"}
+  {key:"siphon",  name:c=>`Siphon ${of(c.univ)}`,              mult:0.55, cd:4, siphon:true, txt:"draine tous les ennemis à la fois"},
+
+  /* — manœuvres à enchaînement — */
+  {key:"provocation",name:c=>`Provocation de ${short2(c.title)}`, mult:0, cd:3, taunt:true,
+   txt:"les gardiens frappent 35 % moins fort au tour suivant"},
+  {key:"enchainement",name:c=>`Enchaînement de ${short2(c.title)}`, mult:0.85, cd:1, combo:2,
+   txt:"double ses dégâts si ce n'est pas la première action du tour"},
+  {key:"detonation",name:c=>`Détonation ${of(c.univ)}`,        mult:0.65, cd:2, detonate:true,
+   txt:"fait exploser les brûlures et les plaies de la cible"},
+  {key:"transfusion",name:c=>`Transfusion ${of(c.univ)}`,      mult:0,    cd:3, transfuse:true,
+   txt:"rend une part des dégâts infligés ce tour-ci"}
 ];
 function of(u){
   const t = (u||"").trim();
@@ -4363,17 +4408,41 @@ function hashStr(s){
 function baseName(c){ return (c.title||"").split(" — ")[0].trim().toLowerCase() + "|" + (c.univ||""); }
 function alreadyPicked(c){ return state.picked.some(p=>p !== c && baseName(p) === baseName(c)); }
 
+/* chaque rôle puise dans son propre répertoire */
+const ROLE_POOL = {
+  soigneur: ["aura","regain","purge","barriere","ralliement","transfusion"],
+  tank:     ["rempart","epines","faille","provocation","givre","choc"],
+  ninja:    ["lame","salve","saignee","execution","marque","drain","enchainement"],
+  magicien: ["fureur","brasier","gel","malefice","cecite","chaine","siphon","poison","detonation"]
+};
+const SKILL_COST = {
+  frappe:0, lame:2, salve:2, choc:2, drain:2, brise:2, givre:2, fureur:3, aura:2, rempart:2,
+  poison:2, brasier:2, saignee:2, gel:3, cecite:2, malefice:2, marque:1, ralliement:3,
+  regain:3, barriere:2, purge:2, execution:2, chaine:3, epines:2, faille:2, siphon:3,
+  provocation:2, enchainement:1, detonation:2, transfusion:2
+};
+
 function heroFrom(c){
   const h = hashStr(c.id);
-  const special = SKILL_KINDS[1 + h % (SKILL_KINDS.length-1)];
+  const role = roleOf(c);
+  const pool = ROLE_POOL[role];
+  const a = pool[h % pool.length];
+  const b = pool[(h + 3 + (h % 5)) % pool.length];
+  const keys = a === b ? [a, pool[(pool.indexOf(a)+1) % pool.length]] : [a, b];
+  const mk = k=>{
+    const base = SKILL_KINDS.find(x=>x.key === k) || SKILL_KINDS[0];
+    return {...base, label:base.name(c), ready:0, cost:SKILL_COST[k] != null ? SKILL_COST[k] : 2};
+  };
   const power = Math.round(c.atk/80) + 8;
+  const bonus = role === "ninja" ? 1.12 : role === "tank" ? 0.88 : 1;
   return {
     id:c.id, title:c.title, univ:c.univ, img:c.img, rarity:c.rarity, variant:c.variant, stars:c.stars,
-    power, guard: Math.round(c.def/1000),
-    skills:[
-      {...SKILL_KINDS[0], label:SKILL_KINDS[0].name(c), cd:0, ready:0},
-      {...special,        label:special.name(c),        ready:0}
-    ]
+    role,
+    power: Math.round(power*bonus),
+    guard: Math.round(c.def/1000) + (role === "tank" ? 3 : 0),
+    heal: role === "soigneur" ? 1.3 : 1,
+    hex:  role === "magicien" ? 1.2 : 1,
+    skills:[ {...SKILL_KINDS[0], label:SKILL_KINDS[0].name(c), ready:0, cost:0}, mk(keys[0]), mk(keys[1]) ]
   };
 }
 
@@ -4805,41 +4874,38 @@ document.addEventListener("keydown", e=>{
   step(x,y);
 });
 
-/* ---------- combat ---------- */
+/* ---------- combat : phases, énergie et enchaînements ---------- */
 function startFight(spot){
   const d = state.dj;
   const foes = [spot.card];
   const extras = spot.elite ? 1 + rnd(2) : (Math.random() < 0.5 ? 1 : 0);
   for(let k=0;k<extras;k++){ const e = makeFoe(d.floor, false); if(e) foes.push(e); }
-  d.fight = {spot, foes, turn:0, order:[], idx:0, log:[], shield:0};
-  d.party.forEach(h=>h.skills.forEach(s=>s.ready = 0));
-  buildOrder();
+  d.fight = {
+    spot, foes, turn:0, log:[], shield:0,
+    phase:"player", energy:4, maxEnergy:4,
+    acted:d.party.map(()=>false), chain:0, dealt:0, sel:0, pending:null
+  };
+  d.party.forEach(h=>h.skills.forEach(sk=>sk.ready = 0));
   sfx.cannon();
   renderFight();
 }
-function buildOrder(){
-  const f = state.dj.fight;
-  f.order = [
-    ...state.dj.party.map((h,i)=>({side:"hero", i})),
-    ...f.foes.map((x,i)=>({side:"foe", i}))
-  ];
-  f.idx = 0;
-}
-function currentActor(){
-  const f = state.dj.fight;
-  return f.order[f.idx % f.order.length];
+
+function energyPips(f){
+  return Array.from({length:f.maxEnergy}, (_,i)=>
+    `<span class="pip ${i < f.energy ? "on":""}"></span>`).join("");
 }
 
 function renderFight(){
   const d = state.dj, f = d.fight;
-  const act = currentActor();
-  const hero = act.side === "hero" ? d.party[act.i] : null;
+  const hero = d.party[f.sel] || d.party[0];
+  const canAct = f.phase === "player" && !f.acted[f.sel];
 
   view.innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <h2 style="font-size:1.4rem">Combat</h2>
       <span class="sub">Tour ${f.turn+1} · ${f.foes.filter(x=>x.hp>0).length} gardien(s) debout</span>
     </div>
+
     <div class="hpwrap">
       <div class="row" style="justify-content:space-between">
         <span>Escouade ${[
@@ -4847,11 +4913,15 @@ function renderFight(){
           f.barrier?`<span class="st shield">barrière ${f.barrier}</span>`:"",
           f.regen&&f.regen.turns?`<span class="st heal">régénération ${f.regen.turns}</span>`:"",
           f.thorns?`<span class="st shield">épines ${f.thorns}</span>`:"",
+          f.taunt?`<span class="st shield">provocation</span>`:"",
           f.rally?`<span class="st vuln">ralliement</span>`:"",
           f.venom?`<span class="st dot">venin ${f.venom}</span>`:""
         ].filter(Boolean).join("")}</span>
-        <b>${Math.max(0,d.hp)} / ${d.maxhp} HP</b></div>
+        <b>${Math.max(0,d.hp)} / ${d.maxhp} HP</b>
+      </div>
       <div class="hpbar" id="hp-me"><i style="width:${Math.max(0,d.hp)/d.maxhp*100}%"></i><span class="embers"></span></div>
+      <div class="energy"><span class="sub">Énergie</span>${energyPips(f)}
+        <span class="sub" style="margin-left:.4rem">${f.chain? `enchaînement ×${f.chain}`:"première action"}</span></div>
     </div>
 
     <div class="foes">
@@ -4863,7 +4933,7 @@ function renderFight(){
         <div class="fh">${Math.max(0,x.hp)} HP</div>
         <div class="fst">${[
           x.stun?`<span class="st stun">figé ${x.stun}</span>`:"",
-          x.dot?`<span class="st dot">plaie</span>`:"",
+          x.dot?`<span class="st dot">plaie ${x.dot}</span>`:"",
           x.burn?`<span class="st burn">feu ${x.burn}</span>`:"",
           x.bleed?`<span class="st burn">saigne ${x.bleed}</span>`:"",
           x.vuln?`<span class="st vuln">vulnérable</span>`:"",
@@ -4875,65 +4945,83 @@ function renderFight(){
       </div>`).join("")}
     </div>
 
-    <div class="grid" style="grid-template-columns:repeat(5,1fr);max-width:520px;margin:.8rem auto 0">
-      ${d.party.map((h,i)=>`<div class="hero ${act.side==="hero"&&act.i===i?"active":""}">
+    <div class="party">
+      ${d.party.map((h,i)=>`<button class="hero ${f.sel===i?"active":""} ${f.acted[i]?"spent":""}" data-hero="${i}">
+        <span class="hrole">${ROLES[h.role].emoji}</span>
         <div class="ha" ${h.img?`style="background-image:url('${esc(h.img)}')"`:""}></div>
         <div class="hn">${esc(short2(h.title))}</div>
-        <div class="hs">${h.power} ATQ</div>
-      </div>`).join("")}
+        <div class="hs">${h.power} ATQ${f.acted[i]?" · joué":""}</div>
+      </button>`).join("")}
     </div>
 
-    <div class="panel" style="margin-top:.8rem">
-      ${hero ? `<div class="sub" style="margin-bottom:.4rem">Au tour de <b style="color:var(--brass)">${esc(short2(hero.title))}</b> — choisissez une action</div>
-        <div class="skills">
-          ${hero.skills.map((s,si)=>{
-            const kind = s.heal?"heal":s.shield?"shield":s.aoe?"aoe":s.dot?"dot":s.stun?"stun"
-              :s.drain?"drain":s.hits?"salve":s.pierce?"pierce":s.weaken?"weak":"dmg";
-            const power = s.mult? Math.round(hero.power*s.mult)*(s.hits||1) : null;
-            return `<button class="skill k-${kind}" data-sk="${si}" ${s.ready>0?"disabled":""}>
-              <b>${esc(s.label)}</b>
-              <small>${power?`<b class="v">${power} dégâts</b> · `:""}${esc(s.txt)}${s.ready>0?` · <b class="cd">prêt dans ${s.ready}</b>`:s.cd?` · repos ${s.cd} tours`:""}</small>
-            </button>`;
-          }).join("")}
-        </div>`
-      : `<div class="sub"><span class="spinner"></span> l'adversaire prépare son coup…</div>`}
+    <div class="panel" style="margin-top:.7rem">
+      ${f.phase === "player"
+        ? `<div class="sub" style="margin-bottom:.4rem">${canAct
+            ? `Au tour de <b style="color:var(--brass)">${esc(short2(hero.title))}</b> · ${ROLES[hero.role].name}`
+            : `<b style="color:var(--brass)">${esc(short2(hero.title))}</b> a déjà agi — choisissez une autre carte`}</div>
+          <div class="skills">
+            ${hero.skills.map((sk,si)=>{
+              const kind = skillKind(sk);
+              const power = sk.mult ? Math.round(hero.power*sk.mult*(sk.hits||1)) : null;
+              const off = !canAct || sk.ready > 0 || f.energy < (sk.cost||0);
+              return `<button class="skill k-${kind}" data-sk="${si}" ${off?"disabled":""}>
+                <b>${esc(sk.label)} <span class="cost">${sk.cost||0}</span></b>
+                <small>${power?`<b class="v">${power} dégâts</b> · `:""}${esc(sk.txt)}${
+                  sk.ready>0?` · <b class="cd">prêt dans ${sk.ready}</b>`:""}</small>
+              </button>`;
+            }).join("")}
+          </div>
+          <div class="row">
+            <button class="btn small" id="endturn">Terminer le tour</button>
+            <button class="btn ghost small" id="flee2">Tenter de fuir</button>
+          </div>`
+        : `<div class="sub"><span class="spinner"></span> les gardiens ripostent…</div>`}
       <div class="battlebar" id="bbar">${(state.profile.hotbar||[]).map((k,i)=>{
         const n = k ? countItem(k) : 0;
         const fam = k ? item(k).fam : null;
         const left = fam && fam !== "arm" ? d.potions[fam] : 0;
-        const ok = k && n && left > 0;
+        const ok = k && n && left > 0 && f.phase === "player";
         return `<div class="hslot ${ok?"full":"off"}" ${ok?`data-use="${k}"`:""}>${
           k&&n ? itemTile(k, n) : `<span class="num">${i+1}</span>`}</div>`;
       }).join("")}</div>
-      <div class="row" style="margin-top:.5rem">
-        <button class="btn ghost small" id="flee2">Tenter de fuir</button>
-        <span class="sub" style="font-size:.78rem">La fuite coûte des points de vie et n'aboutit pas toujours.</span>
-      </div>
       <div class="fightlog">${f.log.slice(-4).map(l=>`<div class="ll">${l}</div>`).join("")}</div>
     </div>`;
 
-  view.querySelectorAll("[data-use]").forEach(el=>el.onclick=()=>useInBattle(el.dataset.use));
-  view.querySelectorAll("[data-sk]").forEach(b=>b.onclick=()=>pickSkill(+b.dataset.sk));
-  const fl = view.querySelector("#flee2");
-  if(fl) fl.onclick = ()=>tryFlee();
+  view.querySelectorAll("[data-hero]").forEach(b=>b.onclick = ()=>{
+    f.sel = +b.dataset.hero; f.pending = null; sfx.tick(); renderFight();
+  });
+  view.querySelectorAll("[data-sk]").forEach(b=>b.onclick = ()=>pickSkill(+b.dataset.sk));
+  view.querySelectorAll("[data-use]").forEach(el=>el.onclick = ()=>useInBattle(el.dataset.use));
+  const et = view.querySelector("#endturn"); if(et) et.onclick = ()=>endPlayerTurn();
+  const fl = view.querySelector("#flee2"); if(fl) fl.onclick = ()=>tryFlee();
   paintHp();
   playFx();
-  if(act.side === "foe") setTimeout(foeTurn, 780);
+}
+
+function skillKind(s){
+  return s.heal||s.regen||s.cleanse||s.transfuse ? "heal"
+    : s.shield||s.barrier||s.thorns||s.taunt ? "shield"
+    : s.aoe||s.chain||s.siphon ? "aoe"
+    : s.dot||s.burn||s.bleed ? "dot"
+    : s.stun||s.freeze||s.blind ? "stun"
+    : s.drain ? "drain" : s.hits ? "salve" : s.pierce||s.stagger ? "pierce"
+    : s.weaken||s.vuln ? "weak" : "dmg";
 }
 
 function pickSkill(si){
   const d = state.dj, f = d.fight;
-  const act = currentActor();
-  if(act.side !== "hero") return;
-  const hero = d.party[act.i];
+  if(f.phase !== "player" || f.acted[f.sel]) return;
+  const hero = d.party[f.sel];
   const sk = hero.skills[si];
-  if(sk.ready > 0) return;
+  if(sk.ready > 0 || f.energy < (sk.cost||0)) return;
   const alive = f.foes.map((x,i)=>({x,i})).filter(o=>o.x.hp > 0);
   if(!alive.length) return;
-  if(sk.heal || sk.shield || sk.aoe || sk.rally || sk.regen || sk.barrier || sk.cleanse
-     || sk.thorns || sk.chain || sk.siphon) return useSkill(hero, sk, null);
+
+  const noTarget = sk.heal||sk.shield||sk.aoe||sk.rally||sk.regen||sk.barrier||sk.cleanse
+    || sk.thorns||sk.chain||sk.siphon||sk.taunt||sk.transfuse;
+  if(noTarget) return useSkill(hero, sk, null);
   if(alive.length === 1) return useSkill(hero, sk, alive[0].i);
-  // choix de la cible
+
   f.pending = {hero, sk};
   view.querySelectorAll("[data-foe]").forEach(el=>{
     const i = +el.dataset.foe;
@@ -4945,116 +5033,269 @@ function pickSkill(si){
   if(p) p.innerHTML = `Choisissez la cible de <b style="color:var(--brass)">${esc(sk.label)}</b>`;
 }
 
-function useSkill(hero, sk, target){
+/* fin d'action : on décompte l'énergie puis on passe la main si besoin */
+function afterAction(hero, sk){
+  const d = state.dj, f = d.fight;
+  f.energy = Math.max(0, f.energy - (sk.cost||0));
+  f.acted[d.party.indexOf(hero)] = true;
+  f.chain++;
+  if(sk.cd) sk.ready = sk.cd;
+  f.pending = null;
+
+  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
+  if(f.foes.every(x=>x.hp <= 0)) return winFight();
+
+  // le ninja repart parfois pour un tour gratuit
+  if(hero.role === "ninja" && Math.random() < 0.22){
+    f.acted[d.party.indexOf(hero)] = false;
+    f.energy = Math.min(f.maxEnergy, f.energy + 1);
+    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> <b class="crit">enchaîne sans reprendre son souffle</b>`);
+  }
+
+  const done = f.acted.every(Boolean) || f.energy <= 0;
+  const next = f.acted.findIndex(a=>!a);
+  if(next >= 0) f.sel = next;
+  if(done) return endPlayerTurn();
+  renderFight();
+}
+
+function endPlayerTurn(){
+  const d = state.dj, f = d.fight;
+  if(f.phase !== "player") return;
+  f.phase = "foe";
+  f.foeIdx = 0;
+  renderFight();
+  setTimeout(foeStep, 650);
+}
+
+function foeStep(){
+  const d = state.dj, f = d.fight;
+  if(!f) return;
+  while(f.foeIdx < f.foes.length && f.foes[f.foeIdx].hp <= 0) f.foeIdx++;
+  if(f.foeIdx >= f.foes.length) return endFoeTurn();
+  const x = f.foes[f.foeIdx++];
+  foeAct(x);
+  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
+  renderFight();
+  setTimeout(foeStep, 620);
+}
+
+function foeAct(x){
+  const d = state.dj, f = d.fight;
+  if(x.stun > 0){
+    x.stun--;
+    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> est <b class="stun">figé</b> et passe son tour`);
+    return;
+  }
+  if(x.wind > 0){ x.wind = 0; return foeStrike(x, 2.1, "coup chargé"); }
+
+  const r = x.role || FOE_ROLES[0];
+  const roll = Math.random();
+  if(r.key === "brute" && roll < 0.32){
+    x.wind = 1;
+    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> <b class="wind">prend son élan…</b>`);
+  } else if(r.aoe && roll < 0.45){
+    foeStrike(x, 1.15, "déferlante");
+  } else if(r.dot && roll < 0.4){
+    foeStrike(x, 0.7, "crachat de venin");
+    f.venom = (f.venom||0) + 2;
+    f.log.push(`<b class="dot">Venin</b> — l'escouade est empoisonnée 2 tours`);
+  } else if(r.twice){
+    foeStrike(x, 0.62, "attaque rapide");
+    if(d.hp > 0) foeStrike(x, 0.62, "seconde lame");
+  } else {
+    foeStrike(x, 1, "assaut");
+  }
+}
+
+/* fin de tour : entretien des états, puis la main revient au joueur */
+function endFoeTurn(){
+  const d = state.dj, f = d.fight;
+
+  if(f.venom > 0){
+    f.venom--;
+    const n = 14 + rnd(12) + d.floor*4;
+    d.hp -= n;
+    fx(".hpwrap", n, "dot");
+    f.log.push(`<b class="dot">Venin</b> — l'escouade perd <b class="dmg">${n}</b> points`);
+  }
+  f.foes.forEach((x,i)=>{
+    if(x.hp <= 0) return;
+    if(x.dot > 0){ x.dot--; const n = 12 + rnd(10); x.hp = Math.max(0, x.hp-n); fx(`[data-foe="${i}"]`, n, "dot"); }
+    if(x.burn > 0){ x.burn--; const n = 18 + rnd(14) + d.floor*3; x.hp = Math.max(0, x.hp-n); fx(`[data-foe="${i}"]`, n, "dot"); }
+    if(x.bleed > 0){ x.bleed--; const n = Math.max(8, Math.round(x.max*0.05)); x.hp = Math.max(0, x.hp-n); fx(`[data-foe="${i}"]`, n, "dot"); }
+    if(x.vuln > 0) x.vuln--;
+    if(x.blind > 0) x.blind--;
+  });
+  if(f.regen && f.regen.turns > 0){
+    f.regen.turns--;
+    d.hp = Math.min(d.maxhp, d.hp + f.regen.amount);
+    fx(".hpwrap", f.regen.amount, "heal");
+  }
+  if(f.thorns > 0) f.thorns--;
+  f.shield = Math.max(0, f.shield - 3);
+  f.taunt = false;
+
+  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
+  if(f.foes.every(x=>x.hp <= 0)) return winFight();
+
+  f.turn++;
+  f.phase = "player";
+  f.energy = f.maxEnergy;
+  f.acted = d.party.map(()=>false);
+  f.chain = 0;
+  f.dealt = 0;
+  f.sel = 0;
+  d.party.forEach(h=>h.skills.forEach(sk=>{ if(sk.ready > 0) sk.ready--; }));
+  renderFight();
+}
+
+/* ---------- exécution d'une manœuvre ---------- */
+function useSkill(hero, sk0, target){
   const d = state.dj, f = d.fight;
   f.pending = null;
-  if(sk.cd) sk.ready = sk.cd;
 
-  if(sk.heal){
-    const gain = Math.round(hero.power * 2.2) + 20;
+  // enchaînement : certaines manœuvres montent en puissance après une première action du tour
+  const combo = sk0.combo && f.chain >= 1;
+  const hex = (hero.hex||1);
+  const boost = (sk0.burn||sk0.dot||sk0.bleed||sk0.vuln||sk0.blind||sk0.freeze||sk0.aoe) ? hex : 1;
+  const sk = {...sk0, mult:(sk0.mult||0) * (combo ? sk0.combo : 1) * boost};
+  const who = `<b class="who">${esc(short2(hero.title))}</b>`;
+  if(combo) f.log.push(`<b class="crit">Enchaînement !</b>`);
+
+  const hit = (x, m, opts)=>{
+    const r = hitFoe(x, Math.round(hero.power * m), opts);
+    return r;
+  };
+
+  if(sk.taunt){
+    f.taunt = true;
+    f.log.push(`${who} rugit <b class="sk">${esc(sk.label)}</b> — <b class="shield">les gardiens frappent 35 % moins fort</b>`);
+    flashScreen("shield"); sfx.trumpet();
+
+  } else if(sk.transfuse){
+    const gain = Math.round(f.dealt * 0.35 * (hero.heal||1)) + 20;
     d.hp = Math.min(d.maxhp, d.hp + gain);
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> lance <b class="sk">${esc(sk.label)}</b> — <b class="heal">+${gain} HP</b>`);
     fx(".hpwrap", gain, "heal");
-    flashScreen("heal");
-    sfx.ach();
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="heal">+${gain} HP</b>`);
+    flashScreen("heal"); sfx.ach();
+
+  } else if(sk.detonate){
+    const x = f.foes[target];
+    const stacks = (x.burn||0) + (x.bleed||0) + (x.dot||0);
+    x.burn = x.bleed = x.dot = 0;
+    const r = hitFoe(x, Math.round(hero.power*sk.mult) + stacks*45, {pierce:true});
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> fait éclater ${stacks} effet(s) : <b class="dmg">${r.real} dégâts</b>`);
+    flashScreen("aoe"); sfx.cannon();
+
+  } else if(sk.heal){
+    const gain = Math.round(hero.power * 2.2 * (hero.heal||1)) + 20;
+    d.hp = Math.min(d.maxhp, d.hp + gain);
+    fx(".hpwrap", gain, "heal");
+    f.log.push(`${who} lance <b class="sk">${esc(sk.label)}</b> — <b class="heal">+${gain} HP</b>`);
+    flashScreen("heal"); sfx.ach();
+
   } else if(sk.shield){
     f.shield = Math.round(hero.guard*2) + 6;
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">−${f.shield} aux coups reçus</b>`);
-    flashScreen("shield");
-    sfx.ach();
-  } else if(sk.aoe){
-    f.foes.forEach(x=>{ if(x.hp>0) hitFoe(x, Math.round(hero.power*sk.mult)); });
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> déchaîne <b class="sk">${esc(sk.label)}</b> — <b class="aoe">frappe tous les gardiens</b>`);
-    flashScreen("aoe");
-    sfx.cannon();
+    f.log.push(`${who} dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">−${f.shield} aux coups reçus</b>`);
+    flashScreen("shield"); sfx.ach();
+
   } else if(sk.rally){
     f.rally = (f.rally||0) + 1;
     d.party.forEach(h=>h.power = Math.round(h.power*1.18));
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> lance <b class="sk">${esc(sk.label)}</b> — <b class="aoe">l'escouade frappe plus fort</b>`);
+    f.log.push(`${who} lance <b class="sk">${esc(sk.label)}</b> — <b class="aoe">l'escouade frappe plus fort</b>`);
     flashScreen("aoe"); sfx.trumpet();
+
   } else if(sk.regen){
-    f.regen = {turns:sk.regen, amount:Math.round(hero.power*0.9) + 12};
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> souffle <b class="sk">${esc(sk.label)}</b> — <b class="heal">régénération ${sk.regen} tours</b>`);
+    f.regen = {turns:sk.regen, amount:Math.round(hero.power*0.9*(hero.heal||1)) + 12};
+    f.log.push(`${who} souffle <b class="sk">${esc(sk.label)}</b> — <b class="heal">régénération ${sk.regen} tours</b>`);
     flashScreen("heal"); sfx.ach();
+
   } else if(sk.barrier){
     f.barrier = (f.barrier||0) + Math.round(hero.guard*6) + 60;
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">${f.barrier} points absorbés</b>`);
+    f.log.push(`${who} dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">${f.barrier} points absorbés</b>`);
     flashScreen("shield"); sfx.ach();
+
   } else if(sk.cleanse){
-    const gain = Math.round(hero.power*1.2) + 15;
+    const gain = Math.round(hero.power*1.2*(hero.heal||1)) + 15;
     f.venom = 0;
     d.hp = Math.min(d.maxhp, d.hp + gain);
     fx(".hpwrap", gain, "heal");
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="heal">venin dissipé, +${gain} HP</b>`);
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="heal">venin dissipé, +${gain} HP</b>`);
     flashScreen("heal"); sfx.ach();
+
   } else if(sk.thorns){
     f.thorns = sk.thorns + 1;
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> hérisse <b class="sk">${esc(sk.label)}</b> — <b class="shield">les coups seront renvoyés</b>`);
+    f.log.push(`${who} hérisse <b class="sk">${esc(sk.label)}</b> — <b class="shield">les coups seront renvoyés</b>`);
     flashScreen("shield"); sfx.ach();
-  } else if(sk.chain){
-    const alive = f.foes.filter(z=>z.hp > 0);
-    let m = 1, tot = 0;
-    alive.forEach(z=>{ tot += hitFoe(z, Math.round(hero.power*sk.mult*m)).real; m *= 0.65; });
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> rebondit : <b class="dmg">${tot} dégâts</b>`);
+
+  } else if(sk.aoe){
+    let tot = 0;
+    f.foes.forEach(x=>{ if(x.hp > 0) tot += hit(x, sk.mult).real; });
+    f.log.push(`${who} déchaîne <b class="sk">${esc(sk.label)}</b> — <b class="dmg">${tot} dégâts</b> sur tous`);
     flashScreen("aoe"); sfx.cannon();
+
+  } else if(sk.chain){
+    let m = 1, tot = 0;
+    f.foes.filter(z=>z.hp>0).forEach(z=>{ tot += hit(z, sk.mult*m).real; m *= 0.65; });
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> rebondit : <b class="dmg">${tot} dégâts</b>`);
+    flashScreen("aoe"); sfx.cannon();
+
   } else if(sk.siphon){
     let tot = 0;
-    f.foes.forEach(z=>{ if(z.hp > 0) tot += hitFoe(z, Math.round(hero.power*sk.mult)).real; });
-    const back = Math.round(tot*0.25);
+    f.foes.forEach(z=>{ if(z.hp > 0) tot += hit(z, sk.mult).real; });
+    const back = Math.round(tot*0.25*(hero.heal||1));
     d.hp = Math.min(d.maxhp, d.hp + back);
     fx(".hpwrap", back, "heal");
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${tot} dégâts</b> et <b class="heal">+${back} HP</b>`);
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${tot} dégâts</b> et <b class="heal">+${back} HP</b>`);
     flashScreen("aoe"); sfx.cannon();
-  } else if(sk.burn || sk.bleed || sk.freeze || sk.blind || sk.vuln || sk.mark || sk.execute || sk.stagger){
-    const x = f.foes[target];
-    let base = Math.round(hero.power * sk.mult);
-    let note = "";
-    if(sk.execute && x.hp < x.max*0.35){ base = Math.round(base*1.8); note = ` · <b class="crit">achèvement</b>`; }
-    if(sk.stagger){ x.guard = 0; x.broken = true; note = ` · <b class="aoe">armure brisée</b>`; }
-    const r = base > 0 ? hitFoe(x, base, {pierce:!!sk.burn}) : {real:0, crit:false};
-    if(sk.burn){ x.burn = sk.burn; note += ` · <b class="dot">embrasée</b>`; }
-    if(sk.bleed){ x.bleed = sk.bleed; note += ` · <b class="dot">hémorragie</b>`; }
-    if(sk.freeze){ x.stun = Math.max(x.stun||0, sk.freeze); note += ` · <b class="stun">figée ${sk.freeze} tours</b>`; }
-    if(sk.blind){ x.blind = sk.blind; note += ` · <b class="stun">aveuglée</b>`; }
-    if(sk.vuln){ x.vuln = sk.vuln; note += ` · <b class="crit">vulnérable</b>`; }
-    if(sk.mark){ x.mark = true; note += ` · <b class="crit">marquée</b>`; }
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b>${note}`);
-    sfx.cannon();
+
   } else if(sk.hits){
     const x = f.foes[target];
     let tot = 0;
-    for(let k=0;k<sk.hits;k++){
-      if(x.hp <= 0) break;
-      tot += hitFoe(x, Math.round(hero.power*sk.mult)).real;
-    }
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> enchaîne <b class="sk">${esc(sk.label)}</b> — <b class="dmg">${tot} dégâts</b> en ${sk.hits} coups`);
+    for(let k=0;k<sk.hits;k++){ if(x.hp <= 0) break; tot += hit(x, sk.mult).real; }
+    f.log.push(`${who} enchaîne <b class="sk">${esc(sk.label)}</b> — <b class="dmg">${tot} dégâts</b> en ${sk.hits} coups`);
     sfx.cannon();
+
   } else if(sk.drain){
     const x = f.foes[target];
-    const r = hitFoe(x, Math.round(hero.power*sk.mult));
-    const back = Math.round(r.real/2);
+    const r = hit(x, sk.mult);
+    const back = Math.round(r.real/2*(hero.heal||1));
     d.hp = Math.min(d.maxhp, d.hp + back);
     fx(".hpwrap", back, "heal");
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b> et <b class="heal">+${back} HP</b>`);
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b> et <b class="heal">+${back} HP</b>`);
     sfx.cannon();
+
   } else if(sk.weaken){
     const x = f.foes[target];
-    const r = hitFoe(x, Math.round(hero.power*sk.mult));
+    const r = hit(x, sk.mult);
     x.atk = Math.round(x.atk * 0.72);
     x.weak = true;
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b> · <b class="stun">frappe affaiblie</b>`);
+    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b> · <b class="weak">frappe affaiblie</b>`);
     sfx.cannon();
+
   } else {
     const x = f.foes[target];
-    const base = Math.round(hero.power * sk.mult);
-    const r = hitFoe(x, base, {pierce:!!sk.pierce});
-    if(sk.stun) x.stun = 1;
-    if(sk.dot) x.dot = 3;
-    f.log.push(`${r.crit?`<b class="crit">Critique !</b> `:""}<b class="who">${esc(short2(hero.title))}</b> — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b>${sk.pierce?` · <b class="aoe">armure ignorée</b>`:""}${sk.stun?` · <b class="stun">étourdie</b>`:""}${sk.dot?` · <b class="dot">plaie</b>`:""}`);
+    let m = sk.mult;
+    let note = "";
+    if(sk.execute && x.hp < x.max*0.35){ m *= 1.8; note += ` · <b class="crit">achèvement</b>`; }
+    if(sk.stagger){ x.guard = 0; x.broken = true; note += ` · <b class="aoe">armure brisée</b>`; }
+    const r = m > 0 ? hit(x, m, {pierce:!!(sk.pierce||sk.burn)}) : {real:0, crit:false};
+    if(sk.burn){ x.burn = sk.burn; note += ` · <b class="dot">embrasée</b>`; }
+    if(sk.bleed){ x.bleed = sk.bleed; note += ` · <b class="dot">hémorragie</b>`; }
+    if(sk.dot){ x.dot = 3; note += ` · <b class="dot">plaie</b>`; }
+    if(sk.freeze){ x.stun = Math.max(x.stun||0, sk.freeze); note += ` · <b class="stun">figée ${sk.freeze} tours</b>`; }
+    if(sk.stun){ x.stun = Math.max(x.stun||0, 1); note += ` · <b class="stun">étourdie</b>`; }
+    if(sk.blind){ x.blind = sk.blind; note += ` · <b class="stun">aveuglée</b>`; }
+    if(sk.vuln){ x.vuln = sk.vuln; note += ` · <b class="vuln">vulnérable</b>`; }
+    if(sk.mark){ x.mark = true; note += ` · <b class="vuln">marquée</b>`; }
+    f.log.push(`${r.crit?`<b class="crit">Critique !</b> `:""}${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b>${note}`);
     sfx.cannon();
   }
-  nextTurn();
+
+  afterAction(hero, sk0);
 }
+
 function hitFoe(x, dmg, opts){
   opts = opts || {};
   const crit = opts.crit !== false ? Math.random() < 0.12 : false;
@@ -5139,107 +5380,6 @@ function foeStrike(x, mult, label){
   flashScreen("hurt");
 }
 
-function foeTurn(){
-  const d = state.dj, f = d.fight;
-  if(!f) return;
-  const act = currentActor();
-  if(act.side !== "foe") return;
-  const x = f.foes[act.i];
-  if(!x || x.hp <= 0) return nextTurn();
-  if(x.stun > 0){
-    x.stun--;
-    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> est <b class="stun">étourdi</b> et passe son tour`);
-    return nextTurn();
-  }
-
-  // coup chargé annoncé au tour précédent
-  if(x.wind > 0){
-    x.wind = 0;
-    foeStrike(x, 2.1, "coup chargé");
-    return nextTurn();
-  }
-
-  const r = x.role || FOE_ROLES[0];
-  const roll = Math.random();
-
-  if(r.key === "brute" && roll < 0.3){
-    x.wind = 1;
-    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> <b class="wind">prend son élan…</b>`);
-  } else if(r.aoe && roll < 0.45){
-    foeStrike(x, 1.15, "déferlante");
-    f.party_hit = true;
-  } else if(r.dot && roll < 0.4){
-    foeStrike(x, 0.7, "crachat de venin");
-    f.venom = (f.venom||0) + 2;
-    f.log.push(`<b class="dot">Venin</b> — l'escouade est empoisonnée pour 2 tours`);
-  } else if(r.twice){
-    foeStrike(x, 0.62, "attaque rapide");
-    if(d.hp > 0) foeStrike(x, 0.62, "seconde lame");
-  } else {
-    foeStrike(x, 1, "assaut");
-  }
-  nextTurn();
-}
-
-function nextTurn(){
-  const d = state.dj, f = d.fight;
-  // venin sur l'escouade
-  if(f.venom > 0 && f.idx % f.order.length === f.order.length-1){
-    f.venom--;
-    const bleed = 14 + rnd(12) + d.floor*4;
-    d.hp -= bleed;
-    fx(".hpwrap", bleed, "dot");
-    f.log.push(`<b class="dot">Venin</b> — l'escouade perd <b class="dmg">${bleed}</b> points`);
-  }
-  // plaies, brasiers, hémorragies
-  f.foes.forEach(x=>{
-    if(x.hp <= 0) return;
-    const i = f.foes.indexOf(x);
-    if(x.dot > 0){
-      x.dot--;
-      const n = 12 + rnd(10);
-      x.hp = Math.max(0, x.hp - n);
-      fx(`[data-foe="${i}"]`, n, "dot");
-    }
-    if(x.burn > 0){
-      x.burn--;
-      const n = 18 + rnd(14) + d.floor*3;
-      x.hp = Math.max(0, x.hp - n);
-      fx(`[data-foe="${i}"]`, n, "dot");
-    }
-    if(x.bleed > 0){
-      x.bleed--;
-      const n = Math.max(8, Math.round(x.max*0.05));
-      x.hp = Math.max(0, x.hp - n);
-      fx(`[data-foe="${i}"]`, n, "dot");
-    }
-    if(x.vuln > 0) x.vuln--;
-    if(x.blind > 0) x.blind--;
-  });
-  if(f.regen && f.regen.turns > 0 && f.idx % f.order.length === f.order.length-1){
-    f.regen.turns--;
-    d.hp = Math.min(d.maxhp, d.hp + f.regen.amount);
-    fx(".hpwrap", f.regen.amount, "heal");
-  }
-  if(f.thorns > 0 && f.idx % f.order.length === f.order.length-1) f.thorns--;
-  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
-  if(f.foes.every(x=>x.hp <= 0)) return winFight();
-
-  f.idx++;
-  let guard = 0;
-  while(guard++ < 20){
-    const a = currentActor();
-    if(a.side === "foe" && f.foes[a.i].hp <= 0){ f.idx++; continue; }
-    break;
-  }
-  if(f.idx % f.order.length === 0){
-    f.turn++;
-    d.party.forEach(h=>h.skills.forEach(s=>{ if(s.ready > 0) s.ready--; }));
-    f.shield = Math.max(0, f.shield - 3);
-  }
-  renderFight();
-}
-
 function tryFlee(){
   const d = state.dj, f = d.fight;
   if(!f) return;
@@ -5259,7 +5399,7 @@ function tryFlee(){
   }
   f.log.push(`<b class="crit">Fuite ratée</b> — <b class="dmg">${cost}</b> points de vie perdus`);
   sfx.hurt();
-  nextTurn();
+  endPlayerTurn();
 }
 
 function winFight(){
