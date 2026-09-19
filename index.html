@@ -298,6 +298,10 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card.compact .armtag{width:20px;height:20px;border-radius:6px;right:4px;top:4px;bottom:auto}
 .card.compact .armtag .isvgmini{width:14px;height:14px}
 .card.compact .sparks i{font-size:.6rem}
+.duelbox{margin-bottom:.5rem;padding:.6rem .7rem;border-radius:12px;
+  background:linear-gradient(140deg,#2A231D,#201B18);border:1px solid var(--line)}
+.dcost{width:30px;height:30px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:800;
+  font-family:"Bricolage Grotesque",sans-serif;background:linear-gradient(150deg,#7DE3FF,#2E86C8);color:#08202E}
 .sellbox{background:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:.7rem .8rem;margin-top:.4rem}
 .qty{display:inline-flex;align-items:center;gap:.4rem}
 .qty b{min-width:2ch;text-align:center;font-family:"Bricolage Grotesque",sans-serif}
@@ -3468,6 +3472,15 @@ function showCard(c){
         </div>
         <p class="sub" style="margin:.35rem 0 0;font-size:.8rem">+6 % d'attaque et de défense par étoile, et une aura qui s'intensifie.</p>
       </div>`:""}
+      ${(()=>{ const m = battleCard(c); return `<div class="duelbox">
+        <div class="row" style="align-items:center;gap:.6rem">
+          <span class="dcost">${m.cost}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700">${ROLES[m.role].emoji} ${ROLES[m.role].name} — <b style="color:var(--brass)">${m.atk}/${m.hp}</b> en donjon</div>
+            <div class="sub" style="font-size:.82rem">${esc(keywordText(m) || "Serviteur sans mot-clé")}</div>
+          </div>
+        </div>
+      </div>`; })()}
       <div class="sellbox">
         ${busy ? `<p class="sub" style="margin:0">Carte engagée en campagne : impossible de la renvoyer pour l'instant.</p>`
         : `<div class="row" style="justify-content:space-between;align-items:center">
@@ -4874,108 +4887,169 @@ document.addEventListener("keydown", e=>{
   step(x,y);
 });
 
-/* ---------- combat : phases, énergie et enchaînements ---------- */
+/* ========================================================================
+   COMBAT DE DONJON — plateau à la Hearthstone
+   Héros, serviteurs, cristaux de mana, main, provocation, charge et cris de guerre.
+   ======================================================================== */
+const BOARD_MAX = 7, HAND_MAX = 10, MANA_MAX = 10, DECK_COPIES = 3;
+const FACE = 26;                 // un point d'attaque vaut autant de dégâts sur un héros
+
+/* une carte de collection devient un serviteur jouable */
+let uidSeq = 0;
+function battleCard(c){
+  const ri = Math.max(0, RARITIES.indexOf(c.rarity));
+  const role = roleOf(c);
+  // Commune 1 · Peu commune 1 · Rare 2 · Super rare 3 · Ultra rare 4 · Légendaire 5 · Relique 6
+  const cost = Math.max(1, Math.min(MANA_MAX, Math.max(1, ri) + (c.variant?1:0) + (c.stars||0)));
+  // budget de statistiques proportionnel au coût, réparti selon le profil de la carte
+  const total = cost*2 + 1;
+  const ratio = (c.atk||1) / ((c.atk||1) + (c.def||1));
+  const atk = Math.max(1, Math.min(total-1, Math.round(total*ratio)));
+  const hp  = Math.max(1, total - atk);
+  return {
+    uid:"m"+(++uidSeq), id:c.id, title:c.title, img:c.img, univ:c.univ,
+    rarity:c.rarity, variant:c.variant, role, cost, atk, hp, max:hp,
+    taunt: role === "tank",
+    charge: role === "ninja",
+    cry: role === "soigneur" ? {heal:2 + ri} : role === "magicien" ? {dmg:1 + Math.floor(ri/2)} : null,
+    ready:false, sick:true
+  };
+}
+function keywordText(m){
+  const out = [];
+  if(m.taunt) out.push("Provocation");
+  if(m.charge) out.push("Charge");
+  if(m.cry && m.cry.heal) out.push(`Cri de guerre : rend ${m.cry.heal} PV`);
+  if(m.cry && m.cry.dmg) out.push(`Cri de guerre : ${m.cry.dmg} dégâts`);
+  return out.join(" · ");
+}
+
+/* le gardien devient un héros adverse, avec son propre deck */
+function foeMinion(floor){
+  const pool = foePool();
+  const c = pool.length ? pool[rnd(pool.length)] : {atk:3000, def:3000, rarity:"Rare", title:"Sbire", id:"x"};
+  const m = battleCard(c);
+  m.title = "⚑ " + m.title;
+  if(floor > 1) m.atk += 1;
+  if(floor > 2) m.hp = m.max = m.hp + 1;
+  return m;
+}
+
 function startFight(spot){
   const d = state.dj;
-  const foes = [spot.card];
-  const extras = spot.elite ? 1 + rnd(2) : (Math.random() < 0.5 ? 1 : 0);
-  for(let k=0;k<extras;k++){ const e = makeFoe(d.floor, false); if(e) foes.push(e); }
+  const boss = spot.card;
+  const deck = shuffled(d.party.flatMap(h=>{
+    const src = state.collection.find(c=>c.id === h.id) || h;
+    return Array.from({length:DECK_COPIES}, ()=>battleCard(src));
+  }));
   d.fight = {
-    spot, foes, turn:0, log:[], shield:0,
-    phase:"player", energy:4, maxEnergy:4,
-    acted:d.party.map(()=>false), chain:0, dealt:0, sel:0, pending:null
+    spot,
+    hero:{hp:d.hp, max:d.maxhp},
+    foe:{hp:Math.round(boss.hp*1.6), max:Math.round(boss.hp*1.6), title:boss.title, img:boss.img,
+         univ:boss.univ, elite:!!spot.elite},
+    deck, hand:[], board:[], foeBoard:[],
+    mana:1, maxMana:1, foeMana:1, foeMax:1,
+    turn:1, phase:"player", fatigue:0, sel:null, log:[]
   };
-  d.party.forEach(h=>h.skills.forEach(sk=>sk.ready = 0));
-  sfx.cannon();
+  for(let k=0;k<3;k++) drawCard();
+  d.fight.log.push(`<b class="foe">${esc(short2(boss.title))}</b> barre le passage`);
+  sfx.trumpet();
   renderFight();
 }
 
-function energyPips(f){
-  return Array.from({length:f.maxEnergy}, (_,i)=>
-    `<span class="pip ${i < f.energy ? "on":""}"></span>`).join("");
+function drawCard(){
+  const f = state.dj.fight;
+  if(!f.deck.length){
+    f.fatigue++;
+    f.hero.hp -= f.fatigue;
+    f.log.push(`<b class="dmg">Épuisement</b> — ${f.fatigue} dégâts au héros`);
+    return;
+  }
+  const c = f.deck.pop();
+  if(f.hand.length >= HAND_MAX){
+    f.log.push(`<b class="sk">${esc(short2(c.title))}</b> brûlée — main pleine`);
+    return;
+  }
+  f.hand.push(c);
+}
+
+/* ---------- rendu du plateau ---------- */
+function manaCrystals(cur, max){
+  return `<span class="crystals">${Array.from({length:MANA_MAX}, (_,i)=>
+    `<i class="${i < cur ? "on" : i < max ? "used" : ""}"></i>`).join("")}</span>
+    <b class="mcount">${cur}/${max}</b>`;
+}
+function minionHTML(m, side, i){
+  const canAct = side === "me" && state.dj.fight.phase === "player" && m.ready && !m.sick;
+  const sel = state.dj.fight.sel === m.uid;
+  return `<div class="minion ${side} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""}"
+      data-${side==="me"?"mine":"enemy"}="${m.uid}" data-r="${esc(m.rarity)}">
+    <div class="mart" ${m.img?`style="background-image:url('${esc(m.img)}')"`:""}></div>
+    <div class="mname">${esc(short2(m.title))}</div>
+    ${m.taunt?`<span class="kw taunt">🛡</span>`:""}
+    ${m.charge?`<span class="kw charge">⚡</span>`:""}
+    <span class="mstat atk">${m.atk}</span>
+    <span class="mstat hp ${m.hp<m.max?"hurt":""}">${m.hp}</span>
+  </div>`;
+}
+function handHTML(c, i){
+  const f = state.dj.fight;
+  const ok = f.phase === "player" && f.mana >= c.cost && f.board.length < BOARD_MAX;
+  return `<div class="handcard ${ok?"playable":""}" data-hand="${i}" data-r="${esc(c.rarity)}">
+    <span class="hcost">${c.cost}</span>
+    <div class="hart" ${c.img?`style="background-image:url('${esc(c.img)}')"`:""}></div>
+    <div class="hname">${esc(short2(c.title))}</div>
+    <div class="hkw">${esc(keywordText(c) || ROLES[c.role].name)}</div>
+    <span class="mstat atk">${c.atk}</span>
+    <span class="mstat hp">${c.hp}</span>
+  </div>`;
 }
 
 function renderFight(){
   const d = state.dj, f = d.fight;
-  const hero = d.party[f.sel] || d.party[0];
-  const canAct = f.phase === "player" && !f.acted[f.sel];
+  d.hp = f.hero.hp;
 
   view.innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:baseline">
-      <h2 style="font-size:1.4rem">Combat</h2>
-      <span class="sub">Tour ${f.turn+1} · ${f.foes.filter(x=>x.hp>0).length} gardien(s) debout</span>
+      <h2 style="font-size:1.3rem">Duel · étage ${d.floor}</h2>
+      <span class="sub">Tour ${f.turn} · ${f.deck.length} carte(s) en pioche</span>
     </div>
 
-    <div class="hpwrap">
-      <div class="row" style="justify-content:space-between">
-        <span>Escouade ${[
-          f.shield?`<span class="st shield">garde ${f.shield}</span>`:"",
-          f.barrier?`<span class="st shield">barrière ${f.barrier}</span>`:"",
-          f.regen&&f.regen.turns?`<span class="st heal">régénération ${f.regen.turns}</span>`:"",
-          f.thorns?`<span class="st shield">épines ${f.thorns}</span>`:"",
-          f.taunt?`<span class="st shield">provocation</span>`:"",
-          f.rally?`<span class="st vuln">ralliement</span>`:"",
-          f.venom?`<span class="st dot">venin ${f.venom}</span>`:""
-        ].filter(Boolean).join("")}</span>
-        <b>${Math.max(0,d.hp)} / ${d.maxhp} HP</b>
+    <div class="hsboard">
+      <div class="heroline foe" data-enemyhero="1">
+        <div class="hface" ${f.foe.img?`style="background-image:url('${esc(f.foe.img)}')"`:""}></div>
+        <div style="min-width:0">
+          <div class="hname2">${esc(short2(f.foe.title))}</div>
+          <div class="hbar"><i style="width:${Math.max(0,f.foe.hp)/f.foe.max*100}%"></i></div>
+        </div>
+        <span class="hhp">${Math.max(0,f.foe.hp)}</span>
       </div>
-      <div class="hpbar" id="hp-me"><i style="width:${Math.max(0,d.hp)/d.maxhp*100}%"></i><span class="embers"></span></div>
-      <div class="energy"><span class="sub">Énergie</span>${energyPips(f)}
-        <span class="sub" style="margin-left:.4rem">${f.chain? `enchaînement ×${f.chain}`:"première action"}</span></div>
+
+      <div class="lane foe">${f.foeBoard.map((m,i)=>minionHTML(m,"foe",i)).join("") ||
+        `<span class="empty">aucun serviteur adverse</span>`}</div>
+
+      <div class="lane me">${f.board.map((m,i)=>minionHTML(m,"me",i)).join("") ||
+        `<span class="empty">posez une carte depuis votre main</span>`}</div>
+
+      <div class="heroline me">
+        <div class="hface you">${ROLES[d.party[0].role].emoji}</div>
+        <div style="min-width:0">
+          <div class="hname2">${esc(state.profile.pseudo||"Votre héros")}</div>
+          <div class="hbar"><i style="width:${Math.max(0,f.hero.hp)/f.hero.max*100}%"></i></div>
+        </div>
+        <span class="hhp">${Math.max(0,f.hero.hp)}</span>
+      </div>
     </div>
 
-    <div class="foes">
-      ${f.foes.map((x,i)=>`<div class="foecard ${x.hp<=0?"down":""}" data-foe="${i}">
-        <div class="fa" ${x.img?`style="background-image:url('${esc(x.img)}')"`:""}></div>
-        <div class="fn">${esc(short2(x.title))}</div>
-        <div class="fu">${esc((x.role&&x.role.name)||"")} · ${esc(x.univ||"")}</div>
-        <div class="fbar"><i style="width:${Math.max(0,x.hp)/x.max*100}%"></i></div>
-        <div class="fh">${Math.max(0,x.hp)} HP</div>
-        <div class="fst">${[
-          x.stun?`<span class="st stun">figé ${x.stun}</span>`:"",
-          x.dot?`<span class="st dot">plaie ${x.dot}</span>`:"",
-          x.burn?`<span class="st burn">feu ${x.burn}</span>`:"",
-          x.bleed?`<span class="st burn">saigne ${x.bleed}</span>`:"",
-          x.vuln?`<span class="st vuln">vulnérable</span>`:"",
-          x.blind?`<span class="st stun">aveuglé</span>`:"",
-          x.mark?`<span class="st vuln">marqué</span>`:"",
-          x.weak?`<span class="st weak">affaibli</span>`:"",
-          x.broken?`<span class="st weak">sans armure</span>`:""
-        ].filter(Boolean).join("")}</div>
-      </div>`).join("")}
+    <div class="manarow">${manaCrystals(f.mana, f.maxMana)}
+      <button class="btn small" id="endturn" ${f.phase==="player"?"":"disabled"}>
+        ${f.phase==="player"?"Terminer le tour":"tour adverse…"}</button>
     </div>
 
-    <div class="party">
-      ${d.party.map((h,i)=>`<button class="hero ${f.sel===i?"active":""} ${f.acted[i]?"spent":""}" data-hero="${i}">
-        <span class="hrole">${ROLES[h.role].emoji}</span>
-        <div class="ha" ${h.img?`style="background-image:url('${esc(h.img)}')"`:""}></div>
-        <div class="hn">${esc(short2(h.title))}</div>
-        <div class="hs">${h.power} ATQ${f.acted[i]?" · joué":""}</div>
-      </button>`).join("")}
-    </div>
+    <div class="hand">${f.hand.map((c,i)=>handHTML(c,i)).join("") ||
+      `<span class="empty">main vide</span>`}</div>
 
-    <div class="panel" style="margin-top:.7rem">
-      ${f.phase === "player"
-        ? `<div class="sub" style="margin-bottom:.4rem">${canAct
-            ? `Au tour de <b style="color:var(--brass)">${esc(short2(hero.title))}</b> · ${ROLES[hero.role].name}`
-            : `<b style="color:var(--brass)">${esc(short2(hero.title))}</b> a déjà agi — choisissez une autre carte`}</div>
-          <div class="skills">
-            ${hero.skills.map((sk,si)=>{
-              const kind = skillKind(sk);
-              const power = sk.mult ? Math.round(hero.power*sk.mult*(sk.hits||1)) : null;
-              const off = !canAct || sk.ready > 0 || f.energy < (sk.cost||0);
-              return `<button class="skill k-${kind}" data-sk="${si}" ${off?"disabled":""}>
-                <b>${esc(sk.label)} <span class="cost">${sk.cost||0}</span></b>
-                <small>${power?`<b class="v">${power} dégâts</b> · `:""}${esc(sk.txt)}${
-                  sk.ready>0?` · <b class="cd">prêt dans ${sk.ready}</b>`:""}</small>
-              </button>`;
-            }).join("")}
-          </div>
-          <div class="row">
-            <button class="btn small" id="endturn">Terminer le tour</button>
-            <button class="btn ghost small" id="flee2">Tenter de fuir</button>
-          </div>`
-        : `<div class="sub"><span class="spinner"></span> les gardiens ripostent…</div>`}
+    <div class="panel" style="margin-top:.6rem">
       <div class="battlebar" id="bbar">${(state.profile.hotbar||[]).map((k,i)=>{
         const n = k ? countItem(k) : 0;
         const fam = k ? item(k).fam : null;
@@ -4984,335 +5058,195 @@ function renderFight(){
         return `<div class="hslot ${ok?"full":"off"}" ${ok?`data-use="${k}"`:""}>${
           k&&n ? itemTile(k, n) : `<span class="num">${i+1}</span>`}</div>`;
       }).join("")}</div>
+      <div class="row" style="margin-top:.5rem">
+        <button class="btn ghost small" id="flee2">Tenter de fuir</button>
+        <span class="sub" style="font-size:.78rem">Cliquez un serviteur prêt, puis sa cible.</span>
+      </div>
       <div class="fightlog">${f.log.slice(-4).map(l=>`<div class="ll">${l}</div>`).join("")}</div>
     </div>`;
 
-  view.querySelectorAll("[data-hero]").forEach(b=>b.onclick = ()=>{
-    f.sel = +b.dataset.hero; f.pending = null; sfx.tick(); renderFight();
-  });
-  view.querySelectorAll("[data-sk]").forEach(b=>b.onclick = ()=>pickSkill(+b.dataset.sk));
-  view.querySelectorAll("[data-use]").forEach(el=>el.onclick = ()=>useInBattle(el.dataset.use));
+  view.querySelectorAll("[data-hand]").forEach(el=>el.onclick = ()=>playCard(+el.dataset.hand));
+  view.querySelectorAll("[data-mine]").forEach(el=>el.onclick = ()=>selectMinion(el.dataset.mine));
+  view.querySelectorAll("[data-enemy]").forEach(el=>el.onclick = ()=>attackTarget(el.dataset.enemy));
+  const eh = view.querySelector("[data-enemyhero]");
+  if(eh) eh.onclick = ()=>attackTarget("hero");
   const et = view.querySelector("#endturn"); if(et) et.onclick = ()=>endPlayerTurn();
   const fl = view.querySelector("#flee2"); if(fl) fl.onclick = ()=>tryFlee();
-  paintHp();
+  view.querySelectorAll("[data-use]").forEach(el=>el.onclick = ()=>useInBattle(el.dataset.use));
   playFx();
 }
 
-function skillKind(s){
-  return s.heal||s.regen||s.cleanse||s.transfuse ? "heal"
-    : s.shield||s.barrier||s.thorns||s.taunt ? "shield"
-    : s.aoe||s.chain||s.siphon ? "aoe"
-    : s.dot||s.burn||s.bleed ? "dot"
-    : s.stun||s.freeze||s.blind ? "stun"
-    : s.drain ? "drain" : s.hits ? "salve" : s.pierce||s.stagger ? "pierce"
-    : s.weaken||s.vuln ? "weak" : "dmg";
-}
-
-function pickSkill(si){
+/* ---------- actions du joueur ---------- */
+function playCard(i){
   const d = state.dj, f = d.fight;
-  if(f.phase !== "player" || f.acted[f.sel]) return;
-  const hero = d.party[f.sel];
-  const sk = hero.skills[si];
-  if(sk.ready > 0 || f.energy < (sk.cost||0)) return;
-  const alive = f.foes.map((x,i)=>({x,i})).filter(o=>o.x.hp > 0);
-  if(!alive.length) return;
-
-  const noTarget = sk.heal||sk.shield||sk.aoe||sk.rally||sk.regen||sk.barrier||sk.cleanse
-    || sk.thorns||sk.chain||sk.siphon||sk.taunt||sk.transfuse;
-  if(noTarget) return useSkill(hero, sk, null);
-  if(alive.length === 1) return useSkill(hero, sk, alive[0].i);
-
-  f.pending = {hero, sk};
-  view.querySelectorAll("[data-foe]").forEach(el=>{
-    const i = +el.dataset.foe;
-    if(f.foes[i].hp <= 0) return;
-    el.classList.add("targetable");
-    el.onclick = ()=>useSkill(hero, sk, i);
-  });
-  const p = view.querySelector(".panel .sub");
-  if(p) p.innerHTML = `Choisissez la cible de <b style="color:var(--brass)">${esc(sk.label)}</b>`;
-}
-
-/* fin d'action : on décompte l'énergie puis on passe la main si besoin */
-function afterAction(hero, sk){
-  const d = state.dj, f = d.fight;
-  f.energy = Math.max(0, f.energy - (sk.cost||0));
-  f.acted[d.party.indexOf(hero)] = true;
-  f.chain++;
-  if(sk.cd) sk.ready = sk.cd;
-  f.pending = null;
-
-  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
-  if(f.foes.every(x=>x.hp <= 0)) return winFight();
-
-  // le ninja repart parfois pour un tour gratuit
-  if(hero.role === "ninja" && Math.random() < 0.22){
-    f.acted[d.party.indexOf(hero)] = false;
-    f.energy = Math.min(f.maxEnergy, f.energy + 1);
-    f.log.push(`<b class="who">${esc(short2(hero.title))}</b> <b class="crit">enchaîne sans reprendre son souffle</b>`);
+  if(f.phase !== "player") return;
+  const c = f.hand[i];
+  if(!c) return;
+  if(f.mana < c.cost) return toast("Mana insuffisant", `${c.cost} cristaux nécessaires`, "info");
+  if(f.board.length >= BOARD_MAX) return toast("Plateau plein", "Sept serviteurs au maximum", "info");
+  f.hand.splice(i,1);
+  f.mana -= c.cost;
+  c.sick = !c.charge;
+  c.ready = !!c.charge;
+  f.board.push(c);
+  f.log.push(`<b class="who">${esc(short2(c.title))}</b> entre en jeu`);
+  sfx.tick();
+  if(c.cry){
+    if(c.cry.heal){
+      f.hero.hp = Math.min(f.hero.max, f.hero.hp + c.cry.heal*FACE);
+      fx(".heroline.me", c.cry.heal*FACE, "heal");
+      f.log.push(`<b class="heal">Cri de guerre</b> — le héros récupère ${c.cry.heal*FACE} PV`);
+    }
+    if(c.cry.dmg){
+      const t = f.foeBoard.find(m=>m.hp>0) || null;
+      if(t){ damageMinion(t, c.cry.dmg, "foe"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg} dégâts à ${esc(short2(t.title))}`); }
+      else { f.foe.hp -= c.cry.dmg*FACE; fx(".heroline.foe", c.cry.dmg*FACE, "dmg"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg*FACE} dégâts au gardien`); }
+    }
   }
+  checkFightEnd();
+}
 
-  const done = f.acted.every(Boolean) || f.energy <= 0;
-  const next = f.acted.findIndex(a=>!a);
-  if(next >= 0) f.sel = next;
-  if(done) return endPlayerTurn();
+function selectMinion(uid){
+  const f = state.dj.fight;
+  if(f.phase !== "player") return;
+  const m = f.board.find(x=>x.uid === uid);
+  if(!m) return;
+  if(m.sick || !m.ready) return toast("Pas encore prêt", "Un serviteur attaque au tour suivant", "info");
+  f.sel = f.sel === uid ? null : uid;
   renderFight();
 }
 
+function attackTarget(what){
+  const d = state.dj, f = d.fight;
+  if(f.phase !== "player" || !f.sel) return;
+  const me = f.board.find(x=>x.uid === f.sel);
+  if(!me) return;
+  const taunts = f.foeBoard.filter(x=>x.taunt && x.hp > 0);
+  if(what === "hero"){
+    if(taunts.length) return toast("Provocation", "Abattez d'abord les gardes", "info");
+    f.foe.hp -= me.atk*FACE;
+    fx(".heroline.foe", me.atk*FACE, "dmg");
+    shake(".heroline.foe");
+    f.log.push(`<b class="who">${esc(short2(me.title))}</b> frappe le gardien — <b class="dmg">${me.atk*FACE}</b>`);
+  } else {
+    const t = f.foeBoard.find(x=>x.uid === what);
+    if(!t) return;
+    if(taunts.length && !t.taunt) return toast("Provocation", "Abattez d'abord les gardes", "info");
+    damageMinion(t, me.atk, "foe");
+    damageMinion(me, t.atk, "me");
+    f.log.push(`<b class="who">${esc(short2(me.title))}</b> attaque <b class="foe">${esc(short2(t.title))}</b>`);
+  }
+  me.ready = false;
+  f.sel = null;
+  sfx.cannon();
+  checkFightEnd();
+}
+
+function damageMinion(m, n, side){
+  m.hp -= n;
+  fx(`[data-${side==="me"?"mine":"enemy"}="${m.uid}"]`, n, "dmg");
+  if(m.hp <= 0){
+    const f = state.dj.fight;
+    const arr = side === "me" ? f.board : f.foeBoard;
+    const k = arr.indexOf(m);
+    if(k >= 0) arr.splice(k,1);
+  }
+}
+
+function checkFightEnd(){
+  const d = state.dj, f = d.fight;
+  d.hp = f.hero.hp;
+  if(f.foe.hp <= 0) return winFight();
+  if(f.hero.hp <= 0) return endDungeon(false, "Le gardien a eu raison de vous");
+  renderFight();
+}
+
+/* ---------- tour adverse ---------- */
 function endPlayerTurn(){
   const d = state.dj, f = d.fight;
   if(f.phase !== "player") return;
   f.phase = "foe";
-  f.foeIdx = 0;
+  f.sel = null;
+  f.foeMax = Math.min(MANA_MAX, f.foeMax + 1);
+  f.foeMana = f.foeMax;
+  f.foeBoard.forEach(m=>{ m.sick = false; m.ready = true; });
   renderFight();
-  setTimeout(foeStep, 650);
+  setTimeout(foePlay, 700);
 }
 
-function foeStep(){
+function foePlay(){
   const d = state.dj, f = d.fight;
   if(!f) return;
-  while(f.foeIdx < f.foes.length && f.foes[f.foeIdx].hp <= 0) f.foeIdx++;
-  if(f.foeIdx >= f.foes.length) return endFoeTurn();
-  const x = f.foes[f.foeIdx++];
-  foeAct(x);
-  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
+  // pose de serviteurs tant que le mana le permet
+  let guard = 0;
+  while(guard++ < 6 && f.foeBoard.length < BOARD_MAX){
+    let m = null;
+    for(let t=0;t<4 && !m;t++){
+      const cand = foeMinion(d.floor);
+      if(cand.cost <= f.foeMana) m = cand;
+    }
+    if(!m) break;
+    f.foeMana -= m.cost;
+    m.sick = !m.charge;
+    m.ready = !!m.charge;
+    f.foeBoard.push(m);
+    f.log.push(`<b class="foe">${esc(short2(m.title))}</b> rejoint le gardien`);
+    if(Math.random() < 0.35) break;
+  }
   renderFight();
-  setTimeout(foeStep, 620);
+  setTimeout(foeAttack, 650);
 }
 
-function foeAct(x){
+function foeAttack(){
   const d = state.dj, f = d.fight;
-  if(x.stun > 0){
-    x.stun--;
-    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> est <b class="stun">figé</b> et passe son tour`);
-    return;
-  }
-  if(x.wind > 0){ x.wind = 0; return foeStrike(x, 2.1, "coup chargé"); }
-
-  const r = x.role || FOE_ROLES[0];
-  const roll = Math.random();
-  if(r.key === "brute" && roll < 0.32){
-    x.wind = 1;
-    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> <b class="wind">prend son élan…</b>`);
-  } else if(r.aoe && roll < 0.45){
-    foeStrike(x, 1.15, "déferlante");
-  } else if(r.dot && roll < 0.4){
-    foeStrike(x, 0.7, "crachat de venin");
-    f.venom = (f.venom||0) + 2;
-    f.log.push(`<b class="dot">Venin</b> — l'escouade est empoisonnée 2 tours`);
-  } else if(r.twice){
-    foeStrike(x, 0.62, "attaque rapide");
-    if(d.hp > 0) foeStrike(x, 0.62, "seconde lame");
-  } else {
-    foeStrike(x, 1, "assaut");
-  }
-}
-
-/* fin de tour : entretien des états, puis la main revient au joueur */
-function endFoeTurn(){
-  const d = state.dj, f = d.fight;
-
-  if(f.venom > 0){
-    f.venom--;
-    const n = 14 + rnd(12) + d.floor*4;
-    d.hp -= n;
-    fx(".hpwrap", n, "dot");
-    f.log.push(`<b class="dot">Venin</b> — l'escouade perd <b class="dmg">${n}</b> points`);
-  }
-  f.foes.forEach((x,i)=>{
-    if(x.hp <= 0) return;
-    if(x.dot > 0){ x.dot--; const n = 12 + rnd(10); x.hp = Math.max(0, x.hp-n); fx(`[data-foe="${i}"]`, n, "dot"); }
-    if(x.burn > 0){ x.burn--; const n = 18 + rnd(14) + d.floor*3; x.hp = Math.max(0, x.hp-n); fx(`[data-foe="${i}"]`, n, "dot"); }
-    if(x.bleed > 0){ x.bleed--; const n = Math.max(8, Math.round(x.max*0.05)); x.hp = Math.max(0, x.hp-n); fx(`[data-foe="${i}"]`, n, "dot"); }
-    if(x.vuln > 0) x.vuln--;
-    if(x.blind > 0) x.blind--;
+  if(!f) return;
+  const attackers = f.foeBoard.filter(m=>m.ready && !m.sick && m.hp > 0);
+  const myTaunts = f.board.filter(m=>m.taunt && m.hp > 0);
+  attackers.forEach(m=>{
+    if(f.hero.hp <= 0) return;
+    const pool = myTaunts.length ? myTaunts : f.board;
+    // le gardien vise un serviteur qu'il peut tuer, sinon le héros
+    const kill = pool.find(t=>t.hp > 0 && t.hp <= m.atk);
+    const target = kill || (pool.length && Math.random() < 0.45 ? pool[rnd(pool.length)] : null);
+    if(target){
+      damageMinion(target, m.atk, "me");
+      damageMinion(m, target.atk, "foe");
+      f.log.push(`<b class="foe">${esc(short2(m.title))}</b> attaque <b class="who">${esc(short2(target.title))}</b>`);
+    } else {
+      f.hero.hp -= m.atk*FACE;
+      fx(".heroline.me", m.atk*FACE, "dmg");
+      shake(".heroline.me");
+      f.log.push(`<b class="foe">${esc(short2(m.title))}</b> frappe votre héros — <b class="dmg">${m.atk*FACE}</b>`);
+    }
+    m.ready = false;
   });
-  if(f.regen && f.regen.turns > 0){
-    f.regen.turns--;
-    d.hp = Math.min(d.maxhp, d.hp + f.regen.amount);
-    fx(".hpwrap", f.regen.amount, "heal");
+  // le gardien lui-même cogne
+  if(f.hero.hp > 0 && !myTaunts.length && Math.random() < 0.55){
+    const n = 24 + d.floor*10 + (f.foe.elite ? 26 : 0);
+    f.hero.hp -= n;
+    fx(".heroline.me", n, "dmg");
+    flashScreen("hurt");
+    f.log.push(`<b class="foe">${esc(short2(f.foe.title))}</b> frappe lui-même — <b class="dmg">${n}</b>`);
   }
-  if(f.thorns > 0) f.thorns--;
-  f.shield = Math.max(0, f.shield - 3);
-  f.taunt = false;
+  sfx.hurt();
+  setTimeout(startPlayerTurn, 620);
+}
 
-  if(d.hp <= 0) return endDungeon(false, "L'escouade est tombée");
-  if(f.foes.every(x=>x.hp <= 0)) return winFight();
-
+function startPlayerTurn(){
+  const d = state.dj, f = d.fight;
+  if(!f) return;
+  d.hp = f.hero.hp;
+  if(f.hero.hp <= 0) return endDungeon(false, "Le gardien a eu raison de vous");
+  if(f.foe.hp <= 0) return winFight();
   f.turn++;
   f.phase = "player";
-  f.energy = f.maxEnergy;
-  f.acted = d.party.map(()=>false);
-  f.chain = 0;
-  f.dealt = 0;
-  f.sel = 0;
-  d.party.forEach(h=>h.skills.forEach(sk=>{ if(sk.ready > 0) sk.ready--; }));
+  f.maxMana = Math.min(MANA_MAX, f.maxMana + 1);
+  f.mana = f.maxMana;
+  f.board.forEach(m=>{ m.sick = false; m.ready = true; });
+  drawCard();
   renderFight();
 }
 
-/* ---------- exécution d'une manœuvre ---------- */
-function useSkill(hero, sk0, target){
-  const d = state.dj, f = d.fight;
-  f.pending = null;
-
-  // enchaînement : certaines manœuvres montent en puissance après une première action du tour
-  const combo = sk0.combo && f.chain >= 1;
-  const hex = (hero.hex||1);
-  const boost = (sk0.burn||sk0.dot||sk0.bleed||sk0.vuln||sk0.blind||sk0.freeze||sk0.aoe) ? hex : 1;
-  const sk = {...sk0, mult:(sk0.mult||0) * (combo ? sk0.combo : 1) * boost};
-  const who = `<b class="who">${esc(short2(hero.title))}</b>`;
-  if(combo) f.log.push(`<b class="crit">Enchaînement !</b>`);
-
-  const hit = (x, m, opts)=>{
-    const r = hitFoe(x, Math.round(hero.power * m), opts);
-    return r;
-  };
-
-  if(sk.taunt){
-    f.taunt = true;
-    f.log.push(`${who} rugit <b class="sk">${esc(sk.label)}</b> — <b class="shield">les gardiens frappent 35 % moins fort</b>`);
-    flashScreen("shield"); sfx.trumpet();
-
-  } else if(sk.transfuse){
-    const gain = Math.round(f.dealt * 0.35 * (hero.heal||1)) + 20;
-    d.hp = Math.min(d.maxhp, d.hp + gain);
-    fx(".hpwrap", gain, "heal");
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="heal">+${gain} HP</b>`);
-    flashScreen("heal"); sfx.ach();
-
-  } else if(sk.detonate){
-    const x = f.foes[target];
-    const stacks = (x.burn||0) + (x.bleed||0) + (x.dot||0);
-    x.burn = x.bleed = x.dot = 0;
-    const r = hitFoe(x, Math.round(hero.power*sk.mult) + stacks*45, {pierce:true});
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> fait éclater ${stacks} effet(s) : <b class="dmg">${r.real} dégâts</b>`);
-    flashScreen("aoe"); sfx.cannon();
-
-  } else if(sk.heal){
-    const gain = Math.round(hero.power * 2.2 * (hero.heal||1)) + 20;
-    d.hp = Math.min(d.maxhp, d.hp + gain);
-    fx(".hpwrap", gain, "heal");
-    f.log.push(`${who} lance <b class="sk">${esc(sk.label)}</b> — <b class="heal">+${gain} HP</b>`);
-    flashScreen("heal"); sfx.ach();
-
-  } else if(sk.shield){
-    f.shield = Math.round(hero.guard*2) + 6;
-    f.log.push(`${who} dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">−${f.shield} aux coups reçus</b>`);
-    flashScreen("shield"); sfx.ach();
-
-  } else if(sk.rally){
-    f.rally = (f.rally||0) + 1;
-    d.party.forEach(h=>h.power = Math.round(h.power*1.18));
-    f.log.push(`${who} lance <b class="sk">${esc(sk.label)}</b> — <b class="aoe">l'escouade frappe plus fort</b>`);
-    flashScreen("aoe"); sfx.trumpet();
-
-  } else if(sk.regen){
-    f.regen = {turns:sk.regen, amount:Math.round(hero.power*0.9*(hero.heal||1)) + 12};
-    f.log.push(`${who} souffle <b class="sk">${esc(sk.label)}</b> — <b class="heal">régénération ${sk.regen} tours</b>`);
-    flashScreen("heal"); sfx.ach();
-
-  } else if(sk.barrier){
-    f.barrier = (f.barrier||0) + Math.round(hero.guard*6) + 60;
-    f.log.push(`${who} dresse <b class="sk">${esc(sk.label)}</b> — <b class="shield">${f.barrier} points absorbés</b>`);
-    flashScreen("shield"); sfx.ach();
-
-  } else if(sk.cleanse){
-    const gain = Math.round(hero.power*1.2*(hero.heal||1)) + 15;
-    f.venom = 0;
-    d.hp = Math.min(d.maxhp, d.hp + gain);
-    fx(".hpwrap", gain, "heal");
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="heal">venin dissipé, +${gain} HP</b>`);
-    flashScreen("heal"); sfx.ach();
-
-  } else if(sk.thorns){
-    f.thorns = sk.thorns + 1;
-    f.log.push(`${who} hérisse <b class="sk">${esc(sk.label)}</b> — <b class="shield">les coups seront renvoyés</b>`);
-    flashScreen("shield"); sfx.ach();
-
-  } else if(sk.aoe){
-    let tot = 0;
-    f.foes.forEach(x=>{ if(x.hp > 0) tot += hit(x, sk.mult).real; });
-    f.log.push(`${who} déchaîne <b class="sk">${esc(sk.label)}</b> — <b class="dmg">${tot} dégâts</b> sur tous`);
-    flashScreen("aoe"); sfx.cannon();
-
-  } else if(sk.chain){
-    let m = 1, tot = 0;
-    f.foes.filter(z=>z.hp>0).forEach(z=>{ tot += hit(z, sk.mult*m).real; m *= 0.65; });
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> rebondit : <b class="dmg">${tot} dégâts</b>`);
-    flashScreen("aoe"); sfx.cannon();
-
-  } else if(sk.siphon){
-    let tot = 0;
-    f.foes.forEach(z=>{ if(z.hp > 0) tot += hit(z, sk.mult).real; });
-    const back = Math.round(tot*0.25*(hero.heal||1));
-    d.hp = Math.min(d.maxhp, d.hp + back);
-    fx(".hpwrap", back, "heal");
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${tot} dégâts</b> et <b class="heal">+${back} HP</b>`);
-    flashScreen("aoe"); sfx.cannon();
-
-  } else if(sk.hits){
-    const x = f.foes[target];
-    let tot = 0;
-    for(let k=0;k<sk.hits;k++){ if(x.hp <= 0) break; tot += hit(x, sk.mult).real; }
-    f.log.push(`${who} enchaîne <b class="sk">${esc(sk.label)}</b> — <b class="dmg">${tot} dégâts</b> en ${sk.hits} coups`);
-    sfx.cannon();
-
-  } else if(sk.drain){
-    const x = f.foes[target];
-    const r = hit(x, sk.mult);
-    const back = Math.round(r.real/2*(hero.heal||1));
-    d.hp = Math.min(d.maxhp, d.hp + back);
-    fx(".hpwrap", back, "heal");
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b> et <b class="heal">+${back} HP</b>`);
-    sfx.cannon();
-
-  } else if(sk.weaken){
-    const x = f.foes[target];
-    const r = hit(x, sk.mult);
-    x.atk = Math.round(x.atk * 0.72);
-    x.weak = true;
-    f.log.push(`${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b> · <b class="weak">frappe affaiblie</b>`);
-    sfx.cannon();
-
-  } else {
-    const x = f.foes[target];
-    let m = sk.mult;
-    let note = "";
-    if(sk.execute && x.hp < x.max*0.35){ m *= 1.8; note += ` · <b class="crit">achèvement</b>`; }
-    if(sk.stagger){ x.guard = 0; x.broken = true; note += ` · <b class="aoe">armure brisée</b>`; }
-    const r = m > 0 ? hit(x, m, {pierce:!!(sk.pierce||sk.burn)}) : {real:0, crit:false};
-    if(sk.burn){ x.burn = sk.burn; note += ` · <b class="dot">embrasée</b>`; }
-    if(sk.bleed){ x.bleed = sk.bleed; note += ` · <b class="dot">hémorragie</b>`; }
-    if(sk.dot){ x.dot = 3; note += ` · <b class="dot">plaie</b>`; }
-    if(sk.freeze){ x.stun = Math.max(x.stun||0, sk.freeze); note += ` · <b class="stun">figée ${sk.freeze} tours</b>`; }
-    if(sk.stun){ x.stun = Math.max(x.stun||0, 1); note += ` · <b class="stun">étourdie</b>`; }
-    if(sk.blind){ x.blind = sk.blind; note += ` · <b class="stun">aveuglée</b>`; }
-    if(sk.vuln){ x.vuln = sk.vuln; note += ` · <b class="vuln">vulnérable</b>`; }
-    if(sk.mark){ x.mark = true; note += ` · <b class="vuln">marquée</b>`; }
-    f.log.push(`${r.crit?`<b class="crit">Critique !</b> `:""}${who} — <b class="sk">${esc(sk.label)}</b> : <b class="dmg">${r.real} dégâts</b>${note}`);
-    sfx.cannon();
-  }
-
-  afterAction(hero, sk0);
-}
-
-function hitFoe(x, dmg, opts){
-  opts = opts || {};
-  const crit = opts.crit !== false ? Math.random() < 0.12 : false;
-  const armor = opts.pierce ? 0 : (x.guard||0);
-  let mult = crit ? 1.7 : 1;
-  if(x.vuln > 0) mult *= 1.3;
-  if(x.mark){ mult *= 2; x.mark = false; }
-  const real = Math.max(1, Math.round(dmg * mult) - armor);
-  x.hp -= real;
-  if(x.hp <= 0) x.hp = 0;
-  const i = state.dj.fight.foes.indexOf(x);
-  fx(`[data-foe="${i}"]`, real, crit ? "crit" : "dmg");
-  if(crit) sfx.epic();
-  return {real, crit};
-}
-
-/* les effets visuels attendent le prochain rendu pour ne pas être effacés */
 function fx(sel, n, kind){
   const f = state.dj && state.dj.fight;
   if(!f) return;
@@ -5352,39 +5286,13 @@ function flashScreen(kind){
   setTimeout(()=>f.remove(), 420);
 }
 
-function foeStrike(x, mult, label){
-  const d = state.dj, f = d.fight;
-  if(x.blind > 0 && Math.random() < 0.5){
-    f.log.push(`<b class="foe">${esc(short2(x.title))}</b> frappe dans le vide — <b class="stun">aveuglée</b>`);
-    return;
-  }
-  const crit = Math.random() < 0.1;
-  let dmg = Math.max(2, Math.round(x.atk * mult * (crit?1.6:1)) - f.shield);
-  if(f.barrier > 0){
-    const absorbed = Math.min(f.barrier, dmg);
-    f.barrier -= absorbed;
-    dmg -= absorbed;
-    if(absorbed) f.log.push(`<b class="shield">Barrière</b> absorbe ${absorbed} points`);
-    if(dmg <= 0) return;
-  }
-  if(f.thorns > 0){
-    const back = Math.round(dmg*0.5);
-    hitFoe(x, back, {crit:false});
-    f.log.push(`<b class="shield">Épines</b> renvoient <b class="dmg">${back}</b> à ${esc(short2(x.title))}`);
-  }
-  d.hp -= dmg;
-  f.log.push(`${crit?`<b class="crit">Écrasant !</b> `:""}<b class="foe">${esc(short2(x.title))}</b> — <span class="sk">${esc(label)}</span> : <b class="dmg">${dmg} dégâts</b>`);
-  sfx.hurt();
-  hitSpray("hp-me");
-  fx(".hpwrap", dmg, "dmg");
-  flashScreen("hurt");
-}
 
 function tryFlee(){
   const d = state.dj, f = d.fight;
-  if(!f) return;
+  if(!f || f.phase !== "player") return;
   const cost = Math.round(d.maxhp*0.08) + 10;
   d.hp -= cost;
+  f.hero.hp = d.hp;
   if(d.hp <= 0) return endDungeon(false, "Fuite fatale");
   if(Math.random() < 0.55){
     f.spot.dead = false;
@@ -5428,21 +5336,24 @@ function useInBattle(key){
   if(d.potions[def.fam] <= 0){
     return toast("Plus de flacons", `${POTION_CAP[def.fam]} ${def.fam==="heal"?"soins":"fioles de dégâts"} par expédition`, "info");
   }
+  const f = d.fight;
   d.potions[def.fam]--;
   useItem(key, 1);
   if(def.fam === "heal"){
-    d.hp = Math.min(d.maxhp, d.hp + def.val);
+    f.hero.hp = Math.min(f.hero.max, f.hero.hp + def.val);
+    d.hp = f.hero.hp;
+    fx(".heroline.me", def.val, "heal");
     toast(`${def.name} · +${def.val} HP`, "", "ach");
     sfx.ach();
   } else {
-    const alive = d.fight.foes.filter(x=>x.hp > 0);
-    if(alive.length) hitFoe(alive[0], def.val);
+    const t = f.foeBoard.find(m=>m.hp > 0);
+    if(t) damageMinion(t, Math.max(1, Math.round(def.val/90)), "foe");
+    else { f.foe.hp -= def.val; fx(".heroline.foe", def.val, "dmg"); }
     toast(`${def.name} · ${def.val} dégâts`, "", "ach");
     sfx.cannon();
   }
   sset("fm:profile", state.profile);
-  if(d.fight.foes.every(x=>x.hp <= 0)) return winFight();
-  renderFight();
+  return checkFightEnd();
 }
 
 /* ---------- barre de vie ---------- */
