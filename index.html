@@ -1169,6 +1169,119 @@ details.fold .in{padding-top:.6rem}
 }
 @media (prefers-reduced-motion:reduce){.dc.rigged{animation:none;box-shadow:inset 0 0 0 1px #6FD8FF33}}
 
+/* ---------- plateau de duel, façon table de tournoi ---------- */
+.arena{position:relative;max-width:760px;margin:.6rem auto 0;padding:.6rem .7rem .7rem;border-radius:18px;
+  background:radial-gradient(90% 60% at 50% 50%, #5A452C 0%, #3A2C1B 55%, #241B11 100%);
+  border:6px solid #2A2015;box-shadow:inset 0 0 60px -10px #000, 0 18px 36px -26px #000}
+.arena::before{content:"";position:absolute;inset:6px;border-radius:12px;pointer-events:none;
+  box-shadow:inset 0 0 0 2px #7A5F36aa, inset 0 0 50px -12px #000}
+.arow{display:flex;align-items:center;gap:.6rem;justify-content:center;position:relative;min-height:86px}
+.arow.meside{margin-top:.2rem}
+.portrait{position:relative;width:88px;text-align:center}
+.portrait.foe{cursor:pointer}
+.pring{width:74px;height:74px;margin:0 auto;border-radius:50%;padding:4px;
+  background:conic-gradient(from 210deg,#C9A24A,#7A5F36,#E8C87A,#5A4526,#C9A24A);
+  box-shadow:0 6px 16px -8px #000, inset 0 0 0 1px #2A2015}
+.pface{width:100%;height:100%;border-radius:50%;background:#1A1410 center/cover no-repeat;
+  display:grid;place-items:center;font-size:1.6rem;box-shadow:inset 0 0 18px -6px #000}
+.portrait.foe .pring{background:conic-gradient(from 210deg,#E2754C,#7A2E1A,#F0947A,#5A1E12,#E2754C)}
+.portrait.foe:hover .pring{box-shadow:0 0 18px -2px #E2754C}
+.portrait.foe.guarded .pring{filter:grayscale(.35)}
+.phhp{position:absolute;right:6px;bottom:16px;width:28px;height:28px;border-radius:50%;
+  display:grid;place-items:center;font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.86rem;
+  color:#fff;background:radial-gradient(circle at 34% 30%,#F07A6A,#8A1A12);
+  box-shadow:0 0 0 2px #2A0E0A, 0 4px 8px -4px #000}
+.pname{margin-top:.2rem;font-size:.66rem;color:#E8DCC8;opacity:.8;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pile{min-width:48px;padding:.25rem .4rem;border-radius:8px;text-align:center;
+  background:#241B12;border:1px solid #6A5436;color:#E8DCC8}
+.pile b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:1rem;color:#F0CE86}
+.pile small{font-size:.58rem;opacity:.7}
+.lane{display:flex;gap:.35rem;justify-content:center;align-items:center;flex-wrap:wrap;
+  min-height:96px;padding:.3rem;border-radius:12px;margin:.25rem 0}
+.lane.foe{background:linear-gradient(180deg,#00000033,#00000011)}
+.lane.me{background:linear-gradient(0deg,#00000033,#00000011)}
+.lane .empty{color:#C6B7A8;opacity:.55;font-size:.78rem;font-style:italic}
+.midline{height:10px;display:grid;place-items:center}
+.midline span{display:block;width:92%;height:3px;border-radius:3px;
+  background:linear-gradient(90deg,transparent,#C9A24A88,transparent)}
+.minion{position:relative;width:72px;padding-top:6px;cursor:pointer;transition:transform .12s ease}
+.minion .mframe{width:66px;height:66px;margin:0 auto;border-radius:50%;padding:3px;
+  background:conic-gradient(from 210deg,#C9A24A,#6A5330,#E8C87A,#4A3A20,#C9A24A);
+  box-shadow:0 5px 12px -8px #000}
+.minion.foe .mframe{background:conic-gradient(from 210deg,#E2754C,#7A2E1A,#F0947A,#5A1E12,#E2754C)}
+.minion .mart{width:100%;height:100%;border-radius:50%;background:#241D17 center/cover no-repeat;
+  box-shadow:inset 0 0 14px -5px #000}
+.minion .mribbon{margin:-6px auto 0;width:74px;padding:1px 3px;border-radius:4px;font-size:.5rem;text-align:center;
+  background:linear-gradient(#5A4526,#3A2C18);border:1px solid #8A6A38;color:#F6E7C8;position:relative;z-index:2;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.minion.taunt .tshield{position:absolute;inset:-2px 0 14px;border-radius:50% 50% 40% 40%;
+  background:linear-gradient(#8A7A6C55,#3A322A55);border:2px solid #C6B7A8;z-index:0}
+.minion.canact .mframe{box-shadow:0 0 14px -2px #7FD0B4, 0 5px 12px -8px #000}
+.minion.picked{transform:translateY(-8px)}
+.minion.picked .mframe{box-shadow:0 0 18px 0 var(--brass)}
+.minion.sick{opacity:.72}
+.minion .kwmark{position:absolute;top:2px;right:4px;font-size:.66rem;z-index:3}
+.gemv{position:absolute;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;z-index:3;
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.74rem;color:#fff;
+  box-shadow:0 3px 6px -3px #000, inset 0 0 0 1.5px #ffffff55}
+.gemv.atk{left:0;bottom:6px;background:radial-gradient(circle at 34% 30%,#FFE39A,#A8792A);color:#2A1C06}
+.gemv.hp{right:0;bottom:6px;background:radial-gradient(circle at 34% 30%,#F07A6A,#8A1A12)}
+.gemv.hp.hurt{background:radial-gradient(circle at 34% 30%,#FF8A6A,#6A1208)}
+.gemv.cost{left:2px;top:2px;background:radial-gradient(circle at 34% 30%,#9FE8FF,#1E6AA8);color:#062033}
+.manabox{display:flex;flex-direction:column;align-items:center;gap:.25rem}
+.crystals{display:flex;gap:2px}
+.crystals i{width:12px;height:17px;border-radius:3px 3px 5px 5px;background:#1E2A38;border:1px solid #33506E;
+  transform:rotate(2deg)}
+.crystals i.on{background:linear-gradient(#9FE8FF,#2E86C8);border-color:#9FE8FF;box-shadow:0 0 7px -1px #7DE3FF}
+.crystals i.used{background:#16303F}
+.mcount{font-family:"Bricolage Grotesque",sans-serif;color:#9FE8FF;font-size:.76rem}
+.endbtn{width:88px;min-height:58px;border-radius:12px;cursor:pointer;line-height:1.1;
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.76rem;
+  background:linear-gradient(#6A5330,#3A2C18);border:2px solid #8A6A38;color:#E8DCC8}
+.endbtn.lit{background:linear-gradient(#E8C87A,#B0862E);color:#2A1C06;border-color:#FFE39A;
+  box-shadow:0 0 18px -4px #E8B44C;animation:endpulse 2.2s ease-in-out infinite}
+@keyframes endpulse{0%,100%{box-shadow:0 0 14px -6px #E8B44C}50%{box-shadow:0 0 22px -2px #E8B44C}}
+.endbtn:disabled{opacity:.6;cursor:default;animation:none}
+.handfan{display:flex;justify-content:center;align-items:flex-end;max-width:760px;margin:.4rem auto 0;
+  min-height:120px;padding-top:.3rem}
+.handfan .empty{color:var(--muted);font-size:.8rem;font-style:italic}
+.hcard{position:relative;width:86px;height:112px;margin:0 -10px;border-radius:10px;cursor:pointer;flex:none;
+  background:linear-gradient(#3A2C18,#241B11);border:2px solid #6A5330;
+  box-shadow:0 8px 16px -10px #000;transition:transform .14s ease, box-shadow .14s ease;
+  transform-origin:bottom center}
+.hcard.playable{border-color:#E8C87A;box-shadow:0 0 14px -5px #E8B44C, 0 8px 16px -10px #000}
+.hcard.playable:hover{transform:translateY(-18px) scale(1.08) !important;z-index:5;box-shadow:0 0 22px -4px #E8B44C}
+.hcard .hframe{width:54px;height:54px;margin:6px auto 0;border-radius:50%;padding:2px;
+  background:conic-gradient(from 210deg,#C9A24A,#6A5330,#E8C87A,#4A3A20,#C9A24A)}
+.hcard .hart{width:100%;height:100%;border-radius:50%;background:#241D17 center/cover no-repeat}
+.hcard .hribbon{margin:2px 4px 0;font-size:.5rem;text-align:center;color:#F6E7C8;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hcard .htext{margin:1px 5px;font-size:.42rem;text-align:center;color:#C6B7A8;line-height:1.15;
+  height:1.9em;overflow:hidden}
+@media (max-width:760px){
+  .arena{padding:.45rem .4rem .55rem;border-width:4px;border-radius:14px}
+  .arow{min-height:70px;gap:.35rem}
+  .pring{width:58px;height:58px}
+  .portrait{width:70px}
+  .phhp{width:24px;height:24px;font-size:.76rem;right:2px}
+  .pname{font-size:.58rem}
+  .pile{min-width:40px;padding:.18rem .3rem}
+  .pile b{font-size:.84rem}
+  .lane{min-height:78px;gap:.25rem}
+  .minion{width:58px}
+  .minion .mframe{width:52px;height:52px}
+  .minion .mribbon{width:60px;font-size:.44rem}
+  .gemv{width:20px;height:20px;font-size:.64rem}
+  .endbtn{width:66px;min-height:48px;font-size:.66rem}
+  .crystals i{width:9px;height:13px}
+  .handfan{min-height:104px;overflow-x:auto;justify-content:flex-start;padding:0 .4rem .2rem;scrollbar-width:none}
+  .handfan::-webkit-scrollbar{display:none}
+  .hcard{width:72px;height:96px;margin:0 -6px;transform:none !important}
+  .hcard.playable:hover{transform:translateY(-10px) !important}
+  .hcard .hframe{width:44px;height:44px}
+}
+
 /* croix directionnelle, pour jouer au pouce */
 .dpad{display:none;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,54px);gap:.35rem;
   justify-content:center;margin:.7rem auto 0}
@@ -4979,88 +5092,109 @@ function manaCrystals(cur, max){
     `<i class="${i < cur ? "on" : i < max ? "used" : ""}"></i>`).join("")}</span>
     <b class="mcount">${cur}/${max}</b>`;
 }
-function minionHTML(m, side, i){
-  const canAct = side === "me" && state.dj.fight.phase === "player" && m.ready && !m.sick;
-  const sel = state.dj.fight.sel === m.uid;
-  return `<div class="minion ${side} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""}"
-      data-${side==="me"?"mine":"enemy"}="${m.uid}" data-r="${esc(m.rarity)}">
-    <div class="mart" ${m.img?`style="background-image:url('${esc(m.img)}')"`:""}></div>
-    <div class="mname">${esc(short2(m.title))}</div>
-    ${m.taunt?`<span class="kw taunt">🛡</span>`:""}
-    ${m.charge?`<span class="kw charge">⚡</span>`:""}
-    <span class="mstat atk">${m.atk}</span>
-    <span class="mstat hp ${m.hp<m.max?"hurt":""}">${m.hp}</span>
+
+function minionHTML(m, side){
+  const f = state.dj.fight;
+  const canAct = side === "me" && f.phase === "player" && m.ready && !m.sick;
+  const sel = f.sel === m.uid;
+  return `<div class="minion ${side} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""} ${m.sick&&side==="me"?"sick":""}"
+      data-${side==="me"?"mine":"enemy"}="${m.uid}" data-r="${esc(m.rarity)}" title="${esc(m.title)}${keywordText(m)?" — "+esc(keywordText(m)):""}">
+    ${m.taunt?`<span class="tshield"></span>`:""}
+    <div class="mframe">
+      <div class="mart" ${m.img?`style="background-image:url('${esc(m.img)}')"`:""}></div>
+    </div>
+    <div class="mribbon">${esc(short2(m.title))}</div>
+    <span class="gemv atk">${m.atk}</span>
+    <span class="gemv hp ${m.hp<m.max?"hurt":""}">${m.hp}</span>
+    ${m.charge?`<span class="kwmark">⚡</span>`:""}
   </div>`;
 }
-function handHTML(c, i){
+
+function handHTML(c, i, n){
   const f = state.dj.fight;
   const ok = f.phase === "player" && f.mana >= c.cost && f.board.length < BOARD_MAX;
-  return `<div class="handcard ${ok?"playable":""}" data-hand="${i}" data-r="${esc(c.rarity)}">
-    <span class="hcost">${c.cost}</span>
-    <div class="hart" ${c.img?`style="background-image:url('${esc(c.img)}')"`:""}></div>
-    <div class="hname">${esc(short2(c.title))}</div>
-    <div class="hkw">${esc(keywordText(c) || ROLES[c.role].name)}</div>
-    <span class="mstat atk">${c.atk}</span>
-    <span class="mstat hp">${c.hp}</span>
+  const mid = (n-1)/2;
+  const rot = (i - mid) * (n > 1 ? Math.min(6, 22/n) : 0);
+  const lift = Math.pow(Math.abs(i - mid), 2) * 2.2;
+  return `<div class="hcard ${ok?"playable":""}" data-hand="${i}" data-r="${esc(c.rarity)}"
+      style="transform:rotate(${rot.toFixed(1)}deg) translateY(${lift.toFixed(0)}px)"
+      title="${esc(c.title)}${keywordText(c)?" — "+esc(keywordText(c)):""}">
+    <span class="gemv cost">${c.cost}</span>
+    <div class="hframe"><div class="hart" ${c.img?`style="background-image:url('${esc(c.img)}')"`:""}></div></div>
+    <div class="hribbon">${esc(short2(c.title))}</div>
+    <div class="htext">${esc(keywordText(c) || ROLES[c.role].name)}</div>
+    <span class="gemv atk">${c.atk}</span>
+    <span class="gemv hp">${c.hp}</span>
+  </div>`;
+}
+
+function heroPortrait(side){
+  const d = state.dj, f = d.fight;
+  if(side === "foe"){
+    return `<div class="portrait foe ${f.foeBoard.some(m=>m.taunt)?"guarded":""}" data-enemyhero="1">
+      <div class="pring"><div class="pface" ${f.foe.img?`style="background-image:url('${esc(f.foe.img)}')"`:""}></div></div>
+      <span class="phhp">${Math.max(0,f.foe.hp)}</span>
+      <div class="pname">${esc(short2(f.foe.title))}</div>
+    </div>`;
+  }
+  return `<div class="portrait me">
+    <div class="pring"><div class="pface you">${ROLES[d.party[0].role].emoji}</div></div>
+    <span class="phhp">${Math.max(0,f.hero.hp)}</span>
+    <div class="pname">${esc(state.profile.pseudo||"Vous")}</div>
   </div>`;
 }
 
 function renderFight(){
   const d = state.dj, f = d.fight;
   d.hp = f.hero.hp;
+  const yours = f.phase === "player";
 
   view.innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:baseline">
-      <h2 style="font-size:1.3rem">Duel · étage ${d.floor}</h2>
-      <span class="sub">Tour ${f.turn} · ${f.deck.length} carte(s) en pioche</span>
+      <h2 style="font-size:1.2rem">Duel · étage ${d.floor}</h2>
+      <span class="sub">Tour ${f.turn}${yours?" · à vous de jouer":" · le gardien joue"}</span>
     </div>
 
-    <div class="hsboard">
-      <div class="heroline foe" data-enemyhero="1">
-        <div class="hface" ${f.foe.img?`style="background-image:url('${esc(f.foe.img)}')"`:""}></div>
-        <div style="min-width:0">
-          <div class="hname2">${esc(short2(f.foe.title))}</div>
-          <div class="hbar"><i style="width:${Math.max(0,f.foe.hp)/f.foe.max*100}%"></i></div>
-        </div>
-        <span class="hhp">${Math.max(0,f.foe.hp)}</span>
+    <div class="arena">
+      <div class="arow foeside">
+        ${heroPortrait("foe")}
+        <div class="pile foe"><b>${f.foeBoard.length}</b><small>en jeu</small></div>
       </div>
 
-      <div class="lane foe">${f.foeBoard.map((m,i)=>minionHTML(m,"foe",i)).join("") ||
-        `<span class="empty">aucun serviteur adverse</span>`}</div>
+      <div class="lane foe">${f.foeBoard.map(m=>minionHTML(m,"foe")).join("") ||
+        `<span class="empty">le gardien n'a aucun serviteur</span>`}</div>
 
-      <div class="lane me">${f.board.map((m,i)=>minionHTML(m,"me",i)).join("") ||
-        `<span class="empty">posez une carte depuis votre main</span>`}</div>
+      <div class="midline"><span></span></div>
 
-      <div class="heroline me">
-        <div class="hface you">${ROLES[d.party[0].role].emoji}</div>
-        <div style="min-width:0">
-          <div class="hname2">${esc(state.profile.pseudo||"Votre héros")}</div>
-          <div class="hbar"><i style="width:${Math.max(0,f.hero.hp)/f.hero.max*100}%"></i></div>
+      <div class="lane me">${f.board.map(m=>minionHTML(m,"me")).join("") ||
+        `<span class="empty">posez une carte de votre main</span>`}</div>
+
+      <div class="arow meside">
+        ${heroPortrait("me")}
+        <div class="manabox">
+          ${manaCrystals(f.mana, f.maxMana)}
+          <div class="pile deck"><b>${f.deck.length}</b><small>pioche</small></div>
         </div>
-        <span class="hhp">${Math.max(0,f.hero.hp)}</span>
+        <button class="endbtn ${yours?"lit":""}" id="endturn" ${yours?"":"disabled"}>
+          ${yours?"FIN DU<br>TOUR":"tour<br>adverse"}</button>
       </div>
     </div>
 
-    <div class="manarow">${manaCrystals(f.mana, f.maxMana)}
-      <button class="btn small" id="endturn" ${f.phase==="player"?"":"disabled"}>
-        ${f.phase==="player"?"Terminer le tour":"tour adverse…"}</button>
-    </div>
-
-    <div class="hand">${f.hand.map((c,i)=>handHTML(c,i)).join("") ||
+    <div class="handfan">${f.hand.map((c,i)=>handHTML(c,i,f.hand.length)).join("") ||
       `<span class="empty">main vide</span>`}</div>
 
-    <div class="panel" style="margin-top:.6rem">
+    <div class="panel" style="margin-top:.5rem">
       <div class="battlebar" id="bbar">${(state.profile.hotbar||[]).map((k,i)=>{
         const n = k ? countItem(k) : 0;
         const fam = k ? item(k).fam : null;
         const left = fam && fam !== "arm" ? d.potions[fam] : 0;
-        const ok = k && n && left > 0 && f.phase === "player";
+        const ok = k && n && left > 0 && yours;
         return `<div class="hslot ${ok?"full":"off"}" ${ok?`data-use="${k}"`:""}>${
           k&&n ? itemTile(k, n) : `<span class="num">${i+1}</span>`}</div>`;
       }).join("")}</div>
       <div class="row" style="margin-top:.5rem">
         <button class="btn ghost small" id="flee2">Tenter de fuir</button>
-        <span class="sub" style="font-size:.78rem">Cliquez un serviteur prêt, puis sa cible.</span>
+        <span class="sub" style="font-size:.78rem">Un serviteur prêt, puis sa cible.</span>
       </div>
       <div class="fightlog">${f.log.slice(-4).map(l=>`<div class="ll">${l}</div>`).join("")}</div>
     </div>`;
@@ -5094,13 +5228,13 @@ function playCard(i){
   if(c.cry){
     if(c.cry.heal){
       f.hero.hp = Math.min(f.hero.max, f.hero.hp + c.cry.heal*FACE);
-      fx(".heroline.me", c.cry.heal*FACE, "heal");
+      fx(".portrait.me", c.cry.heal*FACE, "heal");
       f.log.push(`<b class="heal">Cri de guerre</b> — le héros récupère ${c.cry.heal*FACE} PV`);
     }
     if(c.cry.dmg){
       const t = f.foeBoard.find(m=>m.hp>0) || null;
       if(t){ damageMinion(t, c.cry.dmg, "foe"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg} dégâts à ${esc(short2(t.title))}`); }
-      else { f.foe.hp -= c.cry.dmg*FACE; fx(".heroline.foe", c.cry.dmg*FACE, "dmg"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg*FACE} dégâts au gardien`); }
+      else { f.foe.hp -= c.cry.dmg*FACE; fx(".portrait.foe", c.cry.dmg*FACE, "dmg"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg*FACE} dégâts au gardien`); }
     }
   }
   checkFightEnd();
@@ -5125,8 +5259,8 @@ function attackTarget(what){
   if(what === "hero"){
     if(taunts.length) return toast("Provocation", "Abattez d'abord les gardes", "info");
     f.foe.hp -= me.atk*FACE;
-    fx(".heroline.foe", me.atk*FACE, "dmg");
-    shake(".heroline.foe");
+    fx(".portrait.foe", me.atk*FACE, "dmg");
+    shake(".portrait.foe");
     f.log.push(`<b class="who">${esc(short2(me.title))}</b> frappe le gardien — <b class="dmg">${me.atk*FACE}</b>`);
   } else {
     const t = f.foeBoard.find(x=>x.uid === what);
@@ -5214,8 +5348,8 @@ function foeAttack(){
       f.log.push(`<b class="foe">${esc(short2(m.title))}</b> attaque <b class="who">${esc(short2(target.title))}</b>`);
     } else {
       f.hero.hp -= m.atk*FACE;
-      fx(".heroline.me", m.atk*FACE, "dmg");
-      shake(".heroline.me");
+      fx(".portrait.me", m.atk*FACE, "dmg");
+      shake(".portrait.me");
       f.log.push(`<b class="foe">${esc(short2(m.title))}</b> frappe votre héros — <b class="dmg">${m.atk*FACE}</b>`);
     }
     m.ready = false;
@@ -5224,7 +5358,7 @@ function foeAttack(){
   if(f.hero.hp > 0 && !myTaunts.length && Math.random() < 0.55){
     const n = 24 + d.floor*10 + (f.foe.elite ? 26 : 0);
     f.hero.hp -= n;
-    fx(".heroline.me", n, "dmg");
+    fx(".portrait.me", n, "dmg");
     flashScreen("hurt");
     f.log.push(`<b class="foe">${esc(short2(f.foe.title))}</b> frappe lui-même — <b class="dmg">${n}</b>`);
   }
@@ -5342,13 +5476,13 @@ function useInBattle(key){
   if(def.fam === "heal"){
     f.hero.hp = Math.min(f.hero.max, f.hero.hp + def.val);
     d.hp = f.hero.hp;
-    fx(".heroline.me", def.val, "heal");
+    fx(".portrait.me", def.val, "heal");
     toast(`${def.name} · +${def.val} HP`, "", "ach");
     sfx.ach();
   } else {
     const t = f.foeBoard.find(m=>m.hp > 0);
     if(t) damageMinion(t, Math.max(1, Math.round(def.val/90)), "foe");
-    else { f.foe.hp -= def.val; fx(".heroline.foe", def.val, "dmg"); }
+    else { f.foe.hp -= def.val; fx(".portrait.foe", def.val, "dmg"); }
     toast(`${def.name} · ${def.val} dégâts`, "", "ach");
     sfx.cannon();
   }
