@@ -1229,6 +1229,33 @@ details.fold .in{padding-top:.6rem}
 .gemv.hp{right:0;bottom:6px;background:radial-gradient(circle at 34% 30%,#F07A6A,#8A1A12)}
 .gemv.hp.hurt{background:radial-gradient(circle at 34% 30%,#FF8A6A,#6A1208)}
 .gemv.cost{left:2px;top:2px;background:radial-gradient(circle at 34% 30%,#9FE8FF,#1E6AA8);color:#062033}
+/* pouvoir héroïque */
+.heropower{position:relative;width:62px;height:62px;flex:none;cursor:default}
+.powring{width:100%;height:100%;border-radius:50%;display:grid;place-items:center;font-size:1.3rem;
+  background:radial-gradient(circle at 34% 28%,#3E5A7A,#16243A);
+  box-shadow:inset 0 0 0 3px #9FE8FF66, 0 4px 10px -6px #000}
+.heropower.ready{cursor:pointer}
+.heropower.ready .powring{box-shadow:inset 0 0 0 3px #9FE8FF, 0 0 16px -3px #7DE3FF;
+  animation:powpulse 2.4s ease-in-out infinite}
+.heropower.spent .powring{filter:grayscale(.8);opacity:.55}
+@keyframes powpulse{0%,100%{box-shadow:inset 0 0 0 3px #9FE8FF, 0 0 12px -5px #7DE3FF}
+                    50%{box-shadow:inset 0 0 0 3px #CFF4FF, 0 0 20px -2px #7DE3FF}}
+.parmor{position:absolute;right:6px;bottom:38px;width:22px;height:22px;border-radius:4px;
+  display:grid;place-items:center;font-weight:800;font-size:.7rem;color:#20303E;
+  background:linear-gradient(150deg,#D8E4EE,#7A8C9C);box-shadow:0 0 0 2px #2A3440}
+.aimable{cursor:crosshair}
+.aimable .pring,.aimable .mframe{box-shadow:0 0 16px -2px #7DE3FF, inset 0 0 0 2px #7DE3FF}
+.manarow{display:flex;justify-content:center;align-items:center;gap:.4rem;margin-top:.3rem}
+
+/* choix du pouvoir avant de descendre */
+.powpick{display:flex;flex-wrap:wrap;gap:.35rem;align-items:center;margin:.2rem 0 .3rem}
+.powbtn{display:flex;flex-direction:column;align-items:center;gap:.1rem;min-width:62px;padding:.35rem .3rem;
+  border-radius:10px;background:var(--ink-2);border:1px solid var(--line);color:var(--text);cursor:pointer}
+.powbtn span{font-size:1.1rem}
+.powbtn small{font-size:.6rem;color:var(--muted);text-align:center;line-height:1.1}
+.powbtn.on{border-color:#9FE8FF;box-shadow:0 0 12px -4px #7DE3FF}
+.powbtn.on small{color:#9FE8FF}
+
 .manabox{display:flex;flex-direction:column;align-items:center;gap:.25rem}
 .crystals{display:flex;gap:2px}
 .crystals i{width:12px;height:17px;border-radius:3px 3px 5px 5px;background:#1E2A38;border:1px solid #33506E;
@@ -1273,7 +1300,11 @@ details.fold .in{padding-top:.6rem}
   .minion .mframe{width:52px;height:52px}
   .minion .mribbon{width:60px;font-size:.44rem}
   .gemv{width:20px;height:20px;font-size:.64rem}
-  .endbtn{width:66px;min-height:48px;font-size:.66rem}
+  .endbtn{width:60px;min-height:44px;font-size:.6rem}
+  .heropower{width:48px;height:48px}
+  .powring{font-size:1rem}
+  .arow{gap:.25rem}
+  .pile{min-width:34px;font-size:.7rem}
   .crystals i{width:9px;height:13px}
   .handfan{min-height:104px;overflow-x:auto;justify-content:flex-start;padding:0 .4rem .2rem;scrollbar-width:none}
   .handfan::-webkit-scrollbar{display:none}
@@ -4615,7 +4646,7 @@ function viewDuel(){
 
   view.innerHTML = `
     <h2 style="font-size:1.6rem">Donjon</h2>
-    ${info("Comment ça marche ?", "<p class='sub' style='margin:0'>Engagez "+PARTY+" cartes, explorez le donjon salle après salle, ouvrez les coffres et gagnez la sortie. Les gardiens croisés en chemin déclenchent un combat au tour par tour : chaque carte dispose d'une frappe et d'une capacité propre à son univers. Votre barre de vie est commune à toute l'escouade. Sortir vivant rapporte "+EXIT_GOLD+" ◆.</p>")}
+    ${info("Comment ça marche ?", "<p class='sub' style='margin:0'>Engagez "+PARTY+" cartes : elles forment un deck de 25 cartes, dont 6 en main d'ouverture. Explorez le donjon salle après salle, ouvrez les coffres et gagnez la sortie. Les gardiens croisés en chemin déclenchent un combat au tour par tour : votre héros et le gardien disposent chacun de 30 points de vie, d'un pouvoir héroïque et d'une réserve de mana qui grandit chaque tour. Sortir vivant rapporte "+EXIT_GOLD+" ◆.</p>")}
     ${pool.length < PARTY
       ? `<div class="panel">Il vous faut ${PARTY} cartes distinctes pour entrer. Vous en avez ${pool.length}.
          <button class="btn small" data-go="pack" style="margin-left:.4rem">Ouvrir un paquet</button></div>`
@@ -4625,6 +4656,11 @@ function viewDuel(){
             <button class="btn ghost" id="openpick">${state.pickOpen? "Masquer les cartes":"Choisir mes cartes"}</button>
             <button class="btn ghost" id="auto">Escouade au mieux</button>
             <button class="btn ghost" id="clear">Tout retirer</button>
+          </div>
+          <div class="powpick">
+            <span class="sub">Pouvoir héroïque :</span>
+            ${POWERS.map(p=>`<button class="powbtn ${(state.profile.power||"feu")===p.key?"on":""}" data-pow="${p.key}"
+               title="${esc(p.txt)}"><span>${p.icon}</span><small>${esc(p.name)}</small></button>`).join("")}
           </div>
           ${decks("bataille").filter(deckFull).length? `<div class="row">
             <span class="sub">Vos decks :</span>
@@ -4655,6 +4691,12 @@ function viewDuel(){
     state.picked = out;
     sfx.tick(); viewDuel();
   };
+  view.querySelectorAll("[data-pow]").forEach(b=>b.onclick = async ()=>{
+    state.profile.power = b.dataset.pow;
+    sfx.tick();
+    await sset("fm:profile", state.profile);
+    viewDuel();
+  });
   view.querySelectorAll("[data-deck]").forEach(b=>b.onclick = ()=>{
     const dk = decks().find(x=>x.id === b.dataset.deck);
     const seen = new Set();
@@ -4700,7 +4742,7 @@ function renderDeckGrid(){
 /* ---------- entrée dans le donjon ---------- */
 function enterDungeon(){
   const party = state.picked.map(heroFrom);
-  const maxhp = Math.round(state.picked.reduce((n,c)=>n + c.def/14, 0)) + 320;
+  const maxhp = HERO_HP;
   state.dj = {
     party, hp:maxhp, maxhp, floor:1,
     gold:0, chestsOpen:0, kills:0, turns:0, keys:0, boon:0,
@@ -4952,7 +4994,7 @@ function step(x, y){
   const trap = d.traps.find(t=>t.x===x && t.y===y && !t.sprung);
   if(trap){
     trap.sprung = true;
-    const dmg = 40 + rnd(40) + d.floor*15;
+    const dmg = 2 + rnd(3) + (d.floor > 2 ? 1 : 0);
     d.hp -= dmg;
     sfx.hurt();
     flashScreen("hurt");
@@ -4979,7 +5021,7 @@ function step(x, y){
   const fire = d.rest.find(r=>r.x===x && r.y===y && !r.used);
   if(fire){
     fire.used = true;
-    const heal = Math.round(d.maxhp*0.28);
+    const heal = 8;
     d.hp = Math.min(d.maxhp, d.hp + heal);
     sfx.ach();
     toast("Feu de camp", `L'escouade récupère ${heal} HP`, "win");
@@ -4995,7 +5037,7 @@ function step(x, y){
       sfx.epic();
       toast("Autel oublié", "Vos cartes frappent 15 % plus fort", "ach");
     } else {
-      const dmg = Math.round(d.maxhp*0.12);
+      const dmg = 4;
       d.hp -= dmg;
       sfx.hurt();
       toast("Autel maudit", `${dmg} points de vie arrachés`, "lose");
@@ -5039,17 +5081,27 @@ document.addEventListener("keydown", e=>{
    COMBAT DE DONJON — plateau à la Hearthstone
    Héros, serviteurs, cristaux de mana, main, provocation, charge et cris de guerre.
    ======================================================================== */
-const BOARD_MAX = 7, HAND_MAX = 10, MANA_MAX = 10, DECK_COPIES = 3;
-const FACE = 26;                 // un point d'attaque vaut autant de dégâts sur un héros
+const BOARD_MAX = 7, HAND_MAX = 10, MANA_MAX = 10;
+const DECK_SIZE_HS = 25, START_HAND = 6, HERO_HP = 30;
 
-/* une carte de collection devient un serviteur jouable */
+/* ---------- pouvoirs héroïques, choisis avant de descendre ---------- */
+const POWERS = [
+  {key:"feu",    name:"Feu follet",      icon:"🔥", cost:2, txt:"1 dégât à une cible au choix"},
+  {key:"armure", name:"Blindage",        icon:"🛡", cost:2, txt:"+2 points d'armure"},
+  {key:"soin",   name:"Imposition",      icon:"✚", cost:2, txt:"rend 2 points de vie"},
+  {key:"renfort",name:"Renfort",         icon:"⚔", cost:2, txt:"invoque un serviteur 1/1"},
+  {key:"totem",  name:"Totem de garde",  icon:"🗿", cost:2, txt:"invoque un 0/2 avec Provocation"},
+  {key:"trait",  name:"Tir précis",      icon:"🏹", cost:2, txt:"2 dégâts au héros adverse"},
+  {key:"pacte",  name:"Pacte obscur",    icon:"📖", cost:2, txt:"piochez une carte, perdez 2 PV"},
+  {key:"lame",   name:"Lame empoisonnée",icon:"🗡", cost:2, txt:"1 dégât à un serviteur et il s'affaiblit"}
+];
+function powerOf(k){ return POWERS.find(p=>p.key === k) || POWERS[0]; }
+
 let uidSeq = 0;
 function battleCard(c){
   const ri = Math.max(0, RARITIES.indexOf(c.rarity));
   const role = roleOf(c);
-  // Commune 1 · Peu commune 1 · Rare 2 · Super rare 3 · Ultra rare 4 · Légendaire 5 · Relique 6
   const cost = Math.max(1, Math.min(MANA_MAX, Math.max(1, ri) + (c.variant?1:0) + (c.stars||0)));
-  // budget de statistiques proportionnel au coût, réparti selon le profil de la carte
   const total = cost*2 + 1;
   const ratio = (c.atk||1) / ((c.atk||1) + (c.def||1));
   const atk = Math.max(1, Math.min(total-1, Math.round(total*ratio)));
@@ -5059,7 +5111,7 @@ function battleCard(c){
     rarity:c.rarity, variant:c.variant, role, cost, atk, hp, max:hp,
     taunt: role === "tank",
     charge: role === "ninja",
-    cry: role === "soigneur" ? {heal:2 + ri} : role === "magicien" ? {dmg:1 + Math.floor(ri/2)} : null,
+    cry: role === "soigneur" ? {heal:2 + Math.floor(ri/2)} : role === "magicien" ? {dmg:1 + Math.floor(ri/2)} : null,
     ready:false, sick:true
   };
 }
@@ -5071,36 +5123,36 @@ function keywordText(m){
   if(m.cry && m.cry.dmg) out.push(`Cri de guerre : ${m.cry.dmg} dégâts`);
   return out.join(" · ");
 }
-
-/* le gardien devient un héros adverse, avec son propre deck */
 function foeMinion(floor){
   const pool = foePool();
-  const c = pool.length ? pool[rnd(pool.length)] : {atk:3000, def:3000, rarity:"Rare", title:"Sbire", id:"x"};
+  const c = pool.length ? pool[rnd(pool.length)] : {atk:4000, def:4000, rarity:"Rare", title:"Sbire", id:"x"};
   const m = battleCard(c);
   m.title = "⚑ " + m.title;
-  if(floor > 1) m.atk += 1;
-  if(floor > 2) m.hp = m.max = m.hp + 1;
+  if(floor > 2){ m.atk++; m.hp = ++m.max; }
   return m;
 }
 
+/* ---------- ouverture du duel ---------- */
 function startFight(spot){
   const d = state.dj;
   const boss = spot.card;
-  const deck = shuffled(d.party.flatMap(h=>{
-    const src = state.collection.find(c=>c.id === h.id) || h;
-    return Array.from({length:DECK_COPIES}, ()=>battleCard(src));
-  }));
+  const src = d.party.map(h=>state.collection.find(c=>c.id === h.id) || h);
+  const deck = [];
+  while(deck.length < DECK_SIZE_HS) deck.push(battleCard(src[deck.length % src.length]));
+  const foeHp = spot.elite ? 35 : (d.floor >= 3 ? 34 : 30);
   d.fight = {
     spot,
-    hero:{hp:d.hp, max:d.maxhp},
-    foe:{hp:Math.round(boss.hp*1.6), max:Math.round(boss.hp*1.6), title:boss.title, img:boss.img,
-         univ:boss.univ, elite:!!spot.elite},
-    deck, hand:[], board:[], foeBoard:[],
+    hero:{hp:d.hp, max:d.maxhp, armor:0},
+    foe:{hp:foeHp, max:foeHp, armor:0, title:boss.title, img:boss.img, univ:boss.univ, elite:!!spot.elite},
+    deck:shuffled(deck), hand:[], board:[], foeBoard:[], foeDeck:[],
     mana:1, maxMana:1, foeMana:1, foeMax:1,
-    turn:1, phase:"player", fatigue:0, sel:null, log:[]
+    power:{...powerOf(state.profile.power || "feu"), used:false},
+    foePower:{...POWERS[rnd(POWERS.length)], used:false},
+    pick:null, aim:null,
+    turn:1, phase:"player", fatigue:0, foeFatigue:0, sel:null, log:[]
   };
-  for(let k=0;k<3;k++) drawCard();
-  d.fight.log.push(`<b class="foe">${esc(short2(boss.title))}</b> barre le passage`);
+  for(let k=0;k<START_HAND;k++) drawCard();
+  d.fight.log.push(`<b class="foe">${esc(short2(boss.title))}</b> vous barre le passage`);
   sfx.trumpet();
   renderFight();
 }
@@ -5109,8 +5161,7 @@ function drawCard(){
   const f = state.dj.fight;
   if(!f.deck.length){
     f.fatigue++;
-    f.hero.hp -= f.fatigue;
-    f.log.push(`<b class="dmg">Épuisement</b> — ${f.fatigue} dégâts au héros`);
+    heroDamage("me", f.fatigue, "Épuisement");
     return;
   }
   const c = f.deck.pop();
@@ -5121,36 +5172,68 @@ function drawCard(){
   f.hand.push(c);
 }
 
-/* ---------- rendu du plateau ---------- */
+/* ---------- dégâts et soins ---------- */
+function heroDamage(side, n, why){
+  const f = state.dj.fight;
+  const h = side === "me" ? f.hero : f.foe;
+  let left = n;
+  if(h.armor > 0){
+    const a = Math.min(h.armor, left);
+    h.armor -= a; left -= a;
+  }
+  h.hp -= left;
+  fx(side === "me" ? ".portrait.me" : ".portrait.foe", n, "dmg");
+  shake(side === "me" ? ".portrait.me" : ".portrait.foe");
+  if(why) f.log.push(`<b class="dmg">${esc(why)}</b> — ${n} dégât(s) ${side === "me" ? "au héros" : "au gardien"}`);
+  if(side === "me") state.dj.hp = f.hero.hp;
+}
+function heroHeal(side, n){
+  const f = state.dj.fight;
+  const h = side === "me" ? f.hero : f.foe;
+  h.hp = Math.min(h.max, h.hp + n);
+  fx(side === "me" ? ".portrait.me" : ".portrait.foe", n, "heal");
+  if(side === "me") state.dj.hp = f.hero.hp;
+}
+function damageMinion(m, n, side){
+  m.hp -= n;
+  fx(`[data-${side==="me"?"mine":"enemy"}="${m.uid}"]`, n, "dmg");
+  shake(`[data-${side==="me"?"mine":"enemy"}="${m.uid}"]`);
+  if(m.hp <= 0){
+    const f = state.dj.fight;
+    const arr = side === "me" ? f.board : f.foeBoard;
+    const k = arr.indexOf(m);
+    if(k >= 0) arr.splice(k,1);
+    f.log.push(`<b class="${side==="me"?"who":"foe"}">${esc(short2(m.title))}</b> est détruit`);
+  }
+}
+
+/* ---------- rendu ---------- */
 function manaCrystals(cur, max){
   return `<span class="crystals">${Array.from({length:MANA_MAX}, (_,i)=>
     `<i class="${i < cur ? "on" : i < max ? "used" : ""}"></i>`).join("")}</span>
     <b class="mcount">${cur}/${max}</b>`;
 }
-
 function minionHTML(m, side){
   const f = state.dj.fight;
   const canAct = side === "me" && f.phase === "player" && m.ready && !m.sick;
   const sel = f.sel === m.uid;
-  return `<div class="minion ${side} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""} ${m.sick&&side==="me"?"sick":""}"
+  const aiming = f.aim && side === "foe";
+  return `<div class="minion ${side} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""} ${m.sick&&side==="me"?"sick":""} ${aiming?"aimable":""}"
       data-${side==="me"?"mine":"enemy"}="${m.uid}" data-r="${esc(m.rarity)}" title="${esc(m.title)}${keywordText(m)?" — "+esc(keywordText(m)):""}">
     ${m.taunt?`<span class="tshield"></span>`:""}
-    <div class="mframe">
-      <div class="mart" ${m.img?`style="background-image:url('${esc(m.img)}')"`:""}></div>
-    </div>
+    <div class="mframe"><div class="mart" ${m.img?`style="background-image:url('${esc(m.img)}')"`:""}></div></div>
     <div class="mribbon">${esc(short2(m.title))}</div>
     <span class="gemv atk">${m.atk}</span>
     <span class="gemv hp ${m.hp<m.max?"hurt":""}">${m.hp}</span>
     ${m.charge?`<span class="kwmark">⚡</span>`:""}
   </div>`;
 }
-
 function handHTML(c, i, n){
   const f = state.dj.fight;
   const ok = f.phase === "player" && f.mana >= c.cost && f.board.length < BOARD_MAX;
   const mid = (n-1)/2;
-  const rot = (i - mid) * (n > 1 ? Math.min(6, 22/n) : 0);
-  const lift = Math.pow(Math.abs(i - mid), 2) * 2.2;
+  const rot = (i - mid) * (n > 1 ? Math.min(5, 20/n) : 0);
+  const lift = Math.pow(Math.abs(i - mid), 2) * 2;
   return `<div class="hcard ${ok?"playable":""}" data-hand="${i}" data-r="${esc(c.rarity)}"
       style="transform:rotate(${rot.toFixed(1)}deg) translateY(${lift.toFixed(0)}px)"
       title="${esc(c.title)}${keywordText(c)?" — "+esc(keywordText(c)):""}">
@@ -5162,42 +5245,49 @@ function handHTML(c, i, n){
     <span class="gemv hp">${c.hp}</span>
   </div>`;
 }
-
-function heroPortrait(side){
+function powerHTML(side){
+  const f = state.dj.fight;
+  const p = side === "me" ? f.power : f.foePower;
+  const usable = side === "me" && f.phase === "player" && !p.used && f.mana >= p.cost;
+  return `<div class="heropower ${usable?"ready":""} ${p.used?"spent":""}" ${side==="me"?'id="hpow"':''}
+      title="${esc(p.name)} — ${esc(p.txt)}">
+    <span class="gemv cost">${p.cost}</span>
+    <div class="powring"><span>${p.icon}</span></div>
+  </div>`;
+}
+function portraitHTML(side){
   const d = state.dj, f = d.fight;
-  if(side === "foe"){
-    return `<div class="portrait foe ${f.foeBoard.some(m=>m.taunt)?"guarded":""}" data-enemyhero="1">
-      <div class="pring"><div class="pface" ${f.foe.img?`style="background-image:url('${esc(f.foe.img)}')"`:""}></div></div>
-      <span class="phhp">${Math.max(0,f.foe.hp)}</span>
-      <div class="pname">${esc(short2(f.foe.title))}</div>
-    </div>`;
-  }
-  return `<div class="portrait me">
-    <div class="pring"><div class="pface you">${ROLES[d.party[0].role].emoji}</div></div>
-    <span class="phhp">${Math.max(0,f.hero.hp)}</span>
-    <div class="pname">${esc(state.profile.pseudo||"Vous")}</div>
+  const h = side === "me" ? f.hero : f.foe;
+  const aiming = f.aim && side === "foe";
+  return `<div class="portrait ${side==="me"?"me":"foe"} ${aiming?"aimable":""} ${side==="foe"&&f.foeBoard.some(m=>m.taunt)?"guarded":""}"
+      ${side==="foe"?'data-enemyhero="1"':''}>
+    <div class="pring"><div class="pface ${side==="me"?"you":""}" ${h.img?`style="background-image:url('${esc(h.img)}')"`:""}>${
+      side==="me"?ROLES[d.party[0].role].emoji:""}</div></div>
+    ${h.armor?`<span class="parmor">${h.armor}</span>`:""}
+    <span class="phhp">${Math.max(0,h.hp)}</span>
+    <div class="pname">${esc(side==="me" ? (state.profile.pseudo||"Vous") : short2(f.foe.title))}</div>
   </div>`;
 }
 
 function renderFight(){
   const d = state.dj, f = d.fight;
-  d.hp = f.hero.hp;
   const yours = f.phase === "player";
 
   view.innerHTML = `
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <h2 style="font-size:1.2rem">Duel · étage ${d.floor}</h2>
-      <span class="sub">Tour ${f.turn}${yours?" · à vous de jouer":" · le gardien joue"}</span>
+      <span class="sub">Tour ${f.turn}${yours?" · à vous":" · au gardien"}${f.aim?" · choisissez une cible":""}</span>
     </div>
 
     <div class="arena">
       <div class="arow foeside">
-        ${heroPortrait("foe")}
-        <div class="pile foe"><b>${f.foeBoard.length}</b><small>en jeu</small></div>
+        <div class="pile"><b>${f.foeMana}</b><small>mana</small></div>
+        ${portraitHTML("foe")}
+        ${powerHTML("foe")}
       </div>
 
       <div class="lane foe">${f.foeBoard.map(m=>minionHTML(m,"foe")).join("") ||
-        `<span class="empty">le gardien n'a aucun serviteur</span>`}</div>
+        `<span class="empty">aucun serviteur adverse</span>`}</div>
 
       <div class="midline"><span></span></div>
 
@@ -5205,14 +5295,14 @@ function renderFight(){
         `<span class="empty">posez une carte de votre main</span>`}</div>
 
       <div class="arow meside">
-        ${heroPortrait("me")}
-        <div class="manabox">
-          ${manaCrystals(f.mana, f.maxMana)}
-          <div class="pile deck"><b>${f.deck.length}</b><small>pioche</small></div>
-        </div>
+        <div class="pile deck"><b>${f.deck.length}</b><small>pioche</small></div>
+        ${portraitHTML("me")}
+        ${powerHTML("me")}
         <button class="endbtn ${yours?"lit":""}" id="endturn" ${yours?"":"disabled"}>
           ${yours?"FIN DU<br>TOUR":"tour<br>adverse"}</button>
       </div>
+
+      <div class="manarow">${manaCrystals(f.mana, f.maxMana)}</div>
     </div>
 
     <div class="handfan">${f.hand.map((c,i)=>handHTML(c,i,f.hand.length)).join("") ||
@@ -5229,47 +5319,44 @@ function renderFight(){
       }).join("")}</div>
       <div class="row" style="margin-top:.5rem">
         <button class="btn ghost small" id="flee2">Tenter de fuir</button>
-        <span class="sub" style="font-size:.78rem">Un serviteur prêt, puis sa cible.</span>
+        ${f.aim?`<button class="btn ghost small" id="cancelaim">Annuler le ciblage</button>`:""}
       </div>
       <div class="fightlog">${f.log.slice(-4).map(l=>`<div class="ll">${l}</div>`).join("")}</div>
     </div>`;
 
   view.querySelectorAll("[data-hand]").forEach(el=>el.onclick = ()=>playCard(+el.dataset.hand));
   view.querySelectorAll("[data-mine]").forEach(el=>el.onclick = ()=>selectMinion(el.dataset.mine));
-  view.querySelectorAll("[data-enemy]").forEach(el=>el.onclick = ()=>attackTarget(el.dataset.enemy));
+  view.querySelectorAll("[data-enemy]").forEach(el=>el.onclick = ()=>targetClicked(el.dataset.enemy));
   const eh = view.querySelector("[data-enemyhero]");
-  if(eh) eh.onclick = ()=>attackTarget("hero");
+  if(eh) eh.onclick = ()=>targetClicked("hero");
+  const hp = view.querySelector("#hpow"); if(hp) hp.onclick = ()=>useHeroPower();
   const et = view.querySelector("#endturn"); if(et) et.onclick = ()=>endPlayerTurn();
   const fl = view.querySelector("#flee2"); if(fl) fl.onclick = ()=>tryFlee();
+  const ca = view.querySelector("#cancelaim"); if(ca) ca.onclick = ()=>{ f.aim = null; renderFight(); };
   view.querySelectorAll("[data-use]").forEach(el=>el.onclick = ()=>useInBattle(el.dataset.use));
   playFx();
 }
 
 /* ---------- actions du joueur ---------- */
 function playCard(i){
-  const d = state.dj, f = d.fight;
-  if(f.phase !== "player") return;
+  const f = state.dj.fight;
+  if(f.phase !== "player" || f.aim) return;
   const c = f.hand[i];
   if(!c) return;
   if(f.mana < c.cost) return toast("Mana insuffisant", `${c.cost} cristaux nécessaires`, "info");
   if(f.board.length >= BOARD_MAX) return toast("Plateau plein", "Sept serviteurs au maximum", "info");
   f.hand.splice(i,1);
   f.mana -= c.cost;
-  c.sick = !c.charge;
-  c.ready = !!c.charge;
+  c.sick = !c.charge; c.ready = !!c.charge;
   f.board.push(c);
   f.log.push(`<b class="who">${esc(short2(c.title))}</b> entre en jeu`);
   sfx.tick();
   if(c.cry){
-    if(c.cry.heal){
-      f.hero.hp = Math.min(f.hero.max, f.hero.hp + c.cry.heal*FACE);
-      fx(".portrait.me", c.cry.heal*FACE, "heal");
-      f.log.push(`<b class="heal">Cri de guerre</b> — le héros récupère ${c.cry.heal*FACE} PV`);
-    }
+    if(c.cry.heal){ heroHeal("me", c.cry.heal); f.log.push(`<b class="heal">Cri de guerre</b> — ${c.cry.heal} PV rendus`); }
     if(c.cry.dmg){
-      const t = f.foeBoard.find(m=>m.hp>0) || null;
-      if(t){ damageMinion(t, c.cry.dmg, "foe"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg} dégâts à ${esc(short2(t.title))}`); }
-      else { f.foe.hp -= c.cry.dmg*FACE; fx(".portrait.foe", c.cry.dmg*FACE, "dmg"); f.log.push(`<b class="dmg">Cri de guerre</b> — ${c.cry.dmg*FACE} dégâts au gardien`); }
+      const t = f.foeBoard.find(m=>m.hp > 0);
+      if(t) damageMinion(t, c.cry.dmg, "foe");
+      else heroDamage("foe", c.cry.dmg, "Cri de guerre");
     }
   }
   checkFightEnd();
@@ -5277,7 +5364,7 @@ function playCard(i){
 
 function selectMinion(uid){
   const f = state.dj.fight;
-  if(f.phase !== "player") return;
+  if(f.phase !== "player" || f.aim) return;
   const m = f.board.find(x=>x.uid === uid);
   if(!m) return;
   if(m.sick || !m.ready) return toast("Pas encore prêt", "Un serviteur attaque au tour suivant", "info");
@@ -5285,25 +5372,24 @@ function selectMinion(uid){
   renderFight();
 }
 
-function attackTarget(what){
-  const d = state.dj, f = d.fight;
-  if(f.phase !== "player" || !f.sel) return;
+function targetClicked(what){
+  const f = state.dj.fight;
+  if(f.phase !== "player") return;
+  if(f.aim) return resolveAim(what);
+  if(!f.sel) return;
   const me = f.board.find(x=>x.uid === f.sel);
   if(!me) return;
   const taunts = f.foeBoard.filter(x=>x.taunt && x.hp > 0);
   if(what === "hero"){
     if(taunts.length) return toast("Provocation", "Abattez d'abord les gardes", "info");
-    f.foe.hp -= me.atk*FACE;
-    fx(".portrait.foe", me.atk*FACE, "dmg");
-    shake(".portrait.foe");
-    f.log.push(`<b class="who">${esc(short2(me.title))}</b> frappe le gardien — <b class="dmg">${me.atk*FACE}</b>`);
+    heroDamage("foe", me.atk);
+    f.log.push(`<b class="who">${esc(short2(me.title))}</b> frappe le gardien — <b class="dmg">${me.atk}</b>`);
   } else {
     const t = f.foeBoard.find(x=>x.uid === what);
     if(!t) return;
     if(taunts.length && !t.taunt) return toast("Provocation", "Abattez d'abord les gardes", "info");
     damageMinion(t, me.atk, "foe");
     damageMinion(me, t.atk, "me");
-    f.log.push(`<b class="who">${esc(short2(me.title))}</b> attaque <b class="foe">${esc(short2(t.title))}</b>`);
   }
   me.ready = false;
   f.sel = null;
@@ -5311,15 +5397,60 @@ function attackTarget(what){
   checkFightEnd();
 }
 
-function damageMinion(m, n, side){
-  m.hp -= n;
-  fx(`[data-${side==="me"?"mine":"enemy"}="${m.uid}"]`, n, "dmg");
-  if(m.hp <= 0){
-    const f = state.dj.fight;
-    const arr = side === "me" ? f.board : f.foeBoard;
-    const k = arr.indexOf(m);
-    if(k >= 0) arr.splice(k,1);
+/* ---------- pouvoir héroïque ---------- */
+function useHeroPower(){
+  const f = state.dj.fight;
+  const p = f.power;
+  if(f.phase !== "player" || p.used || f.mana < p.cost) return;
+  if(p.key === "feu" || p.key === "lame"){
+    f.aim = p.key;
+    return renderFight();
   }
+  f.mana -= p.cost; p.used = true;
+  applyPower("me", p, null);
+  checkFightEnd();
+}
+function resolveAim(what){
+  const f = state.dj.fight;
+  const p = f.power;
+  const kind = f.aim;
+  f.aim = null;
+  if(what === "hero" && kind === "lame") return renderFight();
+  f.mana -= p.cost; p.used = true;
+  applyPower("me", p, what);
+  checkFightEnd();
+}
+function applyPower(side, p, target){
+  const f = state.dj.fight;
+  const foeSide = side === "me" ? "foe" : "me";
+  const myBoard = side === "me" ? f.board : f.foeBoard;
+  const theirBoard = side === "me" ? f.foeBoard : f.board;
+  const who = side === "me" ? "Votre pouvoir" : "Le gardien";
+  switch(p.key){
+    case "feu": {
+      const t = target && target !== "hero" ? theirBoard.find(m=>m.uid === target) : null;
+      if(t) damageMinion(t, 1, foeSide);
+      else heroDamage(foeSide, 1);
+      break;
+    }
+    case "lame": {
+      const t = target ? theirBoard.find(m=>m.uid === target) : theirBoard[0];
+      if(t){ damageMinion(t, 1, foeSide); if(t.hp > 0) t.atk = Math.max(0, t.atk - 1); }
+      break;
+    }
+    case "armure": (side === "me" ? f.hero : f.foe).armor += 2; break;
+    case "soin":   heroHeal(side, 2); break;
+    case "renfort": if(myBoard.length < BOARD_MAX) myBoard.push(token(1,1,false)); break;
+    case "totem":   if(myBoard.length < BOARD_MAX) myBoard.push(token(0,2,true)); break;
+    case "trait":   heroDamage(foeSide, 2); break;
+    case "pacte":   if(side === "me"){ drawCard(); heroDamage("me", 2); } else heroDamage(foeSide, 1); break;
+  }
+  f.log.push(`<b class="sk">${esc(who)} — ${esc(p.name)}</b>`);
+  sfx.ach();
+}
+function token(a, h, taunt){
+  return {uid:"t"+(++uidSeq), title:"Recrue", img:null, univ:"", rarity:"Commun", role:"tank",
+    cost:1, atk:a, hp:h, max:h, taunt:!!taunt, charge:false, cry:null, ready:false, sick:true};
 }
 
 function checkFightEnd(){
@@ -5330,75 +5461,70 @@ function checkFightEnd(){
   renderFight();
 }
 
-/* ---------- tour adverse ---------- */
+/* ---------- tour du gardien : jouer, échanger, frapper ---------- */
 function endPlayerTurn(){
-  const d = state.dj, f = d.fight;
+  const f = state.dj.fight;
   if(f.phase !== "player") return;
-  f.phase = "foe";
-  f.sel = null;
+  f.phase = "foe"; f.sel = null; f.aim = null;
   f.foeMax = Math.min(MANA_MAX, f.foeMax + 1);
   f.foeMana = f.foeMax;
+  f.foePower.used = false;
   f.foeBoard.forEach(m=>{ m.sick = false; m.ready = true; });
   renderFight();
-  setTimeout(foePlay, 700);
+  setTimeout(foePlay, 650);
 }
 
 function foePlay(){
   const d = state.dj, f = d.fight;
   if(!f) return;
-  // pose de serviteurs tant que le mana le permet
+  // pose les serviteurs les plus chers que le mana permet, comme une courbe de mana
   let guard = 0;
-  while(guard++ < 6 && f.foeBoard.length < BOARD_MAX){
-    let m = null;
-    for(let t=0;t<4 && !m;t++){
+  while(guard++ < 7 && f.foeBoard.length < BOARD_MAX){
+    let best = null;
+    for(let t=0;t<6;t++){
       const cand = foeMinion(d.floor);
-      if(cand.cost <= f.foeMana) m = cand;
+      if(cand.cost <= f.foeMana && (!best || cand.cost > best.cost)) best = cand;
     }
-    if(!m) break;
-    f.foeMana -= m.cost;
-    m.sick = !m.charge;
-    m.ready = !!m.charge;
-    f.foeBoard.push(m);
-    f.log.push(`<b class="foe">${esc(short2(m.title))}</b> rejoint le gardien`);
-    if(Math.random() < 0.35) break;
+    if(!best) break;
+    f.foeMana -= best.cost;
+    best.sick = !best.charge; best.ready = !!best.charge;
+    f.foeBoard.push(best);
+    f.log.push(`<b class="foe">${esc(short2(best.title))}</b> rejoint le gardien`);
+  }
+  // pouvoir héroïque adverse s'il reste du mana
+  if(!f.foePower.used && f.foeMana >= f.foePower.cost){
+    f.foeMana -= f.foePower.cost;
+    f.foePower.used = true;
+    applyPower("foe", f.foePower, f.board.length ? f.board[0].uid : null);
   }
   renderFight();
-  setTimeout(foeAttack, 650);
+  setTimeout(foeAttack, 620);
 }
 
 function foeAttack(){
   const d = state.dj, f = d.fight;
   if(!f) return;
-  const attackers = f.foeBoard.filter(m=>m.ready && !m.sick && m.hp > 0);
-  const myTaunts = f.board.filter(m=>m.taunt && m.hp > 0);
-  attackers.forEach(m=>{
+  const myTaunts = ()=>f.board.filter(m=>m.taunt && m.hp > 0);
+  f.foeBoard.filter(m=>m.ready && !m.sick && m.hp > 0).forEach(m=>{
     if(f.hero.hp <= 0) return;
-    const pool = myTaunts.length ? myTaunts : f.board;
-    // le gardien vise un serviteur qu'il peut tuer, sinon le héros
-    const kill = pool.find(t=>t.hp > 0 && t.hp <= m.atk);
-    const target = kill || (pool.length && Math.random() < 0.45 ? pool[rnd(pool.length)] : null);
+    const wall = myTaunts();
+    const pool = wall.length ? wall : f.board;
+    // échange favorable : tuer sans mourir, sinon tuer quand même, sinon viser le héros
+    const clean = pool.find(t=>t.hp <= m.atk && t.atk < m.hp);
+    const kill  = pool.find(t=>t.hp <= m.atk);
+    const target = clean || kill || (wall.length ? wall[0] : null);
     if(target){
       damageMinion(target, m.atk, "me");
       damageMinion(m, target.atk, "foe");
       f.log.push(`<b class="foe">${esc(short2(m.title))}</b> attaque <b class="who">${esc(short2(target.title))}</b>`);
     } else {
-      f.hero.hp -= m.atk*FACE;
-      fx(".portrait.me", m.atk*FACE, "dmg");
-      shake(".portrait.me");
-      f.log.push(`<b class="foe">${esc(short2(m.title))}</b> frappe votre héros — <b class="dmg">${m.atk*FACE}</b>`);
+      heroDamage("me", m.atk);
+      f.log.push(`<b class="foe">${esc(short2(m.title))}</b> frappe votre héros — <b class="dmg">${m.atk}</b>`);
     }
     m.ready = false;
   });
-  // le gardien lui-même cogne
-  if(f.hero.hp > 0 && !myTaunts.length && Math.random() < 0.55){
-    const n = 24 + d.floor*10 + (f.foe.elite ? 26 : 0);
-    f.hero.hp -= n;
-    fx(".portrait.me", n, "dmg");
-    flashScreen("hurt");
-    f.log.push(`<b class="foe">${esc(short2(f.foe.title))}</b> frappe lui-même — <b class="dmg">${n}</b>`);
-  }
   sfx.hurt();
-  setTimeout(startPlayerTurn, 620);
+  setTimeout(startPlayerTurn, 600);
 }
 
 function startPlayerTurn(){
@@ -5411,11 +5537,13 @@ function startPlayerTurn(){
   f.phase = "player";
   f.maxMana = Math.min(MANA_MAX, f.maxMana + 1);
   f.mana = f.maxMana;
+  f.power.used = false;
   f.board.forEach(m=>{ m.sick = false; m.ready = true; });
   drawCard();
   renderFight();
 }
 
+/* ---------- effets visuels ---------- */
 function fx(sel, n, kind){
   const f = state.dj && state.dj.fight;
   if(!f) return;
@@ -5426,19 +5554,14 @@ function playFx(){
   if(!f || !f.fx || !f.fx.length) return;
   const q = f.fx.slice();
   f.fx = [];
-  q.forEach((e,i)=>setTimeout(()=>{
-    popDamage(e.sel, e.n, e.kind);
-    if(e.kind !== "heal") shake(e.sel);
-  }, i*90));
+  q.forEach((e,i)=>setTimeout(()=>popDamage(e.sel, e.n, e.kind), i*90));
 }
-
-/* chiffre qui jaillit au-dessus de la cible */
 function popDamage(sel, n, kind){
   const el = view.querySelector(sel);
   if(!el) return;
   const p = document.createElement("span");
   p.className = "dmgpop " + (kind||"dmg");
-  p.textContent = (kind === "heal" ? "+" : "−") + n + (kind === "crit" ? " !" : "");
+  p.textContent = (kind === "heal" ? "+" : "−") + n;
   p.style.left = (18 + Math.random()*54) + "%";
   el.appendChild(p);
   setTimeout(()=>p.remove(), 950);
@@ -5455,13 +5578,12 @@ function flashScreen(kind){
   setTimeout(()=>f.remove(), 420);
 }
 
-
 function tryFlee(){
   const d = state.dj, f = d.fight;
   if(!f || f.phase !== "player") return;
-  const cost = Math.round(d.maxhp*0.08) + 10;
-  d.hp -= cost;
-  f.hero.hp = d.hp;
+  const cost = 3;
+  f.hero.hp -= cost;
+  d.hp = f.hero.hp;
   if(d.hp <= 0) return endDungeon(false, "Fuite fatale");
   if(Math.random() < 0.55){
     f.spot.dead = false;
@@ -5508,17 +5630,16 @@ function useInBattle(key){
   const f = d.fight;
   d.potions[def.fam]--;
   useItem(key, 1);
+  const val = Math.max(1, Math.round(def.val/75));
   if(def.fam === "heal"){
-    f.hero.hp = Math.min(f.hero.max, f.hero.hp + def.val);
-    d.hp = f.hero.hp;
-    fx(".portrait.me", def.val, "heal");
-    toast(`${def.name} · +${def.val} HP`, "", "ach");
+    heroHeal("me", val);
+    toast(`${def.name} · +${val} PV`, "", "ach");
     sfx.ach();
   } else {
     const t = f.foeBoard.find(m=>m.hp > 0);
-    if(t) damageMinion(t, Math.max(1, Math.round(def.val/90)), "foe");
-    else { f.foe.hp -= def.val; fx(".portrait.foe", def.val, "dmg"); }
-    toast(`${def.name} · ${def.val} dégâts`, "", "ach");
+    if(t) damageMinion(t, val, "foe");
+    else heroDamage("foe", val);
+    toast(`${def.name} · ${val} dégâts`, "", "ach");
     sfx.cannon();
   }
   sset("fm:profile", state.profile);
