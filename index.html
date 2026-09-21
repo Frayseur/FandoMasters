@@ -1176,7 +1176,7 @@ details.fold .in{padding-top:.6rem}
 .arena::before{content:"";position:absolute;inset:6px;border-radius:12px;pointer-events:none;
   box-shadow:inset 0 0 0 2px #7A5F36aa, inset 0 0 50px -12px #000}
 .arow{display:flex;align-items:center;gap:.6rem;justify-content:center;position:relative;min-height:86px}
-.arow.meside{margin-top:.2rem}
+.arow.allyside{margin-top:.2rem}
 .portrait{position:relative;width:88px;text-align:center}
 .portrait.foe{cursor:pointer}
 .pring{width:74px;height:74px;margin:0 auto;border-radius:50%;padding:4px;
@@ -1200,7 +1200,7 @@ details.fold .in{padding-top:.6rem}
 .lane{display:flex;gap:.35rem;justify-content:center;align-items:center;flex-wrap:wrap;
   min-height:96px;padding:.3rem;border-radius:12px;margin:.25rem 0}
 .lane.foe{background:linear-gradient(180deg,#00000033,#00000011)}
-.lane.me{background:linear-gradient(0deg,#00000033,#00000011)}
+.lane.ally{background:linear-gradient(0deg,#00000033,#00000011)}
 .lane .empty{color:#C6B7A8;opacity:.55;font-size:.78rem;font-style:italic}
 .midline{height:10px;display:grid;place-items:center}
 .midline span{display:block;width:92%;height:3px;border-radius:3px;
@@ -1326,6 +1326,10 @@ details.fold .in{padding-top:.6rem}
 .dk.right{grid-column:3;grid-row:2}
 @media (max-width:760px){.dpad{display:grid}}
 
+.campwatch{margin-top:.35rem;padding:.35rem .6rem;border-radius:10px;font-size:.84rem;
+  background:linear-gradient(120deg,#3A2414,#241609);border:1px solid #C87A2A;color:#FFCF9A;
+  display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.campwatch b{font-family:"Bricolage Grotesque",sans-serif;color:#FFD36A}
 .keytag{display:inline-block;background:#3E3324;border:1px solid var(--brass);color:var(--brass);
   border-radius:6px;padding:0 .35rem;font-size:.72rem;font-weight:700;vertical-align:middle}
 .keytag.boon{background:#2A3630;border-color:#7FD0B4;color:#9FE0D2}
@@ -3302,12 +3306,12 @@ async function buildRelic(page, w, def){
 function rollItem(kind){
   const r = Math.random();
   if(kind === "demon"){
-    if(r < 0.02) return "arm4";                       // armement nucléaire, très rare
-    if(r < 0.28) return pickRank(kind);
+    if(r < 0.012) return "arm4";                      // armement nucléaire, très rare
+    if(r < 0.13) return pickRank(kind);
     return null;
   }
-  if(kind === "mythic") return r < 0.25 ? pickRank(kind) : null;
-  return r < 0.09 ? pickRank(kind) : null;
+  if(kind === "mythic") return r < 0.10 ? pickRank(kind) : null;
+  return r < 0.035 ? pickRank(kind) : null;
 }
 function pickRank(kind){
   const fam = ["heal","dmg","arm"][Math.floor(Math.random()*3)];
@@ -4465,9 +4469,10 @@ function genDungeon(floor){
   // feu de camp, autel et pièges
   const rest = [];
   const shrines = [];
+  const wantFire = Math.random() < 0.5;
   rooms.forEach(r=>{
     if(r === start) return;
-    if(!rest.length && Math.random() < 0.34) rest.push({x:r.x + rnd(r.w), y:r.y + rnd(r.h), used:false});
+    if(wantFire && !rest.length && Math.random() < 0.55) rest.push({x:r.x + rnd(r.w), y:r.y + rnd(r.h), used:false});
     else if(!shrines.length && Math.random() < 0.3) shrines.push({x:r.x + rnd(r.w), y:r.y + rnd(r.h), used:false});
   });
   const traps = [];
@@ -4935,6 +4940,8 @@ function renderDungeon(){
         <b>${Math.max(0,d.hp)} / ${d.maxhp} HP</b>
       </div>
       <div class="hpbar" id="hp-me"><i style="width:${Math.max(0,d.hp)/d.maxhp*100}%"></i><span class="embers"></span></div>
+      ${d.camp? `<div class="campwatch">🔥 Veillée au feu — <b id="campcount">${d.camp.left} s</b>
+        <span class="sub" style="font-size:.76rem">restez à une case du brasier</span></div>`:""}
       <div class="sub" style="font-size:.78rem;margin-top:.2rem">Flacons restants — soin ${pots.heal} / ${POTION_CAP.heal} · dégâts ${pots.dmg} / ${POTION_CAP.dmg}</div>
     </div>
     <div class="isowrap" id="iso"><div class="djgrid" style="grid-template-columns:repeat(${cw},1fr)">${cells.join("")}</div></div>
@@ -4984,6 +4991,8 @@ function heroTile(h){
 function step(x, y){
   const d = state.dj;
   if(!d || d.fight) return;
+  if(d.rest.some(r=>r.x===x && r.y===y && !r.used))
+    return toast("Le brasier", "On ne marche pas dans les flammes", "info");
   d.pos = {x,y};
   d.turns++;
   reveal();
@@ -5018,15 +5027,7 @@ function step(x, y){
     } else toast("Coffre ouvert", `${gain} Fandominus`, "gold");
   }
 
-  // feu de camp
-  const fire = d.rest.find(r=>r.x===x && r.y===y && !r.used);
-  if(fire){
-    fire.used = true;
-    const heal = 8;
-    d.hp = Math.min(d.maxhp, d.hp + heal);
-    sfx.ach();
-    toast("Feu de camp", `L'escouade récupère ${heal} HP`, "win");
-  }
+
 
   // autel : bénédiction ou malédiction
   const shrine = d.shrines.find(r=>r.x===x && r.y===y && !r.used);
@@ -5062,7 +5063,59 @@ function step(x, y){
   }
 
   sfx.tick();
+  checkCampfire();
   renderDungeon();
+}
+
+/* ---------- veillée au feu de camp ---------- */
+const CAMP_SECONDS = 30;
+function nearFire(){
+  const d = state.dj;
+  if(!d) return null;
+  return d.rest.find(r=>!r.used && Math.abs(r.x-d.pos.x) + Math.abs(r.y-d.pos.y) === 1) || null;
+}
+function checkCampfire(){
+  const d = state.dj;
+  const fire = nearFire();
+  if(!fire){
+    if(d.camp){ d.camp = null; stopCampTimer(); toast("Veillée interrompue", "Vous vous êtes éloigné du feu", "info"); }
+    return;
+  }
+  if(d.camp && d.camp.fire === fire) return;
+  d.camp = {fire, left:CAMP_SECONDS};
+  stopCampTimer();
+  d.campTimer = setInterval(campTick, 1000);
+}
+function stopCampTimer(){
+  const d = state.dj;
+  if(d && d.campTimer){ clearInterval(d.campTimer); d.campTimer = null; }
+}
+function campTick(){
+  const d = state.dj;
+  if(!d || !d.camp || d.fight) return stopCampTimer();
+  if(nearFire() !== d.camp.fire){
+    d.camp = null; stopCampTimer();
+    return renderDungeon();
+  }
+  d.camp.left--;
+  const badge = document.getElementById("campcount");
+  if(badge) badge.textContent = d.camp.left + " s";
+  if(d.camp.left <= 0){
+    const fire = d.camp.fire;
+    fire.used = true;
+    d.camp = null;
+    stopCampTimer();
+    const gain = Math.max(1, Math.round(d.maxhp*0.10));
+    if(d.hp >= d.maxhp){
+      d.maxhp += gain; d.hp += gain;
+      toast("Veillée achevée", `Vigueur accrue : +${gain} PV maximum`, "win");
+    } else {
+      d.hp = Math.min(d.maxhp, d.hp + gain);
+      toast("Veillée achevée", `+${gain} points de vie`, "win");
+    }
+    sfx.ach();
+    renderDungeon();
+  }
 }
 
 /* flèches du clavier */
@@ -5136,6 +5189,7 @@ function foeMinion(floor){
 /* ---------- ouverture du duel ---------- */
 function startFight(spot){
   const d = state.dj;
+  d.camp = null; stopCampTimer();
   const boss = spot.card;
   const src = d.party.map(h=>state.collection.find(c=>c.id === h.id) || h);
   const deck = [];
@@ -5183,8 +5237,8 @@ function heroDamage(side, n, why){
     h.armor -= a; left -= a;
   }
   h.hp -= left;
-  fx(side === "me" ? ".portrait.me" : ".portrait.foe", n, "dmg");
-  shake(side === "me" ? ".portrait.me" : ".portrait.foe");
+  fx(side === "me" ? ".portrait.ally" : ".portrait.foe", n, "dmg");
+  shake(side === "me" ? ".portrait.ally" : ".portrait.foe");
   if(why) f.log.push(`<b class="dmg">${esc(why)}</b> — ${n} dégât(s) ${side === "me" ? "au héros" : "au gardien"}`);
   if(side === "me") state.dj.hp = f.hero.hp;
 }
@@ -5192,7 +5246,7 @@ function heroHeal(side, n){
   const f = state.dj.fight;
   const h = side === "me" ? f.hero : f.foe;
   h.hp = Math.min(h.max, h.hp + n);
-  fx(side === "me" ? ".portrait.me" : ".portrait.foe", n, "heal");
+  fx(side === "me" ? ".portrait.ally" : ".portrait.foe", n, "heal");
   if(side === "me") state.dj.hp = f.hero.hp;
 }
 function damageMinion(m, n, side){
@@ -5219,7 +5273,7 @@ function minionHTML(m, side){
   const canAct = side === "me" && f.phase === "player" && m.ready && !m.sick;
   const sel = f.sel === m.uid;
   const aiming = f.aim && side === "foe";
-  return `<div class="minion ${side} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""} ${m.sick&&side==="me"?"sick":""} ${aiming?"aimable":""}"
+  return `<div class="minion ${side==="me"?"ally":"foe"} ${m.taunt?"taunt":""} ${canAct?"canact":""} ${sel?"picked":""} ${m.sick&&side==="me"?"sick":""} ${aiming?"aimable":""}"
       data-${side==="me"?"mine":"enemy"}="${m.uid}" data-r="${esc(m.rarity)}" title="${esc(m.title)}${keywordText(m)?" — "+esc(keywordText(m)):""}">
     ${m.taunt?`<span class="tshield"></span>`:""}
     <div class="mframe"><div class="mart" ${m.img?`style="background-image:url('${esc(m.img)}')"`:""}></div></div>
@@ -5256,14 +5310,24 @@ function powerHTML(side){
     <div class="powring"><span>${p.icon}</span></div>
   </div>`;
 }
+function avatarSrc(){
+  const p = state.profile;
+  const c = p.avatar ? state.collection.find(x=>x.id === p.avatar) : null;
+  return c && c.img ? c.img : "";
+}
+function portraitArt(side){
+  const f = state.dj.fight;
+  const url = side === "me" ? avatarSrc() : (f.foe.img || "");
+  return url ? `style="background-image:url('${esc(url)}')"` : "";
+}
 function portraitHTML(side){
   const d = state.dj, f = d.fight;
   const h = side === "me" ? f.hero : f.foe;
   const aiming = f.aim && side === "foe";
-  return `<div class="portrait ${side==="me"?"me":"foe"} ${aiming?"aimable":""} ${side==="foe"&&f.foeBoard.some(m=>m.taunt)?"guarded":""}"
+  return `<div class="portrait ${side==="me"?"ally":"foe"} ${aiming?"aimable":""} ${side==="foe"&&f.foeBoard.some(m=>m.taunt)?"guarded":""}"
       ${side==="foe"?'data-enemyhero="1"':''}>
-    <div class="pring"><div class="pface ${side==="me"?"you":""}" ${h.img?`style="background-image:url('${esc(h.img)}')"`:""}>${
-      side==="me"?ROLES[d.party[0].role].emoji:""}</div></div>
+    <div class="pring"><div class="pface" ${portraitArt(side)}>${
+      side==="me" && !avatarSrc() ? esc((state.profile.pseudo||"?").slice(0,1).toUpperCase()) : ""}</div></div>
     ${h.armor?`<span class="parmor">${h.armor}</span>`:""}
     <span class="phhp">${Math.max(0,h.hp)}</span>
     <div class="pname">${esc(side==="me" ? (state.profile.pseudo||"Vous") : short2(f.foe.title))}</div>
@@ -5292,10 +5356,9 @@ function renderFight(){
 
       <div class="midline"><span></span></div>
 
-      <div class="lane me">${f.board.map(m=>minionHTML(m,"me")).join("") ||
-        `<span class="empty">posez une carte de votre main</span>`}</div>
+      <div class="lane ally">${f.board.map(m=>minionHTML(m,"me")).join("")}</div>
 
-      <div class="arow meside">
+      <div class="arow allyside">
         <div class="pile deck"><b>${f.deck.length}</b><small>pioche</small></div>
         ${portraitHTML("me")}
         ${powerHTML("me")}
@@ -5686,6 +5749,7 @@ function hitSpray(id){
 async function endDungeon(won, why, abandon){
   const d = state.dj;
   if(!d) return;
+  d.camp = null; stopCampTimer();
   // on ne repart avec le butin qu'en sortant vivant, ou en étant tombé après le deuxième étage
   const deep = (d.deepest || d.floor) > 2;
   const keep = won || (!abandon && deep);
