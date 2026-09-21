@@ -1314,6 +1314,18 @@ details.fold .in{padding-top:.6rem}
   .hcard .hkw{font-size:.4rem;bottom:14px}
 }
 
+/* ---------- présentoir 3D ---------- */
+.packart .idle3d{position:absolute;inset:0;width:100%;height:100%;z-index:6;opacity:0;
+  transition:opacity .5s ease;pointer-events:none}
+.packart.live3d{background:none !important;border-color:transparent !important;box-shadow:none !important;
+  width:250px;height:340px;overflow:visible}
+.packart.live3d::before,.packart.live3d::after{display:none}
+.packart.live3d > :not(.idle3d){opacity:0}
+.packart.live3d .idle3d{opacity:1}
+.packart.live3d:hover{transform:translateY(-6px)}
+.packart.live3d::marker{display:none}
+@media (max-width:700px){ .packart.live3d{width:210px;height:290px} }
+
 /* ---------- booster en 3D ---------- */
 .b3d{position:fixed;inset:0;z-index:95;pointer-events:none;opacity:0;transition:opacity .28s ease}
 .b3d.on{opacity:1}
@@ -2961,7 +2973,7 @@ function renderStage(){
   if(!r){
     const c10 = costFor(10);
     stage.innerHTML = `
-      <div class="packart" id="packart">
+      <div class="packart" id="packart" title="Ouvrir un booster">
         <span class="rune tl">⌬</span><span class="rune tr">⎔</span>
         <span class="rune bl">⧉</span><span class="rune br">⌘</span>
         <svg class="d20" viewBox="0 0 120 120" aria-hidden="true">
@@ -3037,6 +3049,7 @@ function renderStage(){
         </div>
       </div>`;
     stage.querySelector("#packart").onclick = ()=>openPack(1,"normal");
+    mountIdleBooster(stage.querySelector("#packart"), "normal");
     stage.querySelector("#open").onclick = ()=>openPack(1,"normal");
     stage.querySelector("#open10").onclick = ()=>openPack(10,"normal");
     stage.querySelector("#openM").onclick = ()=>openPack(1,"mythic");
@@ -3521,26 +3534,15 @@ function loadImage(src){
   return new Promise((res, rej)=>{ const im = new Image(); im.onload = ()=>res(im); im.onerror = rej; im.src = src; });
 }
 
-async function playBoosterIntro(kind){
-  if(reducedMotion()) return;
+/* Prépare un rendu WebGL du booster dans un canevas donné.
+   Renvoie {draw, dispose} ou null si WebGL n'est pas disponible. */
+async function makeBoosterGL(cv, kind, camZ){
   const tint = B3D_TINT[kind] || B3D_TINT.normal;
-
-  const wrap = document.createElement("div");
-  wrap.className = "b3d";
-  wrap.style.setProperty("--b3dglow", tint.glow);
-  wrap.innerHTML = `<div class="b3dbg"></div><canvas class="b3dcanvas"></canvas><div class="b3dflash"></div>`;
-  document.body.appendChild(wrap);
-  const cv = wrap.querySelector("canvas");
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  const W = window.innerWidth, H = window.innerHeight;
-  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
-
   const gl = cv.getContext("webgl", {alpha:true, antialias:true, premultipliedAlpha:false})
           || cv.getContext("experimental-webgl");
-  if(!gl){ wrap.remove(); return; }
-
+  if(!gl) return null;
   let img;
-  try{ img = await loadImage(BOOSTER3D.base); }catch(e){ wrap.remove(); return; }
+  try{ img = await loadImage(BOOSTER3D.base); }catch(e){ return null; }
   const mesh = readBoosterGLB();
 
   const sh = (type, src)=>{ const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
@@ -3548,7 +3550,7 @@ async function playBoosterIntro(kind){
   gl.attachShader(prog, sh(gl.VERTEX_SHADER, B3D_VS));
   gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, B3D_FS));
   gl.linkProgram(prog);
-  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)){ wrap.remove(); return; }
+  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
   gl.useProgram(prog);
 
   const attr = (name, data, size)=>{
@@ -3559,8 +3561,7 @@ async function playBoosterIntro(kind){
   };
   const bufs = [attr("aPos", mesh.pos, 3), attr("aNor", mesh.nor, 3), attr("aUv", mesh.uv, 2)];
   const ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib);
-  let idx = mesh.idx;
-  if(idx instanceof Uint32Array) idx = new Uint16Array(idx);
+  const idx = mesh.idx instanceof Uint32Array ? new Uint16Array(mesh.idx) : mesh.idx;
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
 
   const tex = gl.createTexture();
@@ -3574,15 +3575,13 @@ async function playBoosterIntro(kind){
   if(aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
 
   const U = n=>gl.getUniformLocation(prog, n);
-  const uModel=U("uModel"), uView=U("uView"), uProj=U("uProj"), uNorm=U("uNorm"),
-        uTint=U("uTint"), uRim=U("uRim"), uGlow=U("uGlow"), uSweepX=U("uSweepX"), uSweepK=U("uSweepK");
+  const uModel=U("uModel"), uNorm=U("uNorm"), uGlow=U("uGlow"), uSweepX=U("uSweepX"), uSweepK=U("uSweepK");
   gl.uniform1i(U("uTex"), 0);
-  gl.uniform3fv(uTint, tint.tint);
-  gl.uniform3fv(uRim, tint.rim);
-
-  const camZ = W/H < 0.62 ? 16.5 : 13.5;
-  gl.uniformMatrix4fv(uProj, false, new Float32Array(M4.persp(35*Math.PI/180, W/H, 0.1, 100)));
-  gl.uniformMatrix4fv(uView, false, new Float32Array(M4.tr(0, 0, -camZ)));
+  gl.uniform3fv(U("uTint"), tint.tint);
+  gl.uniform3fv(U("uRim"), tint.rim);
+  const asp = cv.width / cv.height;
+  gl.uniformMatrix4fv(U("uProj"), false, new Float32Array(M4.persp(35*Math.PI/180, asp, 0.1, 100)));
+  gl.uniformMatrix4fv(U("uView"), false, new Float32Array(M4.tr(0, 0, -camZ)));
   gl.viewport(0, 0, cv.width, cv.height);
   gl.enable(gl.DEPTH_TEST);
   gl.disable(gl.CULL_FACE);
@@ -3590,19 +3589,77 @@ async function playBoosterIntro(kind){
 
   // le recto du modèle regarde +X : un quart de tour l'amène face à la caméra
   const base = M4.mul(M4.ry(-Math.PI/2), M4.sc(mesh.scale[0], mesh.scale[1], mesh.scale[2]));
-  const draw = (pos, rot, scl, glow, sweepX, sweepK)=>{
-    let m = M4.tr(pos[0], pos[1], pos[2]);
-    m = M4.mul(m, M4.rz(rot[2]));
-    m = M4.mul(m, M4.ry(rot[1]));
-    m = M4.mul(m, M4.rx(rot[0]));
-    m = M4.mul(m, M4.sc(scl, scl, scl));
-    m = M4.mul(m, base);
-    gl.uniformMatrix4fv(uModel, false, new Float32Array(m));
-    gl.uniformMatrix3fv(uNorm, false, new Float32Array(M4.normal(m)));
-    gl.uniform1f(uGlow, glow); gl.uniform1f(uSweepX, sweepX); gl.uniform1f(uSweepK, sweepK);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
+  return {
+    draw(pos, rot, scl, glow, sweepX, sweepK){
+      let m = M4.tr(pos[0], pos[1], pos[2]);
+      m = M4.mul(m, M4.rz(rot[2]));
+      m = M4.mul(m, M4.ry(rot[1]));
+      m = M4.mul(m, M4.rx(rot[0]));
+      m = M4.mul(m, M4.sc(scl, scl, scl));
+      m = M4.mul(m, base);
+      gl.uniformMatrix4fv(uModel, false, new Float32Array(m));
+      gl.uniformMatrix3fv(uNorm, false, new Float32Array(M4.normal(m)));
+      gl.uniform1f(uGlow, glow); gl.uniform1f(uSweepX, sweepX); gl.uniform1f(uSweepK, sweepK);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.drawElements(gl.TRIANGLES, idx.length, gl.UNSIGNED_SHORT, 0);
+    },
+    dispose(){
+      bufs.forEach(b=>gl.deleteBuffer(b)); gl.deleteBuffer(ib); gl.deleteTexture(tex); gl.deleteProgram(prog);
+      const lose = gl.getExtension("WEBGL_lose_context"); if(lose) lose.loseContext();
+    }
   };
+}
+
+/* ---------- présentoir : le booster flotte en attendant qu'on l'ouvre ---------- */
+async function mountIdleBooster(host, kind){
+  const cv = document.createElement("canvas");
+  cv.className = "idle3d";
+  host.appendChild(cv);
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  // dimensions finales du présentoir (le cadre grandit une fois le modèle prêt)
+  const small = window.innerWidth <= 700;
+  const w = small ? 210 : 250, h = small ? 290 : 340;
+  cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
+
+  const view3d = await makeBoosterGL(cv, kind, 10.6);
+  if(!view3d || !cv.isConnected){ cv.remove(); if(view3d) view3d.dispose(); return; }
+  host.classList.add("live3d");
+
+  const still = reducedMotion();
+  const T0 = performance.now();
+  function frame(){
+    if(!cv.isConnected){ view3d.dispose(); return; }
+    const t = (performance.now() - T0) / 1000;
+    // balancement lent pour faire jouer la lumière sur les reliefs du papier
+    const yaw   = still ? -0.28 : Math.sin(t*0.62)*0.42 + Math.sin(t*0.23)*0.12;
+    const pitch = still ?  0.06 : Math.sin(t*0.47 + 1.1)*0.10;
+    const roll  = still ?  0    : Math.sin(t*0.39 + 0.4)*0.035;
+    const bob   = still ?  0    : Math.sin(t*1.05)*0.12;
+    // un reflet traverse le paquet toutes les cinq secondes
+    const cyc = (t % 5) / 5;
+    const sweepK = still ? 0 : Math.max(0, Math.sin(Math.min(1, cyc/0.45)*Math.PI)) * (cyc < 0.45 ? 1 : 0);
+    const sweepX = -3.2 + (cyc/0.45)*6.4;
+    view3d.draw([0, bob, 0], [pitch, yaw, roll], 1, 0, sweepX, sweepK*0.9);
+    if(!still) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+async function playBoosterIntro(kind){
+  if(reducedMotion()) return;
+  const tint = B3D_TINT[kind] || B3D_TINT.normal;
+  const wrap = document.createElement("div");
+  wrap.className = "b3d";
+  wrap.style.setProperty("--b3dglow", tint.glow);
+  wrap.innerHTML = `<div class="b3dbg"></div><canvas class="b3dcanvas"></canvas><div class="b3dflash"></div>`;
+  document.body.appendChild(wrap);
+  const cv = wrap.querySelector("canvas");
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const W = window.innerWidth, H = window.innerHeight;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+
+  const view3d = await makeBoosterGL(cv, kind, W/H < 0.62 ? 16.5 : 13.5);
+  if(!view3d){ wrap.remove(); return; }
 
   requestAnimationFrame(()=>wrap.classList.add("on"));
   try{ sfx.open(); }catch(e){}
@@ -3617,20 +3674,20 @@ async function playBoosterIntro(kind){
       const t = performance.now() - T0;
       if(t < D_IN){
         const k = easeOutCubic(t / D_IN);
-        draw([0, -5.5*(1-k), -14*(1-k)], [-0.7*(1-k), Math.PI*6*(1-k), 0.35*(1-k)], 0.25 + 0.75*k, 0, -9, 0);
+        view3d.draw([0, -5.5*(1-k), -14*(1-k)], [-0.7*(1-k), Math.PI*6*(1-k), 0.35*(1-k)], 0.25 + 0.75*k, 0, -9, 0);
       } else if(t < D_IN + D_HOLD){
         const k = (t - D_IN) / D_HOLD;
-        draw([0, Math.sin(k*Math.PI)*0.18, 0], [Math.sin(k*Math.PI*2)*0.05, Math.sin(k*Math.PI)*0.22, 0], 1,
+        view3d.draw([0, Math.sin(k*Math.PI)*0.18, 0], [Math.sin(k*Math.PI*2)*0.05, Math.sin(k*Math.PI)*0.22, 0], 1,
              0, -3.5 + 7*k, Math.sin(k*Math.PI));
       } else if(t < D_IN + D_HOLD + D_SHAKE){
         const k = (t - D_IN - D_HOLD) / D_SHAKE;
         const a = 0.02 + 0.09*k;
-        draw([(Math.random()-.5)*a*4, (Math.random()-.5)*a*4, 0],
+        view3d.draw([(Math.random()-.5)*a*4, (Math.random()-.5)*a*4, 0],
              [(Math.random()-.5)*a, (Math.random()-.5)*a, (Math.random()-.5)*a*1.5], 1 + 0.07*k, 0.25*k, -9, 0);
       } else if(t < TOTAL){
         if(!burst){ burst = true; wrap.classList.add("burst"); try{ sfx.epic(); }catch(e){} }
         const k = easeInOut((t - D_IN - D_HOLD - D_SHAKE) / D_OUT);
-        draw([0, 0, 1.6*k], [0, 0.18*k, 0], 1.07 + 0.55*k, 0.25 + 0.5*k, -9, 0);
+        view3d.draw([0, 0, 1.6*k], [0, 0.18*k, 0], 1.07 + 0.55*k, 0.25 + 0.5*k, -9, 0);
         cv.style.opacity = String(1 - k);
       } else {
         return resolve();
@@ -3641,11 +3698,7 @@ async function playBoosterIntro(kind){
   });
 
   wrap.classList.add("off");
-  setTimeout(()=>{
-    bufs.forEach(b=>gl.deleteBuffer(b)); gl.deleteBuffer(ib); gl.deleteTexture(tex); gl.deleteProgram(prog);
-    const lose = gl.getExtension("WEBGL_lose_context"); if(lose) lose.loseContext();
-    wrap.remove();
-  }, 420);
+  setTimeout(()=>{ view3d.dispose(); wrap.remove(); }, 420);
 }
 
 /* Le marchand renard : cinq bricoles, ou une pièce de choix. */
