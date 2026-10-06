@@ -143,7 +143,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 /* cartouche de nom, en haut, coins biseautés */
 .card .plate{
   position:relative;z-index:3;flex:none;margin:6px 6px 5px;padding:.2rem .5rem;
-  min-height:22px;display:flex;align-items:center;
+  min-height:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:linear-gradient(180deg,#453831,#1A1411 58%,#241C18);
   box-shadow:inset 0 1px 0 #FFFFFF2E, inset 0 0 0 1px var(--g1), 0 2px 5px -3px #000;
   clip-path:polygon(6px 0,calc(100% - 6px) 0,100% 50%,calc(100% - 6px) 100%,6px 100%,0 50%)}
@@ -204,7 +204,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
   position:relative;z-index:3;flex:none;margin:5px 6px 1px;padding:.1rem .14rem;
   display:flex;align-items:center;justify-content:space-between;gap:.3rem;
   padding-left:.42rem;padding-right:.42rem;
-  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.86rem;
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.76rem;
   color:#F7EDD9;background:linear-gradient(180deg,#3E332C,#19130F 60%,#261C17);
   box-shadow:inset 0 1px 0 #FFFFFF2B, inset 0 0 0 1px var(--g1);
   clip-path:polygon(5px 0,calc(100% - 5px) 0,100% 50%,calc(100% - 5px) 100%,5px 100%,0 50%)
@@ -222,7 +222,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card.compact .plate .name{font-size:.58rem;line-height:1.08}
 .card.compact .art{margin:0 4px}
 .card.compact .body{margin:4px 4px 0;padding:.18rem .3rem}
-.card.compact .band{margin:4px 4px 1px;padding-left:.3rem;padding-right:.3rem;font-size:.68rem;clip-path:none}
+.card.compact .band{margin:4px 4px 1px;padding-left:.3rem;padding-right:.3rem;font-size:.6rem;clip-path:none}
 .card.compact .band span{padding:.05rem .28rem}
 .card.compact .univ{font-size:.44rem;letter-spacing:.08em;padding-bottom:.1rem}
 .card.compact .desc{display:none}
@@ -235,15 +235,8 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card[data-r="Ultra rare"]  {--g1:#F5B48F;--g2:#B4552C;--glow:0 0 26px -9px #E2754C;--t1:rgba(146,64,30,.72);--t2:rgba(54,22,10,.88)}
 .card[data-r="Légendaire"]  {--g1:#FFE39A;--g2:#B98514;--glow:0 0 34px -8px #E8B44C;--t1:rgba(150,106,14,.74);--t2:rgba(58,38,4,.88)}
 
-/* pellicule holographique à partir de Super rare */
-.card[data-r="Super rare"] .art::before,
-.card[data-r="Ultra rare"] .art::before,
-.card[data-r="Légendaire"] .art::before{
-  content:"";position:absolute;inset:-40%;z-index:2;pointer-events:none;opacity:.3;
-  background:repeating-linear-gradient(115deg,transparent 0 14px,#ffffff88 14px 18px,transparent 18px 34px);
-  mix-blend-mode:overlay;animation:holo 6s linear infinite
-}
-.card[data-r="Légendaire"] .art::before{opacity:.42;animation-duration:4.2s}
+/* Les rayures qui traversaient l'illustration ont disparu au profit des
+   nouveaux reflets : il ne reste que le balayage global du cadre. */
 @keyframes holo{0%{transform:translateX(-18%)}50%{transform:translateX(18%)}100%{transform:translateX(-18%)}}
 .card[data-r="Légendaire"]{animation:breathe 3.4s ease-in-out infinite}
 @keyframes breathe{0%,100%{box-shadow:0 18px 30px -20px #000,inset 0 1.5px 0 #FFFFFF7A,inset 0 -2px 3px -1px #00000080,0 0 26px -12px #E8B44C}
@@ -273,8 +266,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card[data-v="noir"] .art{background:#0A0A0C}
 .card[data-v="noir"] .art img{filter:grayscale(1) contrast(1.4) brightness(.92)}
 .card[data-v="noir"] .art::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
-  background:linear-gradient(115deg,transparent 30%,#ffffff1f 44%,transparent 52%),
-             radial-gradient(120% 80% at 50% 0%, transparent 45%, #000000B0 100%)}
+  background:radial-gradient(120% 80% at 50% 0%, transparent 45%, #000000B0 100%)}
 .card[data-v="noir"] .body{backdrop-filter:none}
 .card[data-v="noir"] .plate{background:linear-gradient(180deg,#3B3D42,#0C0C0E)}
 .card[data-v="noir"] .plate .name{color:#F4F5F7}
@@ -289,8 +281,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card[data-v="vintage"] .art{background:#D9C9A6}
 .card[data-v="vintage"] .art img{filter:sepia(.85) saturate(1.15) contrast(.92) brightness(1.04)}
 .card[data-v="vintage"] .art::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:2;
-  background:repeating-linear-gradient(0deg,#00000012 0 2px,transparent 2px 4px),
-             radial-gradient(120% 90% at 50% 40%, transparent 42%, #6A4A1E66 100%);
+  background:radial-gradient(120% 90% at 50% 40%, transparent 42%, #6A4A1E66 100%);
   mix-blend-mode:multiply}
 .card[data-v="vintage"] .body{background:linear-gradient(180deg,#F3E6C8,#E2D0A8);backdrop-filter:none}
 .card[data-v="vintage"] .plate{background:linear-gradient(180deg,#F6EBD0,#D9C294)}
@@ -306,10 +297,6 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 
 /* Holographique — prisme mouvant sur l'illustration et le bandeau */
 .card[data-v="holo"]{--g1:#B8F0E8;--g2:#8E4A6C;box-shadow:0 14px 26px -18px #000, 0 0 26px -8px #8FD8CB}
-.card[data-v="holo"] .art::before{content:"";position:absolute;inset:-40%;z-index:2;pointer-events:none;opacity:.6;
-  background:repeating-linear-gradient(115deg,transparent 0 8px,#7FD0C2AA 8px 12px,#E8A8C6AA 12px 16px,
-             #F0CE86AA 16px 20px,transparent 20px 32px);
-  mix-blend-mode:screen;animation:holo 3.6s linear infinite}
 .card[data-v="holo"] .art::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.3;
   background:conic-gradient(from 0deg,#7FD0C2,#E8A8C6,#F0CE86,#8FD8CB,#7FD0C2);
   mix-blend-mode:color-dodge;animation:aura 9s linear infinite}
@@ -356,14 +343,12 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card[data-v="secret"] .gem{background:linear-gradient(150deg,#FFF2C0,#7A3A60);box-shadow:0 0 16px 3px #C77FA8}
 
 /* étiquette de finition */
-.vtag{position:absolute;left:6px;top:32px;z-index:5;font-size:.55rem;font-weight:800;letter-spacing:.05em;
-  font-family:"Bricolage Grotesque",sans-serif;background:#120E0CD9;border:1px solid var(--g1);
-  border-radius:5px;padding:.08rem .34rem;color:var(--g1);text-transform:uppercase;
-  box-shadow:0 0 10px -3px var(--g1)}
-.card[data-v="std"] .vtag{display:none}
-.card[data-v="vintage"] .vtag{background:#F3E6C8;color:#5A4218;border-color:#A8883F;box-shadow:none}
-.card[data-v="noir"] .vtag{background:#0C0C0E;color:#E6E8EC;border-color:#8B8E95}
-.card.compact .vtag{top:26px;font-size:.48rem}
+.card .plate .vsub{font-family:"Cinzel",Georgia,serif;font-weight:600;font-size:.46rem;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--g1);opacity:.95;
+  text-align:center;line-height:1.1;margin-top:.14em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.card.compact .plate .vsub{font-size:.4rem;letter-spacing:.14em}
+.bigcard .card .plate .vsub{font-size:.58rem}
 
 /* ---------- reflet holographique ----------
    Portage fidèle des feuilles de style de simeydotme/pokemon-cards-css (MIT) :
@@ -1128,7 +1113,7 @@ body.cardopen .wrap,body.cardopen .nav,body.cardopen .scrim{visibility:hidden}
 .bigcard .card .body{margin:8px 9px 0;padding:.42rem .6rem .48rem}
 .bigcard .card .univ{font-size:.66rem;letter-spacing:.16em}
 .bigcard .card .desc{font-size:.78rem;-webkit-line-clamp:3}
-.bigcard .card .band{font-size:1rem;margin:8px 9px 3px;padding:.22rem .7rem}
+.bigcard .card .band{font-size:.88rem;margin:8px 9px 3px;padding:.22rem .7rem}
 .bigcard .card .dupe{height:30px;font-size:.88rem;border-radius:9px;top:9px;right:9px}
 /* texte de l'article, replié par défaut */
 .lore{border:1px solid var(--line);border-radius:10px;background:var(--ink-2);margin:.7rem 0}
@@ -2768,6 +2753,16 @@ function roleBadge(c){
   return `<span class="gem role" title="${ROLES[k].name} — ${ROLES[k].txt}">${ROLES[k].emoji}</span>`;
 }
 
+/* Le nom d'une carte spéciale porte déjà sa finition : on la détache pour
+   l'écrire en plus petit sous le titre, et l'étiquette devient inutile. */
+function plateName(c){
+  const vn = (c.variant && c.variant !== "std") ? varName(c.variant) : "";
+  if(!vn) return `<div class="name">${esc(c.title)}</div>`;
+  const suf = " — " + vn;
+  const base = c.title.endsWith(suf) ? c.title.slice(0, -suf.length) : c.title;
+  return `<div class="name">${esc(base)}</div><div class="vsub">${esc(vn)}</div>`;
+}
+
 function cardHTML(c, opts={}){
   const art = c.img
     ? `<img src="${esc(c.img)}" alt="" loading="lazy" onerror="this.remove()">`
@@ -2776,11 +2771,10 @@ function cardHTML(c, opts={}){
   if(opts.compact){
     return `<article class="card compact ${c.stars?("st"+c.stars):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
       <div class="inner">
-        <div class="plate"><div class="name">${esc(c.title)}</div></div>
+        <div class="plate">${plateName(c)}</div>
         <div class="art">
           ${n>1?`<span class="dupe">×${n}</span>`:""}
           ${art}
-          ${c.variant? `<span class="vtag">${esc(varName(c.variant))}</span>`:""}
         </div>
         <div class="body"><div class="univ">${esc(c.univ||"")}</div></div>
         <div class="band">
@@ -2797,14 +2791,13 @@ function cardHTML(c, opts={}){
     ? ` style="--g1:${esc(c.ra)};--g2:${esc(c.rb)};--t1:${esc(c.t1||"rgba(20,14,0,.7)")};--t2:${esc(c.t2||"rgba(6,4,0,.9)")};--aura:${esc(c.aura||c.ra)};--spark:${esc(c.spark||c.ra)}"` : "";
   return `<article class="card ${c.stars?("st"+c.stars):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""}${relicStyle} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
     <div class="inner">
-      <div class="plate"><div class="name">${esc(c.title)}</div></div>
+      <div class="plate">${plateName(c)}</div>
       <div class="art">
         ${n>1?`<span class="dupe">×${n}</span>`:""}
         ${art}
         ${c.stars? `<span class="stars">${"★".repeat(c.stars)}</span>`:""}
-        ${c.variant? `<span class="vtag">${esc(varName(c.variant))}</span>`:""}
         ${c.rarity==="Relique"? `<span class="sparks ${c.fall?"fall":""}">${
-          Array.from({length:10},(_,k)=>`<i style="left:${4+k*9.5}%;animation-duration:${2.4+((k*37)%16)/10}s;animation-delay:${(k*0.31).toFixed(2)}s">${esc(c.glyph||"")}</i>`).join("")
+          Array.from({length:5},(_,k)=>`<i style="left:${9+k*19}%;animation-duration:${2.8+((k*37)%16)/10}s;animation-delay:${(k*0.62).toFixed(2)}s">${esc(c.glyph||"")}</i>`).join("")
         }</span>`:""}
       </div>
       <div class="body">
@@ -3619,6 +3612,9 @@ function renderStage(){
       </div>
       <div id="packmsg" class="sub"></div>
 
+      <details class="fold" id="pforges" style="margin-top:1.2rem" ${state.packForgesOpen?"open":""}>
+      <summary>Boosters spéciaux — mythique, démonique et réserves</summary>
+      <div class="in">
       <div class="mythbox">
         <div class="row" style="justify-content:space-between;align-items:center">
           <div>
@@ -3675,7 +3671,10 @@ function renderStage(){
           <button class="btn demon" id="openD" ${demon<1?"disabled":""}>Ouvrir un démonique</button>
           <button class="btn ghost" id="openD10" ${demon<10?"disabled":""}>Ouvrir 10 démoniques</button>
         </div>
-      </div>`;
+      </div>
+      </div></details>`;
+    const pf = stage.querySelector("#pforges");
+    if(pf) pf.ontoggle = ()=>{ state.packForgesOpen = pf.open; };
     stage.querySelector("#packart").onclick = ()=>openPack(1,"normal");
     mountIdleBooster(stage.querySelector("#packart"), "normal");
     stage.querySelector("#open").onclick = ()=>openPack(1,"normal");
@@ -6305,10 +6304,19 @@ function avatarStyle(){
        + `background-position:${c.x}% ${c.y}%;background-repeat:no-repeat`;
 }
 
+/* L'illustration est conservée telle quelle dans le profil : jusqu'ici seul
+   l'identifiant de la carte était retenu, si bien que renvoyer la carte, la
+   fusionner ou recharger la collection faisait disparaître la photo. */
 function avatarSrc(){
   const p = state.profile;
+  if(p.avatarImg) return p.avatarImg;
   const c = p.avatar ? state.collection.find(x=>x.id === p.avatar) : null;
-  return c && c.img ? c.img : "";
+  if(c && c.img){
+    p.avatarImg = c.img;
+    sset("fm:profile", p);
+    return c.img;
+  }
+  return "";
 }
 function portraitArt(side){
   const f = state.dj.fight;
@@ -7347,6 +7355,7 @@ function viewProfil(){
     filter:c=>!!c.img,
     onPick:async c=>{
       p.avatar = c.id;
+      p.avatarImg = c.img || "";
       p.avatarCrop = {z:1, x:50, y:50};
       await sset("fm:profile", p);
       cropAvatar();
