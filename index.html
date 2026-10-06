@@ -154,7 +154,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
   letter-spacing:.015em;color:#F7EDD9;text-align:center;
   text-shadow:0 1px 0 #000, 0 0 8px #0009;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-  max-height:2.28em;overflow-wrap:anywhere;hyphens:auto}
+  overflow-wrap:anywhere;hyphens:auto}
 
 /* fenêtre d'illustration : coins coupés et liseré métal */
 .card .art{position:relative;background:#1A1512;overflow:hidden;flex:1;min-height:0;margin:0 6px;
@@ -511,8 +511,9 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
     center center;
   background-size:400% 400%, cover;
   background-blend-mode:overlay;
-  filter:brightness(1.1) contrast(1.1) saturate(1.2);
+  filter:brightness(.8) contrast(.92) saturate(.55);
   mix-blend-mode:color-dodge;
+  opacity:calc(var(--card-opacity) * .62);
 }
 .card.holo[data-fx="holo"] .fmshine::before{
   background-image:
@@ -529,8 +530,9 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
     calc((((50% - var(--background-x)) * -0.9) + 50%) - (var(--background-y) * 0.75)) var(--background-y);
   background-size:200% 200%, 200% 200%;
   background-blend-mode:screen;
-  filter:brightness(1.15) contrast(1.1);
+  filter:brightness(1) contrast(1) saturate(.5);
   mix-blend-mode:hard-light;
+  opacity:.55;
 }
 .card.holo[data-fx="holo"] .fmshine::after{
   background-image:radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y),
@@ -910,7 +912,7 @@ body:has(.card.holoact) .scrim{background:#050912e0}
 
 /* ---- Reliques : artefacts légendaires ---- */
 .card[data-r="Relique"]{
-  --g1:#FFE7A8;--g2:#9B1B10;--t1:rgba(126,30,14,.70);--t2:rgba(40,10,4,.92);--aura:#FF9A3A;--spark:#FFD36A;
+  --g1:#FFD873;--g2:#8C0D06;--t1:rgba(142,22,8,.76);--t2:rgba(34,6,2,.94);--aura:#FF6A1A;--spark:#FFC83A;
   box-shadow:0 14px 26px -18px #000, 0 0 52px -6px var(--aura);
   animation:relic 3s ease-in-out infinite
 }
@@ -1125,6 +1127,37 @@ body.cardopen .wrap,body.cardopen .nav,body.cardopen .scrim{visibility:hidden}
 .lore>summary::after{content:"▾";margin-left:auto;color:var(--muted);transition:transform .2s ease}
 .lore[open]>summary::after{transform:rotate(180deg)}
 .lore .txt{padding:0 .75rem .7rem;font-size:.86rem;line-height:1.5;color:var(--muted)}
+/* page de préparation du donjon */
+.dsec{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:.85rem .9rem;margin-bottom:.9rem}
+.dsech{display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem;flex-wrap:wrap}
+.dsech h3{font-size:1.02rem}
+.dsech .n{width:22px;height:22px;flex:none;border-radius:50%;display:grid;place-items:center;
+  background:linear-gradient(150deg,var(--brass),#CF9C36);color:#221806;
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.78rem}
+.dsech .sub{margin-left:auto;font-size:.84rem;text-align:right}
+.diffpick{display:grid;gap:.5rem;grid-template-columns:repeat(3,1fr)}
+.diffbtn{display:flex;flex-direction:column;align-items:flex-start;gap:.22rem;text-align:left;
+  padding:.6rem .65rem;border-radius:11px;cursor:pointer;color:var(--muted);
+  background:var(--ink-2);border:1px solid var(--line);transition:border-color .15s ease,background .15s ease}
+.diffbtn:hover{border-color:#6B5A3C}
+.diffbtn.on{border-color:var(--brass);background:#3A2F1Cc0;color:var(--text);
+  box-shadow:0 0 0 1px var(--brass), 0 8px 20px -14px var(--brass)}
+.diffbtn .ic{font-size:1.15rem;line-height:1}
+.diffbtn .nm{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.9rem;color:var(--text)}
+.diffbtn .pips{letter-spacing:.14em;font-size:.72rem;color:var(--brass)}
+.diffbtn .tx{font-size:.76rem;line-height:1.35}
+.partyrow{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}
+.pslot{aspect-ratio:63/88;border-radius:10px;border:1px dashed var(--line);background:#2A2320;
+  display:grid;place-items:center;color:var(--muted);font-size:1.3rem;opacity:.7}
+.pslot.full{border:none;background:none;display:block;padding:0}
+.dgo{position:sticky;bottom:calc(.6rem + env(safe-area-inset-bottom));z-index:5;padding-bottom:.4rem}
+.dgo .btn{width:100%}
+@media (max-width:560px){
+  .diffpick{grid-template-columns:1fr}
+  .diffbtn{flex-direction:row;align-items:center;flex-wrap:wrap}
+  .diffbtn .tx{flex-basis:100%}
+}
 .cropbox{width:100%;aspect-ratio:1/1;border-radius:50%;background:#1A1410 center/cover no-repeat;
   border:3px solid var(--brass);cursor:grab;touch-action:none;box-shadow:0 0 0 6px #0006, 0 10px 24px -14px #000}
 .cropbox:active{cursor:grabbing}
@@ -2516,56 +2549,56 @@ async function probe(u){
 const RELICS = [
   {key:"anneau",  name:"Anneau Unique",        univ:"Le Seigneur des Anneaux", host:"lotr.fandom.com",
    titles:["Anneau Unique","Anneau unique","The One Ring"],
-   a:"#FFE7A8", b:"#9B1B10", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFD36A", glyph:"◎", aura:"#FF9A3A"},
+   a:"#FFD873", b:"#8C0D06", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFC83A", glyph:"◎", aura:"#FF6A1A"},
   {key:"deathnote",name:"Death Note",          univ:"Death Note", host:"deathnote.fandom.com",
    titles:["Death Note (objet)","Death Note (Objet)","Cahier de la mort"],
    a:"#6E6E7A", b:"#0A0A0C", t1:"rgba(10,10,14,.82)", t2:"rgba(0,0,0,.92)",
    spark:"#1A1A22", glyph:"✒", aura:"#3A2A4A", fall:true, ink:true},
   {key:"triforce",name:"Triforce",             univ:"Zelda", host:"zelda.fandom.com",
    titles:["Triforce"],
-   a:"#FFF0A8", b:"#A82A10", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFF0A0", glyph:"▲", aura:"#FFC24A"},
+   a:"#FFE878", b:"#9A1A06", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFE85A", glyph:"▲", aura:"#FFA61A"},
   {key:"master",  name:"Épée de Légende",      univ:"Zelda", host:"zelda.fandom.com",
    titles:["Épée de Légende","Excalibur","Master Sword"],
-   a:"#FFE2A0", b:"#8E1E16", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFD88A", glyph:"⚔", aura:"#FF8A3A"},
+   a:"#FFD060", b:"#7E0E08", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFC64A", glyph:"⚔", aura:"#FF6410"},
   {key:"sureau",  name:"Baguette de Sureau",   univ:"Harry Potter", host:"harrypotter.fandom.com",
    titles:["Baguette de Sureau","Elder Wand"],
-   a:"#F4DEAA", b:"#86201A", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#F6E2B0", glyph:"❈", aura:"#FFA64A"},
+   a:"#F0CE7C", b:"#75140E", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#F6DA82", glyph:"❈", aura:"#FF8A22"},
   {key:"pierre",  name:"Pierre Philosophale",  univ:"Harry Potter", host:"harrypotter.fandom.com",
    titles:["Pierre philosophale","Philosopher's Stone"],
-   a:"#FFC89A", b:"#9E140C", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FF9A6A", glyph:"◆", aura:"#FF6A3A"},
+   a:"#FFB06A", b:"#8E0604", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FF7A3A", glyph:"◆", aura:"#FF4A14"},
   {key:"gant",    name:"Gantelet de l'Infini", univ:"Marvel", host:"marvelcinematicuniverse.fandom.com",
    titles:["Gantelet de l'infini","Gantelet de l'Infini","Infinity Gauntlet"],
-   a:"#FFD89A", b:"#A01E2A", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFC46B", glyph:"✶", aura:"#FF7A4A"},
+   a:"#FFC66A", b:"#8E0C1E", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFB03A", glyph:"✶", aura:"#FF5A26"},
   {key:"dragonball",name:"Boules de Cristal",  univ:"Dragon Ball", host:"dragonball.fandom.com",
    titles:["Dragon Balls (objet)","Dragon Ball (objet)","Boules de cristal"],
-   a:"#FFE08A", b:"#B02A0E", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFCF5A", glyph:"★", aura:"#FFA02A"},
+   a:"#FFD44E", b:"#A01C04", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFC02A", glyph:"★", aura:"#FF8A06"},
   {key:"fma",     name:"Pierre Rouge",         univ:"Fullmetal Alchemist", host:"fma.fandom.com",
    titles:["Pierre philosophale","Philosopher's Stone"],
-   a:"#FFC0A0", b:"#9A0E0E", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FF8A6A", glyph:"⬢", aura:"#FF5A3A"},
+   a:"#FFA878", b:"#8A0404", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FF6A3A", glyph:"⬢", aura:"#FF3A0E"},
   {key:"geck",    name:"J.A.R.D.I.N.",         univ:"Fallout", host:"fallout.fandom.com",
    titles:["G.E.C.K.","Garden of Eden Creation Kit"],
-   a:"#FFE4A0", b:"#8E2410", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFD88A", glyph:"❖", aura:"#FF9A3A"},
+   a:"#FFD47A", b:"#7E1606", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFC45A", glyph:"❖", aura:"#FF7A1A"},
   {key:"creuset", name:"Le Creuset",           univ:"Mass Effect", host:"masseffect.fandom.com",
    titles:["Creuset","Crucible"],
-   a:"#FFD49A", b:"#961A12", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFC07A", glyph:"✧", aura:"#FF7A3A"},
+   a:"#FFC274", b:"#860804", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFA84A", glyph:"✧", aura:"#FF5E1A"},
   {key:"clochettes",name:"Clochettes",         univ:"Animal Crossing", host:"animalcrossing.fandom.com",
    titles:["Clochettes","Clochette","Bells"],
-   a:"#FFEDB0", b:"#A8320E", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#FFE08A", glyph:"🔔", aura:"#FFB03A"},
+   a:"#FFE48A", b:"#9A2206", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#FFD45A", glyph:"🔔", aura:"#FF9A14"},
   {key:"parchemin",name:"Parchemin des Anciens",univ:"The Elder Scrolls", host:"elderscrolls.fandom.com",
    titles:["Parchemin des Anciens","Elder Scroll"],
-   a:"#F6E0B4", b:"#8A2412", t1:"rgba(126,30,14,.68)", t2:"rgba(40,10,4,.92)",
-   spark:"#F2D49A", glyph:"✦", aura:"#FFA054"}
+   a:"#F2D08E", b:"#7A1606", t1:"rgba(142,22,8,.74)", t2:"rgba(34,6,2,.94)",
+   spark:"#F0C66A", glyph:"✦", aura:"#FF8632"}
 ];
 const RELIC_TITLES = new Set(RELICS.flatMap(r=>r.titles.map(t=>t.toLowerCase()))
   .concat(["one ring","l'anneau unique","death note","dragon ball","dragon balls","clochettes"]));
@@ -5392,8 +5425,22 @@ function renderDeckEditor(){
 const DJ_W = 21, DJ_H = 17;          // taille de la grille
 const PARTY = 5;                     // cartes engagées
 const VIEW_R = 3;                    // rayon de découverte
-const EXIT_GOLD = 120;               // prime de sortie, une fois dehors
+const EXIT_GOLD = 120;               // prime de sortie, une fois dehors, au taux plein
+function exitGold(){ return Math.round(EXIT_GOLD * diff().gold); }
 const FLOORS = 3;                    // étages à traverser
+
+/* Trois niveaux. Le troisième est le donjon tel qu'il était : c'est le plus
+   avare en coffres et le plus peuplé, mais chaque pièce y vaut son prix. */
+const DIFFS = [
+  {lvl:1, name:"Reconnaissance", icon:"🜁", chest:0.95, foes:-4, trap:0.12, gold:0.6,
+   txt:"Un coffre dans presque chaque salle, peu de gardiens et peu de pièges. Le butin est réduit de 40 %."},
+  {lvl:2, name:"Expédition",     icon:"🜂", chest:0.85, foes:-2, trap:0.20, gold:0.8,
+   txt:"Les coffres restent nombreux, les gardiens se font plus présents. Le butin est réduit de 20 %."},
+  {lvl:3, name:"Descente",       icon:"🜃", chest:0.72, foes:0,  trap:0.28, gold:1,
+   txt:"Coffres rares, gardiens partout, pièges nombreux. Butin et prime de sortie à taux plein."}
+];
+function diffLevel(){ return Math.max(1, Math.min(3, state.profile.djDiff || 3)); }
+function diff(){ return DIFFS[diffLevel()-1]; }
 const POTION_CAP = {heal:4, dmg:4};  // flacons autorisés par expédition
 const CAM_W = 11, CAM_H = 9;         // fenêtre de caméra sur petit écran
 
@@ -5412,6 +5459,7 @@ function carveCorridor(g, a, b){
   g[y][x] = g[y][x] || 2;
 }
 function genDungeon(floor){
+  const D = diff();
   const g = emptyGrid();
   const rooms = [];
   const cols = 4, rows = 3;
@@ -5444,7 +5492,7 @@ function genDungeon(floor){
   const chests = [];
   rooms.forEach(r=>{
     if(r === start || r === exit) return;
-    if(Math.random() < 0.72){
+    if(Math.random() < D.chest){
       chests.push({x:r.x + rnd(r.w), y:r.y + rnd(r.h), open:false});
     }
   });
@@ -5480,17 +5528,17 @@ function genDungeon(floor){
     if(corridor || doorway) spots.push({x,y});
   }
   const foes = [];
-  const nFoes = 8 + floor*2 + rnd(4);
+  const nFoes = Math.max(3, 8 + floor*2 + rnd(4) + D.foes);
   const picked = shuffled(spots);
   picked.slice(0, nFoes).forEach(p=>foes.push({x:p.x, y:p.y, card:null, dead:false}));
 
   // pièges dans les couloirs, à l'écart des gardiens
   const busy = new Set(foes.map(f=>f.x+","+f.y));
   picked.slice(nFoes).forEach(p=>{
-    if(traps.length >= 3 + floor) return;
+    if(traps.length >= Math.max(1, Math.round((3 + floor) * (D.trap/0.28)))) return;
     if(busy.has(p.x+","+p.y)) return;
     if(g[p.y][p.x] !== 2) return;
-    if(Math.random() < 0.28) traps.push({x:p.x, y:p.y, seen:false, sprung:false});
+    if(Math.random() < D.trap) traps.push({x:p.x, y:p.y, seen:false, sprung:false});
   });
 
   // le gardien de l'escalier : plus coriace, et porteur de la clé si aucun coffre ne l'a
@@ -5637,34 +5685,64 @@ function viewDuel(){
   const pool = [...state.collection].sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity)||b.atk-a.atk);
   state.picked = (state.picked||[]).filter(c=>state.collection.includes(c)).slice(0,PARTY);
 
+  const D = diff();
   view.innerHTML = `
     <h2 style="font-size:1.6rem">Donjon</h2>
-    ${info("Comment ça marche ?", "<p class='sub' style='margin:0'>Engagez "+PARTY+" cartes : elles forment un deck de 25 cartes, dont 6 en main d'ouverture. Explorez le donjon salle après salle, ouvrez les coffres et gagnez la sortie. Les gardiens croisés en chemin déclenchent un combat au tour par tour : votre héros et le gardien disposent chacun de 30 points de vie, d'un pouvoir héroïque et d'une réserve de mana qui grandit chaque tour. Sortir vivant rapporte "+EXIT_GOLD+" ◆.</p>")}
+    ${info("Comment ça marche ?", "<p class='sub' style='margin:0'>Engagez "+PARTY+" cartes : elles forment un deck de 25 cartes, dont 6 en main d'ouverture. Explorez le donjon salle après salle, ouvrez les coffres et gagnez la sortie. Les gardiens croisés en chemin déclenchent un combat au tour par tour : votre héros et le gardien disposent chacun de 30 points de vie, d'un pouvoir héroïque et d'une réserve de mana qui grandit chaque tour.</p>")}
     ${pool.length < PARTY
       ? `<div class="panel">Il vous faut ${PARTY} cartes distinctes pour entrer. Vous en avez ${pool.length}.
          <button class="btn small" data-go="pack" style="margin-left:.4rem">Ouvrir un paquet</button></div>`
-      : `<div class="actions">
-          <button class="btn wide" id="enter" ${state.picked.length===PARTY?"":"disabled"}>Entrer dans le donjon</button>
-          <div class="row">
-            <button class="btn ghost" id="openpick">${state.pickOpen? "Masquer les cartes":"Choisir mes cartes"}</button>
-            <button class="btn ghost" id="auto">Escouade au mieux</button>
-            <button class="btn ghost" id="clear">Tout retirer</button>
-          </div>
-          <div class="powpick">
-            <span class="sub">Pouvoir héroïque :</span>
-            ${POWERS.map(p=>`<button class="powbtn ${(state.profile.power||"feu")===p.key?"on":""}" data-pow="${p.key}"
-               title="${esc(p.txt)}"><span>${p.icon}</span><small>${esc(p.name)}</small></button>`).join("")}
-          </div>
-          ${decks("bataille").filter(deckFull).length? `<div class="row">
-            <span class="sub">Vos decks :</span>
-            ${decks("bataille").filter(deckFull).map(dk=>`<button class="btn ghost small" data-deck="${esc(dk.id)}">${esc(dk.glyph)} ${esc(dk.name)}</button>`).join("")}
-          </div>`:""}
-          <span class="sub" id="pick">${state.picked.length} / ${PARTY} engagées</span>
+      : `
+      <section class="dsec">
+        <div class="dsech"><span class="n">1</span><h3>Difficulté</h3>
+          <span class="sub">${esc(D.name)} · sortie ${exitGold()} ◆</span></div>
+        <div class="diffpick">
+          ${DIFFS.map(d=>`<button class="diffbtn ${d.lvl===D.lvl?"on":""}" data-diff="${d.lvl}">
+            <span class="ic">${d.icon}</span>
+            <span class="nm">${esc(d.name)}</span>
+            <span class="pips">${"◆".repeat(d.lvl)}${"◇".repeat(3-d.lvl)}</span>
+            <span class="tx">${esc(d.txt)}</span>
+          </button>`).join("")}
         </div>
-        ${state.picked.length? `<div class="grid" style="grid-template-columns:repeat(5,1fr);max-width:520px;margin-bottom:1rem">
-          ${state.picked.map(c=>cardHTML(c,{compact:true})).join("")}</div>`:""}
-        ${state.pickOpen? `<input id="dq" placeholder="Rechercher une carte…" value="${esc(state.dq||"")}" style="margin-bottom:.7rem">`:""}
-        <div id="deckgrid"></div>`}`;
+      </section>
+
+      <section class="dsec">
+        <div class="dsech"><span class="n">2</span><h3>Escouade</h3>
+          <span class="sub" id="pick">${state.picked.length} / ${PARTY} engagées</span></div>
+        <div class="row" style="margin-bottom:.6rem">
+          <button class="btn ghost small" id="openpick">${state.pickOpen? "Masquer les cartes":"Choisir mes cartes"}</button>
+          <button class="btn ghost small" id="auto">Escouade au mieux</button>
+          <button class="btn ghost small" id="clear">Tout retirer</button>
+        </div>
+        ${decks("bataille").filter(deckFull).length? `<div class="row" style="margin-bottom:.6rem">
+          <span class="sub">Vos decks :</span>
+          ${decks("bataille").filter(deckFull).map(dk=>`<button class="btn ghost small" data-deck="${esc(dk.id)}">${esc(dk.glyph)} ${esc(dk.name)}</button>`).join("")}
+        </div>`:""}
+        <div class="partyrow">
+          ${Array.from({length:PARTY}, (_,i)=>{
+            const c = state.picked[i];
+            return c ? `<div class="pslot full">${cardHTML(c,{compact:true})}</div>`
+                     : `<div class="pslot">+</div>`;
+          }).join("")}
+        </div>
+        ${state.pickOpen? `<input id="dq" placeholder="Rechercher une carte…" value="${esc(state.dq||"")}" style="margin:.7rem 0 0">`:""}
+        <div id="deckgrid"></div>
+      </section>
+
+      <section class="dsec">
+        <div class="dsech"><span class="n">3</span><h3>Pouvoir héroïque</h3>
+          <span class="sub">${esc(powerOf(state.profile.power||"feu").txt)}</span></div>
+        <div class="powpick">
+          ${POWERS.map(p=>`<button class="powbtn ${(state.profile.power||"feu")===p.key?"on":""}" data-pow="${p.key}"
+             title="${esc(p.txt)}"><span>${p.icon}</span><small>${esc(p.name)}</small></button>`).join("")}
+        </div>
+      </section>
+
+      <div class="dgo">
+        <button class="btn wide" id="enter" ${state.picked.length===PARTY?"":"disabled"}>
+          ${state.picked.length===PARTY? "Entrer dans le donjon" : `Encore ${PARTY-state.picked.length} carte${PARTY-state.picked.length>1?"s":""} à engager`}
+        </button>
+      </div>`}`;
 
   view.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   if(pool.length < PARTY) return;
@@ -5699,6 +5777,12 @@ function viewDuel(){
       seen.add(k); return true;
     }).slice(0, PARTY);
     sfx.tick();
+    viewDuel();
+  });
+  view.querySelectorAll("[data-diff]").forEach(b=>b.onclick = async ()=>{
+    state.profile.djDiff = +b.dataset.diff;
+    sfx.tick();
+    await sset("fm:profile", state.profile);
     viewDuel();
   });
   view.querySelector("#enter").onclick = ()=>enterDungeon();
@@ -6004,7 +6088,7 @@ function step(x, y){
   if(chest){
     chest.open = true;
     // butin volontairement maigre : souvent une poignée de pièces
-    const gain = Math.round(4 + Math.pow(Math.random(), 2.8) * 26);
+    const gain = Math.max(1, Math.round((4 + Math.pow(Math.random(), 2.8) * 26) * diff().gold));
     d.gold += gain;
     d.chestsOpen++;
     sfx.coin();
@@ -6758,7 +6842,7 @@ async function endDungeon(won, why, abandon){
   // on ne repart avec le butin qu'en sortant vivant, ou en étant tombé après le deuxième étage
   const deep = (d.deepest || d.floor) > 2;
   const keep = won || (!abandon && deep);
-  const bonus = won ? EXIT_GOLD : 0;
+  const bonus = won ? exitGold() : 0;
   const total = keep ? d.gold + bonus : 0;
   const lost = keep ? 0 : d.gold;
   state.profile.coins += total;
@@ -6779,7 +6863,7 @@ async function endDungeon(won, why, abandon){
 
   const stats = `${d.chestsOpen} coffre(s) · ${d.kills} gardien(s) · étage ${d.deepest||d.floor}`
     + (lost ? ` · ${lost} ◆ abandonnés sur place` : "")
-    + (won ? ` · prime de sortie ${EXIT_GOLD} ◆` : "");
+    + (won ? ` · prime de sortie ${exitGold()} ◆` : "");
   state.dj = null;
   view.innerHTML = `
     <div class="inner arcade ${won?"win":"lose"}" style="max-width:520px;margin:1rem auto">
@@ -6989,7 +7073,7 @@ const HOLO_FROM = 2;   // à partir de Rare
 /* quel effet pour quelle carte : la finition prime sur la rareté */
 const HOLO_FX_VAR = {noir:"noir", vintage:"vintage", holo:"rainbow", fullart:"fa", secret:"secret"};
 const HOLO_FX_RAR = {"Rare":"rev", "Super rare":"holo", "Ultra rare":"fa",
-                     "Légendaire":"rainbow", "Relique":"secret"};
+                     "Légendaire":"secret", "Relique":"secret"};
 function holoFx(rarity, variant){
   if(variant && variant !== "std" && HOLO_FX_VAR[variant]) return HOLO_FX_VAR[variant];
   return HOLO_FX_RAR[rarity] || null;
