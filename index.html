@@ -391,7 +391,10 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
   background-blend-mode:normal}
 .card.holoact .inner{
   background-image:linear-gradient(176deg,#2C241E,#140F0D 62%,#1E1814)}
-.card.holo .band{position:relative;z-index:7}
+/* Le cartouche, la boîte de texte et la barre de stats passent au-dessus du
+   balayage et des deux couches de reflet : le texte reste net et lisible
+   quelle que soit l'intensité de l'effet. */
+.card .plate,.card .body,.card .band{z-index:7}
 .card.holo .fmshine::before,.card.holo .fmshine::after,
 .card.holo .fmglare::after{
   content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
@@ -1942,8 +1945,14 @@ details.fold .in{padding-top:.6rem}
 .fightlog{margin-top:.6rem;font-size:.82rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:.5rem}
 
 .timebar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#E8B44C,#E2574C)}
-.pickwrap{position:relative;cursor:pointer;border-radius:16px;transition:transform .12s ease;min-width:0}
-.pickwrap.on{outline:3px solid var(--brass);outline-offset:2px;transform:translateY(-3px)}
+.pickwrap{position:relative;cursor:pointer;border-radius:16px;transition:transform .12s ease;
+  min-width:0;display:block;line-height:0}
+.pickwrap .card{width:100%}
+/* Dans une grille de sélection, la carte ne bascule pas en 3D : elle reste
+   calée dans sa case, seul le reflet joue. */
+.pickwrap .card.holoact,.pslot .card.holoact,.slot .card.holoact{transform:none;box-shadow:0 14px 26px -18px #000, var(--glow)}
+.pickwrap .card,.pslot .card,.slot .card{transition:none}
+.pickwrap.on{outline:2px solid var(--brass);outline-offset:1px;transform:translateY(-3px)}
 .pickwrap.on::after{content:"✓";position:absolute;top:6px;right:6px;z-index:5;width:24px;height:24px;border-radius:50%;
   display:grid;place-items:center;background:var(--brass);color:#1A1305;font-weight:800;box-shadow:0 2px 8px -2px #000}
 .pickwrap.off{opacity:.35}
@@ -4150,23 +4159,91 @@ void main(){
   vW = w.xyz; vN = normalize(uNorm * aNor); vUv = aUv;
   gl_Position = uProj * uView * w;
 }`;
-const B3D_FS = `
+/* Corps commun des deux variantes du nuanceur : un plastique diélectrique.
+   La carte de rugosité pilote la largeur et la force du reflet, le Fresnel
+   donne le lustre rasant du film, et la carte métallique teinte le reflet
+   là où l'emballage est métallisé. */
+const B3D_BODY = `
 precision mediump float;
-uniform sampler2D uTex; uniform vec3 uTint, uRim; uniform float uGlow, uSweepX, uSweepK;
+uniform sampler2D uTex, uRgh, uNrm, uMtl;
+uniform vec3 uTint, uRim; uniform float uGlow, uSweepX, uSweepK;
 varying vec3 vN; varying vec2 vUv; varying vec3 vW;
+
 void main(){
-  vec3 base = texture2D(uTex, vUv).rgb * uTint;
+  vec3 albedo = texture2D(uTex, vUv).rgb * uTint;
+  /* la carte de rugosité est recalée pour un film plastique : jamais miroir,
+     jamais complètement mat, avec un lustre large qui balaie l'emballage */
+  float rough = clamp(texture2D(uRgh, vUv).g * 0.85 + 0.17, 0.14, 0.86);
+  float metal = clamp(texture2D(uMtl, vUv).b, 0.0, 1.0) * 0.55;
+
   vec3 N = normalize(vN);
   if(!gl_FrontFacing) N = -N;
   vec3 V = vec3(0.0, 0.0, 1.0);
-  vec3 L = normalize(vec3(-0.45, 0.55, 0.75));
-  float diff = max(dot(N, L), 0.0);
-  float spec = pow(max(dot(N, normalize(L + V)), 0.0), 36.0) * 0.28;
-  float rim  = pow(1.0 - max(dot(N, V), 0.0), 2.4);
-  float band = exp(-pow((vW.x - uSweepX) * 0.85, 2.0)) * uSweepK;
-  vec3 col = base * (0.42 + 0.78 * diff) + spec + uRim * rim * 0.55 + vec3(band * 0.32) + uRim * uGlow;
+  N = bumpNormal(N, vUv);
+
+  vec3 L1 = normalize(vec3(-0.45, 0.62, 0.70));   /* lumière principale */
+  vec3 L2 = normalize(vec3( 0.72,-0.28, 0.55));   /* appoint, côté opposé */
+
+  float a = rough * rough;
+  float gloss = clamp(2.0 / (a * a + 1e-4) - 2.0, 6.0, 1400.0);
+  float norm  = (gloss + 8.0) / 28.0;
+
+  float nv = max(dot(N, V), 0.0);
+  vec3  F0 = mix(vec3(0.045), albedo, metal);     /* 4,5 % : un plastique */
+  vec3  F  = F0 + (vec3(1.0) - F0) * pow(1.0 - nv, 5.0);
+
+  float s1 = pow(max(dot(N, normalize(L1 + V)), 0.0), gloss);
+  float s2 = pow(max(dot(N, normalize(L2 + V)), 0.0), gloss);
+  vec3  spec = (s1 * 1.35 + s2 * 0.55) * norm * F;
+
+  float d1 = max(dot(N, L1), 0.0), d2 = max(dot(N, L2), 0.0);
+  vec3  diff = albedo * (0.34 + 0.74 * d1 + 0.22 * d2) * (1.0 - metal * 0.72);
+
+  /* décor réfléchi : un studio sommaire, clair en haut, sombre en bas.
+     C'est ce reflet glissant qui fait lire la surface comme du plastique. */
+  vec3  R   = reflect(-V, N);
+  float ciel = R.y * 0.5 + 0.5;
+  vec3  env = mix(vec3(0.04, 0.05, 0.08), vec3(0.88, 0.92, 1.0), pow(ciel, 1.7));
+  env += vec3(0.25, 0.22, 0.18) * pow(max(-R.y, 0.0), 2.0);   /* rebond du sol */
+  vec3  refl = env * F * (1.0 - rough * 0.62) * 0.9;
+
+  float rim  = pow(1.0 - nv, 3.0) * (1.0 - rough * 0.55);
+  float band = exp(-pow((vW.x - uSweepX) * 0.85, 2.0)) * uSweepK * (1.0 - rough * 0.55);
+
+  vec3 col = diff + spec + refl + uRim * rim * 0.40 + vec3(band * 0.30) + uRim * uGlow;
   gl_FragColor = vec4(col, 1.0);
 }`;
+
+/* Avec les dérivées, le relief de la carte de normales est appliqué sans
+   avoir de tangentes dans le maillage : on les reconstruit à l'écran. */
+const B3D_FS_RICH = `#extension GL_OES_standard_derivatives : enable
+precision mediump float;
+uniform sampler2D uTex, uRgh, uNrm, uMtl;
+varying vec3 vN; varying vec2 vUv; varying vec3 vW;
+vec3 bumpNormal(vec3 N, vec2 uv){
+  vec3 nm = texture2D(uNrm, uv).xyz * 2.0 - 1.0;
+  nm.xy *= 1.35;
+  vec3 dp1 = dFdx(vW), dp2 = dFdy(vW);
+  vec2 du1 = dFdx(uv), du2 = dFdy(uv);
+  vec3 p1 = cross(dp2, N), p2 = cross(N, dp1);
+  vec3 T = p1 * du1.x + p2 * du2.x;
+  vec3 B = p1 * du1.y + p2 * du2.y;
+  float inv = inversesqrt(max(dot(T, T), dot(B, B)) + 1e-8);
+  return normalize(mat3(T * inv, B * inv, N) * normalize(nm));
+}
+` + B3D_BODY.replace("precision mediump float;", "").replace(
+  "uniform sampler2D uTex, uRgh, uNrm, uMtl;", "").replace(
+  "varying vec3 vN; varying vec2 vUv; varying vec3 vW;", "");
+
+/* Repli quand les dérivées manquent : même plastique, sans le relief. */
+const B3D_FS_BASIC = `
+precision mediump float;
+uniform sampler2D uTex, uRgh, uNrm, uMtl;
+varying vec3 vN; varying vec2 vUv; varying vec3 vW;
+vec3 bumpNormal(vec3 N, vec2 uv){ return N; }
+` + B3D_BODY.replace("precision mediump float;", "").replace(
+  "uniform sampler2D uTex, uRgh, uNrm, uMtl;", "").replace(
+  "varying vec3 vN; varying vec2 vUv; varying vec3 vW;", "");
 
 const B3D_TINT = {
   normal:{tint:[1,1,1],        rim:[0.49,0.89,1.0], glow:"#7DE3FF"},
@@ -4188,14 +4265,30 @@ async function makeBoosterGL(cv, kind, camZ){
   if(!gl) return null;
   let img;
   try{ img = await loadImage(BOOSTER3D.base); }catch(e){ return null; }
+  /* rugosité, relief et métal : s'ils manquent, on retombe sur des valeurs
+     neutres (plastique mi-mat, surface lisse, non métallique) */
+  const plat = (r,g,b)=>`data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2"><rect width="2" height="2" fill="rgb(${r},${g},${b})"/></svg>`)}`;
+  const opt = async (src, r,g,b)=>{ try{ return await loadImage(src); }catch(e){ return await loadImage(plat(r,g,b)); } };
+  const imgRgh = await opt(BOOSTER3D.rough,  128,128,128);
+  const imgNrm = await opt(BOOSTER3D.normal, 128,128,255);
+  const imgMtl = await opt(BOOSTER3D.metal,  0,0,0);
   const mesh = readBoosterGLB();
 
-  const sh = (type, src)=>{ const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
-  const prog = gl.createProgram();
-  gl.attachShader(prog, sh(gl.VERTEX_SHADER, B3D_VS));
-  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, B3D_FS));
-  gl.linkProgram(prog);
-  if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
+  gl.getExtension("OES_standard_derivatives");
+  const sh = (type, src)=>{
+    const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o);
+    return gl.getShaderParameter(o, gl.COMPILE_STATUS) ? o : null;
+  };
+  const build = fsSrc=>{
+    const vs = sh(gl.VERTEX_SHADER, B3D_VS), fs = sh(gl.FRAGMENT_SHADER, fsSrc);
+    if(!vs || !fs) return null;
+    const p = gl.createProgram();
+    gl.attachShader(p, vs); gl.attachShader(p, fs); gl.linkProgram(p);
+    return gl.getProgramParameter(p, gl.LINK_STATUS) ? p : null;
+  };
+  const prog = build(B3D_FS_RICH) || build(B3D_FS_BASIC);
+  if(!prog) return null;
   gl.useProgram(prog);
 
   const attr = (name, data, size)=>{
@@ -4209,19 +4302,29 @@ async function makeBoosterGL(cv, kind, camZ){
   const idx = mesh.idx instanceof Uint32Array ? new Uint16Array(mesh.idx) : mesh.idx;
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);
 
-  const tex = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, tex);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   const aniso = gl.getExtension("EXT_texture_filter_anisotropic");
-  if(aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  const upload = (unit, src)=>{
+    const t = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, src);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    if(aniso) gl.texParameterf(gl.TEXTURE_2D, aniso.TEXTURE_MAX_ANISOTROPY_EXT, 8);
+    return t;
+  };
+  const tex = upload(0, img);
+  upload(1, imgRgh); upload(2, imgNrm); upload(3, imgMtl);
+  gl.activeTexture(gl.TEXTURE0);
 
   const U = n=>gl.getUniformLocation(prog, n);
   const uModel=U("uModel"), uNorm=U("uNorm"), uGlow=U("uGlow"), uSweepX=U("uSweepX"), uSweepK=U("uSweepK");
   gl.uniform1i(U("uTex"), 0);
+  gl.uniform1i(U("uRgh"), 1);
+  gl.uniform1i(U("uNrm"), 2);
+  gl.uniform1i(U("uMtl"), 3);
   gl.uniform3fv(U("uTint"), tint.tint);
   gl.uniform3fv(U("uRim"), tint.rim);
   const asp = cv.width / cv.height;
@@ -6373,9 +6476,32 @@ function avatarStyle(){
        + `background-position:${c.x}% ${c.y}%;background-repeat:no-repeat`;
 }
 
-/* L'illustration est conservée telle quelle dans le profil : jusqu'ici seul
-   l'identifiant de la carte était retenu, si bien que renvoyer la carte, la
-   fusionner ou recharger la collection faisait disparaître la photo. */
+/* La photo est recopiée dans le profil sous forme d'image autonome. Retenir
+   une adresse Fandom ne suffit pas : les vignettes sont régénérées, le lien
+   change, et la photo disparaissait. Une copie locale ne dépend de rien. */
+function cacheAvatar(url){
+  return new Promise(res=>{
+    if(!url || url.startsWith("data:")) return res(url || "");
+    const im = new Image();
+    im.crossOrigin = "anonymous";
+    const fini = ok=>{ clearTimeout(t); res(ok); };
+    const t = setTimeout(()=>fini(url), 7000);
+    im.onerror = ()=>fini(url);
+    im.onload = ()=>{
+      try{
+        const S = 320;
+        const cv = document.createElement("canvas");
+        const r = Math.min(S / im.naturalWidth, S / im.naturalHeight, 1);
+        cv.width = Math.max(1, Math.round(im.naturalWidth * r));
+        cv.height = Math.max(1, Math.round(im.naturalHeight * r));
+        cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+        fini(cv.toDataURL("image/jpeg", 0.86));   // lève si l'image est « teintée »
+      }catch(e){ fini(url); }                      // pas de CORS : on garde l'adresse
+    };
+    im.src = url;
+  });
+}
+
 function avatarSrc(){
   const p = state.profile;
   if(p.avatarImg) return p.avatarImg;
@@ -6383,6 +6509,9 @@ function avatarSrc(){
   if(c && c.img){
     p.avatarImg = c.img;
     sset("fm:profile", p);
+    cacheAvatar(c.img).then(copie=>{
+      if(copie && copie.startsWith("data:")){ p.avatarImg = copie; sset("fm:profile", p); }
+    });
     return c.img;
   }
   return "";
@@ -7428,6 +7557,12 @@ function viewProfil(){
       p.avatarCrop = {z:1, x:50, y:50};
       await sset("fm:profile", p);
       cropAvatar();
+      const copie = await cacheAvatar(c.img || "");
+      if(copie && copie !== p.avatarImg){
+        p.avatarImg = copie;
+        await sset("fm:profile", p);
+        paintMe();
+      }
     }
   });
   const recadre = view.querySelector("#recadre");
@@ -8724,6 +8859,16 @@ function openSettings(){
   }
   await migrateStats();
   await refreshRelics();
+  /* profils d'avant la copie locale : on fige la photo une bonne fois */
+  if(state.profile.avatarImg && !state.profile.avatarImg.startsWith("data:")){
+    cacheAvatar(state.profile.avatarImg).then(async copie=>{
+      if(copie && copie.startsWith("data:")){
+        state.profile.avatarImg = copie;
+        await sset("fm:profile", state.profile);
+        paintMe();
+      }
+    });
+  }
   farmTick();
   state.collection = (await sget("fm:col")) || [];
   paintSound();
