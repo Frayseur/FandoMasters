@@ -78,6 +78,8 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .me .pic{width:26px;height:26px;border-radius:50%;flex:none;overflow:hidden;display:grid;place-items:center;
   background:#41362C;color:var(--muted);font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:.8rem}
 .me .pic img{width:100%;height:100%;object-fit:cover}
+.me .pic{background-size:cover;background-position:center}
+.avatar{background-size:cover;background-position:center}
 .wikitag{display:inline-flex;align-items:center;gap:.4rem;background:var(--ink-2);border:1px dashed var(--line);
   border-radius:999px;padding:.25rem .7rem;font-size:.85rem;color:var(--muted);cursor:pointer}
 
@@ -270,6 +272,40 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 .card[data-v="noir"] .vtag{background:#0C0C0E;color:#E6E8EC;border-color:#8B8E95}
 .card.compact .vtag{top:26px;font-size:.48rem}
 
+/* ---------- reflet holographique ---------- */
+.card.holo{--mx:50%;--my:50%;--rx:0deg;--ry:0deg;--pos:50%;--hyp:0;
+  transition:transform .35s ease, box-shadow .35s ease;transform-style:preserve-3d;will-change:transform}
+.card.holo.active{transition:transform .08s ease-out, box-shadow .2s ease;
+  transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.02);
+  box-shadow:0 22px 40px -22px #000, 0 0 26px -10px var(--g1)}
+.card.holo .shine,.card.holo .glare{position:absolute;inset:0;z-index:5;pointer-events:none;
+  border-radius:inherit;opacity:0;transition:opacity .35s ease}
+.card.holo.active .shine{opacity:calc(.35 + var(--hyp) * .5)}
+.card.holo.active .glare{opacity:calc(.25 + var(--hyp) * .45)}
+.card.holo .shine{
+  background-image:
+    repeating-linear-gradient(110deg,
+      #ff6b9c33 0%, #ffd36a33 6%, #7fe0c833 12%, #7da8ff33 18%, #c77fd833 24%, #ff6b9c33 30%),
+    repeating-linear-gradient(72deg,
+      #0000 0%, #ffffff22 4%, #0000 9%);
+  background-position:var(--pos) var(--my), var(--mx) var(--my);
+  background-size:220% 220%, 180% 180%;
+  background-blend-mode:screen;
+  mix-blend-mode:color-dodge;
+  filter:saturate(1.3) contrast(1.15)}
+.card.holo .glare{
+  background:radial-gradient(farthest-corner circle at var(--mx) var(--my),
+    #ffffffcc 6%, #ffffff44 24%, #00000000 62%);
+  mix-blend-mode:overlay}
+/* les finitions spéciales et les reliques poussent le reflet plus loin */
+.card.holo[data-v="holo"] .shine,.card.holo[data-v="secret"] .shine{filter:saturate(1.7) contrast(1.3)}
+.card.holo[data-r="Relique"] .shine{filter:saturate(1.6) brightness(1.15)}
+.card.holo[data-r="Légendaire"] .glare{background:radial-gradient(farthest-corner circle at var(--mx) var(--my),
+  #FFF3C9dd 6%, #E8B44C55 26%, #00000000 62%)}
+@media (prefers-reduced-motion:reduce){
+  .card.holo.active{transform:none}
+  .card.holo .shine,.card.holo .glare{display:none}
+}
 .card .stars{position:absolute;left:6px;bottom:6px;z-index:4;font-size:.72rem;color:#FFE39A;
   text-shadow:0 0 8px #FFD36A,0 1px 2px #000;letter-spacing:1px}
 .card.st1{box-shadow:0 14px 26px -18px #000, 0 0 16px -8px #FFD36A}
@@ -655,6 +691,9 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 @keyframes halopulse{0%,100%{box-shadow:0 0 26px 0 #E8B44CAA, 0 0 0 2px #E8B44C77}
                      50%{box-shadow:0 0 40px 4px #E8B44CE6, 0 0 0 2px #E8B44CAA}}
 @media (prefers-reduced-motion:reduce){.avatar.halo3{animation:none}}
+.cropbox{width:100%;aspect-ratio:1/1;border-radius:50%;background:#1A1410 center/cover no-repeat;
+  border:3px solid var(--brass);cursor:grab;touch-action:none;box-shadow:0 0 0 6px #0006, 0 10px 24px -14px #000}
+.cropbox:active{cursor:grabbing}
 .avatar{position:relative;z-index:2;width:92px;height:92px;border-radius:50%;flex:none;overflow:hidden;background:var(--ink-2);
   border:3px solid var(--brass);display:grid;place-items:center;font-family:"Bricolage Grotesque",sans-serif;
   font-weight:800;font-size:2rem;color:var(--muted)}
@@ -1334,6 +1373,19 @@ details.fold .in{padding-top:.6rem}
 .b3dbg{position:absolute;inset:0;
   background:radial-gradient(60% 50% at 50% 50%, color-mix(in srgb, var(--b3dglow) 30%, transparent) 0%, #0A0706E6 62%, #050303F5 100%)}
 .b3dcanvas{position:absolute;inset:0;width:100%;height:100%}
+.b3dtext{position:absolute;left:0;right:0;bottom:12%;text-align:center;z-index:3;
+  font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:.02em;
+  color:#F6EBD8;text-shadow:0 2px 12px #000, 0 0 18px var(--b3dglow);
+  opacity:0;animation:b3dtextin .5s ease .35s forwards}
+.b3d.opening .b3dtext{animation:b3dtextout .35s ease forwards}
+@keyframes b3dtextin{to{opacity:1}}
+@keyframes b3dtextout{to{opacity:0;transform:translateY(6px)}}
+.b3dtext .dots{display:inline-block;margin-left:.1rem}
+.b3dtext .dots i{display:inline-block;font-style:normal;animation:dotjump 1.5s ease-in-out infinite}
+.b3dtext .dots i:nth-child(2){animation-delay:.25s}
+.b3dtext .dots i:nth-child(3){animation-delay:.5s}
+@keyframes dotjump{0%,60%,100%{transform:translateY(0);opacity:.55}30%{transform:translateY(-6px);opacity:1}}
+@media (max-width:700px){.b3dtext{font-size:.95rem;bottom:14%}}
 .b3dflash{position:absolute;inset:0;opacity:0;
   background:radial-gradient(circle at 50% 50%, #FFFFFF 0%, var(--b3dglow) 28%, transparent 62%)}
 .b3d.burst .b3dflash{animation:b3dflash .6s ease-out forwards}
@@ -1504,6 +1556,18 @@ details.fold .in{padding-top:.6rem}
 .steamtoast.oneline .tx b{font-size:.8rem}
 .steamtoast.item{border-left-color:#C6B7A8}
 .steamtoast.item .ic{background:linear-gradient(150deg,#C6B7A8,#6E6155)}
+.claimbox{display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;margin:.8rem 0;padding:.8rem 1rem;
+  border-radius:var(--radius);background:linear-gradient(120deg,#3E3324,#2A231B);border:1px solid var(--brass);
+  box-shadow:0 0 22px -12px var(--brass)}
+.claimbox b{font-family:"Bricolage Grotesque",sans-serif;color:var(--brass);font-size:1.02rem}
+.ach.ready{background:#ffffff08}
+.ach.ready .badge{background:linear-gradient(150deg,var(--brass),#B0862E);color:#2A1C06;
+  animation:achpulse 2.2s ease-in-out infinite}
+@keyframes achpulse{0%,100%{box-shadow:0 0 10px -4px var(--brass)}50%{box-shadow:0 0 18px -2px var(--brass)}}
+.achdot{position:absolute;top:2px;right:calc(50% - 22px);min-width:15px;height:15px;border-radius:999px;
+  display:grid;place-items:center;font-size:.6rem;font-weight:800;color:#2A1C06;padding:0 3px;
+  background:linear-gradient(150deg,#FFE39A,#C08F2A);box-shadow:0 0 8px -2px var(--brass)}
+.nav button{position:relative}
 .ach{display:flex;gap:.8rem;align-items:flex-start;padding:.7rem 0;border-bottom:1px solid var(--line)}
 .ach:last-child{border-bottom:none}
 .ach .badge{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex:none;
@@ -2068,12 +2132,34 @@ async function drawPages(n, w){
     generator:"random", grnnamespace:"0", grnlimit:String(n),
     prop:"info|categories|images|pageimages|linkshere|extracts",
     inprop:"url", cllimit:"20", imlimit:"20",
-    piprop:"thumbnail", pithumbsize:"500",
+    piprop:"thumbnail", pithumbsize:"900",
     lhnamespace:"0", lhlimit:"500",
     exintro:"1", explaintext:"1"
   }, w);
   const pages = (data.query && data.query.pages) || [];
   return pages.filter(p=>!p.missing && !isRelic(p.title) && (p.length||0) > 400);
+}
+
+/* Secours quand un article n'a aucune image : Wikimedia Commons, qui ne contient
+   que des œuvres et photographies réelles, sous licence libre. */
+const commonsCache = new Map();
+async function commonsImage(title){
+  const key = (title||"").toLowerCase();
+  if(commonsCache.has(key)) return commonsCache.get(key);
+  let url = null;
+  try{
+    const q = new URLSearchParams({action:"query", format:"json", origin:"*",
+      generator:"search", gsrnamespace:"6", gsrlimit:"1",
+      gsrsearch:`filetype:bitmap ${title}`, prop:"imageinfo", iiprop:"url", iiurlwidth:"900"});
+    const r = await fetch("https://commons.wikimedia.org/w/api.php?" + q, {mode:"cors"});
+    const d = await r.json();
+    const pages = d && d.query && d.query.pages;
+    const first = pages && Object.values(pages)[0];
+    const info = first && first.imageinfo && first.imageinfo[0];
+    if(info) url = info.thumburl || info.url;
+  }catch(e){}
+  commonsCache.set(key, url);
+  return url;
 }
 
 async function enrich(page, w){
@@ -2092,6 +2178,10 @@ async function enrich(page, w){
       }
     }
   }catch(e){}
+  if(!page.thumbnail && state.profile.commons !== false){
+    const url = await commonsImage(page.title);
+    if(url) page.thumbnail = {source:url, commons:true};
+  }
   return page;
 }
 
@@ -2349,6 +2439,7 @@ function sfxForRarity(r){
 const view = document.getElementById("view");
 
 function render(){
+  setTimeout(()=>holoScan(view), 0);
   document.getElementById("coins").textContent = short(state.profile.coins);
   paintMana();
   paintMe();
@@ -2783,7 +2874,7 @@ async function pageByTitle(w, title){
     action:"query", titles:title,
     prop:"info|categories|images|pageimages|linkshere|extracts",
     inprop:"url", cllimit:"20", imlimit:"20",
-    piprop:"thumbnail", pithumbsize:"500",
+    piprop:"thumbnail", pithumbsize:"900",
     lhnamespace:"0", lhlimit:"500",
     exintro:"1", explaintext:"1"
   }, w);
@@ -3351,7 +3442,7 @@ async function relicCard(spec){
       action:"query", generator:"search", gsrsearch:def.titles[0], gsrlimit:"1",
       prop:"info|categories|images|pageimages|linkshere|extracts",
       inprop:"url", cllimit:"20", imlimit:"20",
-      piprop:"thumbnail", pithumbsize:"500",
+      piprop:"thumbnail", pithumbsize:"900",
       lhnamespace:"0", lhlimit:"500", exintro:"1", explaintext:"1"
     }, w);
     const p = ((d.query && d.query.pages) || [])[0];
@@ -3708,7 +3799,9 @@ async function runBoosterIntro(kind, expose){
   const wrap = document.createElement("div");
   wrap.className = "b3d";
   wrap.style.setProperty("--b3dglow", tint.glow);
-  wrap.innerHTML = `<div class="b3dbg"></div><canvas class="b3dcanvas"></canvas><div class="b3dflash"></div>`;
+  wrap.innerHTML = `<div class="b3dbg"></div><canvas class="b3dcanvas"></canvas>
+    <div class="b3dtext">Ouverture en cours<span class="dots"><i>.</i><i>.</i><i>.</i></span></div>
+    <div class="b3dflash"></div>`;
   document.body.appendChild(wrap);
   const cv = wrap.querySelector("canvas");
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -3748,7 +3841,7 @@ async function runBoosterIntro(kind, expose){
         const cyc = (h % 2.2) / 2.2;                       // un reflet balaie le paquet
         const sweepK = cyc < 0.5 ? Math.sin(cyc/0.5*Math.PI) : 0;
         view3d.draw([0, bob, 0], [pitch, yaw, roll], 1, 0, -3.5 + (cyc/0.5)*7, sweepK*0.9);
-        if(asked && (now - holdStart) >= D_HOLD_MIN) shakeStart = now;
+        if(asked && (now - holdStart) >= D_HOLD_MIN){ shakeStart = now; wrap.classList.add("opening"); }
       } else if(!outStart){
         // tension : le paquet tremble avant de céder
         const k = (now - shakeStart) / D_SHAKE;
@@ -5704,6 +5797,15 @@ function powerHTML(side){
     <div class="powring"><span>${p.icon}</span></div>
   </div>`;
 }
+/* style commun à toutes les vignettes de profil, recadrage compris */
+function avatarStyle(){
+  const url = avatarSrc();
+  if(!url) return "";
+  const c = state.profile.avatarCrop || {z:1, x:50, y:50};
+  return `background-image:url('${esc(url)}');background-size:${(c.z*100).toFixed(0)}% auto;`
+       + `background-position:${c.x}% ${c.y}%;background-repeat:no-repeat`;
+}
+
 function avatarSrc(){
   const p = state.profile;
   const c = p.avatar ? state.collection.find(x=>x.id === p.avatar) : null;
@@ -5711,8 +5813,8 @@ function avatarSrc(){
 }
 function portraitArt(side){
   const f = state.dj.fight;
-  const url = side === "me" ? avatarSrc() : (f.foe.img || "");
-  return url ? `style="background-image:url('${esc(url)}')"` : "";
+  if(side === "me") return avatarSrc() ? `style="${avatarStyle()}"` : "";
+  return f.foe.img ? `style="background-image:url('${esc(f.foe.img)}')"` : "";
 }
 function portraitHTML(side){
   const d = state.dj, f = d.fight;
@@ -6247,26 +6349,58 @@ const ACHIEVEMENTS = [
 
 function achGoal(a){ return a.dyn ? a.dyn() : a.goal; }
 
+/* Un succès atteint attend que le joueur vienne encaisser sa prime. */
+function achClaimed(){ return new Set(state.profile.achClaimed || []); }
+function achPending(){
+  const owned = new Set(state.profile.ach||[]), paid = achClaimed();
+  return ACHIEVEMENTS.filter(a=>owned.has(a.id) && !paid.has(a.id));
+}
+
 async function checkAch(){
   const owned = new Set(state.profile.ach||[]);
   const fresh = [];
   for(const a of ACHIEVEMENTS){
     if(owned.has(a.id)) continue;
-    if(a.val() >= achGoal(a)){
-      owned.add(a.id);
-      state.profile.coins += a.reward;
-      fresh.push(a);
-    }
+    if(a.val() >= achGoal(a)){ owned.add(a.id); fresh.push(a); }
   }
   if(fresh.length){
     state.profile.ach = [...owned];
     await saveAll();
-    document.getElementById("coins").textContent = short(state.profile.coins);
     fresh.forEach((a,i)=>setTimeout(()=>{
-      toast(a.name, `Succès débloqué · +${a.reward} ◆`, "ach"); sfx.ach();
+      toast(a.name, `Succès débloqué · ${a.reward} ◆ à réclamer`, "ach"); sfx.ach();
     }, i*1400));
+    paintAchDot();
   }
   return fresh;
+}
+
+async function claimAch(ids){
+  const paid = achClaimed();
+  let total = 0, n = 0;
+  ACHIEVEMENTS.forEach(a=>{
+    if(!ids.includes(a.id) || paid.has(a.id)) return;
+    paid.add(a.id); total += a.reward; n++;
+  });
+  if(!n) return;
+  state.profile.achClaimed = [...paid];
+  state.profile.coins += total;
+  await saveAll();
+  document.getElementById("coins").textContent = short(state.profile.coins);
+  sfx.coin();
+  toast(n > 1 ? `${n} succès encaissés` : "Succès encaissé", `+${total.toLocaleString("fr-FR")} ◆`, "gold");
+  paintAchDot();
+  if(state.view === "ach") viewAch();
+}
+
+/* pastille sur l'onglet Succès tant qu'il reste une prime à prendre */
+function paintAchDot(){
+  const n = achPending().length;
+  document.querySelectorAll('[data-view="ach"]').forEach(b=>{
+    let d = b.querySelector(".achdot");
+    if(n && !d){ d = document.createElement("span"); d.className = "achdot"; b.appendChild(d); }
+    if(d) d.textContent = n || "";
+    if(d && !n) d.remove();
+  });
 }
 
 function toast(title, sub, kind){
@@ -6292,29 +6426,192 @@ function viewAch(){
   const done = ACHIEVEMENTS.filter(a=>owned.has(a.id));
   const todo = ACHIEVEMENTS.filter(a=>!owned.has(a.id))
     .sort((a,b)=> (b.val()/achGoal(b)) - (a.val()/achGoal(a)));
+  const paid = achClaimed();
+  const pending = achPending();
   const row = a=>{
-    const on = owned.has(a.id);
+    const on = owned.has(a.id), got = paid.has(a.id);
     const g = achGoal(a), v = Math.min(a.val(), g);
-    return `<div class="ach ${on?"on":""}">
-      <div class="badge">${on?"✦":"·"}</div>
+    return `<div class="ach ${on?"on":""} ${on&&!got?"ready":""}">
+      <div class="badge">${got?"✦":on?"◆":"·"}</div>
       <div style="flex:1;min-width:0">
         <div class="t">${esc(a.name)}</div>
         <div class="sub" style="font-size:.85rem">${esc(a.desc)}</div>
         ${on?"":`<div class="bar"><i style="width:${Math.round(v/g*100)}%"></i></div>
         <div class="sub" style="font-size:.78rem">${v.toLocaleString("fr-FR")} / ${g.toLocaleString("fr-FR")}</div>`}
       </div>
-      <div class="rw">${on?"obtenu":"+"+a.reward.toLocaleString("fr-FR")+" ◆"}</div>
+      <div class="rw">${
+        got ? "encaissé"
+        : on ? `<button class="btn small" data-claim="${esc(a.id)}">Réclamer ${a.reward.toLocaleString("fr-FR")} ◆</button>`
+             : "+"+a.reward.toLocaleString("fr-FR")+" ◆"}</div>
     </div>`;
   };
   view.innerHTML = `
     <h2 style="font-size:1.6rem">Succès</h2>
     <p class="sub">${done.length} sur ${ACHIEVEMENTS.length} débloqués.</p>
+    ${pending.length? `<div class="claimbox">
+      <div style="flex:1;min-width:0">
+        <b>${pending.length} prime${pending.length>1?"s":""} à encaisser</b>
+        <div class="sub" style="font-size:.84rem">${pending.reduce((n,a)=>n+a.reward,0).toLocaleString("fr-FR")} Fandominus vous attendent.</div>
+      </div>
+      <button class="btn" id="claimall">Tout réclamer</button>
+    </div>
+    <h3 style="font-size:1.05rem;margin:1rem 0 .5rem">À réclamer</h3>
+    <div class="panel">${pending.map(row).join("")}</div>`:""}
     <h3 style="font-size:1.05rem;margin:1rem 0 .5rem">En cours</h3>
     <div class="panel">${todo.length? todo.map(row).join("") : `<p class="sub" style="margin:0">Tout est décroché. Chapeau.</p>`}</div>
     ${done.length? `<details class="fold" style="margin-top:1rem">
       <summary>Succès validés · ${done.length}</summary>
-      <div class="in">${done.map(row).join("")}</div>
+      <div class="in">${done.filter(a=>paid.has(a.id)).map(row).join("")}</div>
     </details>`:""}`;
+
+  view.querySelectorAll("[data-claim]").forEach(b=>b.onclick = ()=>claimAch([b.dataset.claim]));
+  const all = view.querySelector("#claimall");
+  if(all) all.onclick = ()=>claimAch(pending.map(a=>a.id));
+}
+
+/* ========================================================================
+   REFLET HOLOGRAPHIQUE
+   Technique des cartes Pokémon de simeydotme (pokemon-cards-css, MIT) :
+   la position du pointeur alimente des variables CSS, deux couches en
+   fondu additif glissent sur la carte, et la carte s'incline en 3D.
+   ======================================================================== */
+const HOLO_FROM = 3;   // à partir de Super rare
+
+function holoWorthy(c){
+  if(!c) return false;
+  if(c.rarity === "Relique") return true;
+  if(c.variant && c.variant !== "std") return true;
+  return RARITIES.indexOf(c.rarity) >= HOLO_FROM;
+}
+
+function holoTrack(el){
+  if(!el || el.dataset.holo) return;
+  el.dataset.holo = "1";
+  el.classList.add("holo");
+  if(!el.querySelector(".shine")){
+    const sh = document.createElement("span"); sh.className = "shine";
+    const gl = document.createElement("span"); gl.className = "glare";
+    const inner = el.querySelector(".inner") || el;
+    inner.appendChild(sh); inner.appendChild(gl);
+  }
+  let raf = 0;
+  const apply = (px, py)=>{
+    const r = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(1, (px - r.left) / r.width));
+    const y = Math.max(0, Math.min(1, (py - r.top) / r.height));
+    const cx = x*100, cy = y*100;
+    // distance au centre : plus on s'éloigne, plus le reflet est franc
+    const hyp = Math.min(1, Math.hypot(x-0.5, y-0.5) / 0.6);
+    if(raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(()=>{
+      el.style.setProperty("--mx", cx + "%");
+      el.style.setProperty("--my", cy + "%");
+      el.style.setProperty("--rx", ((0.5 - y) * 16).toFixed(2) + "deg");
+      el.style.setProperty("--ry", ((x - 0.5) * 18).toFixed(2) + "deg");
+      el.style.setProperty("--pos", (cx*0.8 + cy*0.2).toFixed(1) + "%");
+      el.style.setProperty("--hyp", hyp.toFixed(3));
+      el.classList.add("active");
+    });
+  };
+  const leave = ()=>{
+    if(raf) cancelAnimationFrame(raf);
+    el.classList.remove("active");
+    el.style.removeProperty("--rx");
+    el.style.removeProperty("--ry");
+    el.style.setProperty("--hyp", "0");
+  };
+  el.addEventListener("pointermove", e=>apply(e.clientX, e.clientY));
+  el.addEventListener("pointerleave", leave);
+  el.addEventListener("touchmove", e=>{
+    const t = e.touches[0];
+    if(t) apply(t.clientX, t.clientY);
+  }, {passive:true});
+  el.addEventListener("touchend", leave);
+}
+
+/* branche l'effet sur toutes les cartes dignes affichées dans un conteneur */
+function holoScan(root){
+  (root || document).querySelectorAll(".card[data-r]").forEach(el=>{
+    const r = el.getAttribute("data-r");
+    const v = el.getAttribute("data-v");
+    const worthy = r === "Relique" || (v && v !== "std") || RARITIES.indexOf(r) >= HOLO_FROM;
+    if(worthy) holoTrack(el);
+  });
+}
+
+/* ---------- recadrage de la photo de profil ---------- */
+function cropAvatar(){
+  const p = state.profile;
+  const url = avatarSrc();
+  if(!url) return;
+  const c = Object.assign({z:1, x:50, y:50}, p.avatarCrop || {});
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `<div class="inner" style="max-width:360px">
+    <h3 style="font-size:1.15rem;margin-bottom:.2rem">Recadrer la photo</h3>
+    <p class="sub" style="margin:0 0 .7rem;font-size:.82rem">Faites glisser l'image pour la cadrer, puis réglez le zoom.</p>
+    <div class="cropbox" id="cb"></div>
+    <div class="row" style="margin-top:.7rem;align-items:center;gap:.5rem">
+      <span class="sub" style="font-size:.8rem">Zoom</span>
+      <input type="range" id="cz" min="100" max="300" value="${Math.round(c.z*100)}" style="flex:1">
+    </div>
+    <div class="row" style="margin-top:.7rem">
+      <button class="btn small" id="cok">Valider</button>
+      <button class="btn small ghost" id="ccenter">Recentrer</button>
+      <button class="btn small ghost" id="cno">Annuler</button>
+    </div>
+  </div>`;
+  document.body.appendChild(m);
+  const box = m.querySelector("#cb");
+  const paint = ()=>{
+    box.setAttribute("style",
+      `background-image:url('${esc(url)}');background-size:${(c.z*100).toFixed(0)}% auto;`
+      + `background-position:${c.x}% ${c.y}%;background-repeat:no-repeat`);
+  };
+  paint();
+
+  let drag = null;
+  const start = e=>{
+    const t = e.touches ? e.touches[0] : e;
+    drag = {x:t.clientX, y:t.clientY, cx:c.x, cy:c.y};
+    e.preventDefault();
+  };
+  const move = e=>{
+    if(!drag) return;
+    const t = e.touches ? e.touches[0] : e;
+    const r = box.getBoundingClientRect();
+    c.x = Math.max(0, Math.min(100, drag.cx - (t.clientX - drag.x) / r.width * 100));
+    c.y = Math.max(0, Math.min(100, drag.cy - (t.clientY - drag.y) / r.height * 100));
+    paint();
+    e.preventDefault();
+  };
+  const end = ()=>{ drag = null; };
+  box.addEventListener("mousedown", start);
+  box.addEventListener("touchstart", start, {passive:false});
+  window.addEventListener("mousemove", move);
+  window.addEventListener("touchmove", move, {passive:false});
+  window.addEventListener("mouseup", end);
+  window.addEventListener("touchend", end);
+  const close = ()=>{
+    window.removeEventListener("mousemove", move);
+    window.removeEventListener("touchmove", move);
+    window.removeEventListener("mouseup", end);
+    window.removeEventListener("touchend", end);
+    m.remove();
+  };
+
+  m.querySelector("#cz").oninput = e=>{ c.z = +e.target.value / 100; paint(); };
+  m.querySelector("#ccenter").onclick = ()=>{ c.x = 50; c.y = 50; c.z = 1; m.querySelector("#cz").value = 100; paint(); };
+  m.querySelector("#cno").onclick = close;
+  m.onclick = e=>{ if(e.target === m) close(); };
+  m.querySelector("#cok").onclick = async ()=>{
+    p.avatarCrop = {z:c.z, x:Math.round(c.x), y:Math.round(c.y)};
+    await sset("fm:profile", p);
+    sfx.tick();
+    close();
+    paintMe();
+    viewProfil();
+  };
 }
 
 /* ---------- écritures gothiques ---------- */
@@ -6412,9 +6709,13 @@ function viewProfil(){
     </div>`:""}
     <div class="panel profilehead ${p.banner?"hasbanner":""}" style="margin:.8rem 0 1rem">
       <div class="row" style="gap:1rem;flex-wrap:nowrap;align-items:center;position:relative;z-index:2">
-        <button class="avatar halo${lv0.lvl>=30?"3":lv0.lvl>=20?"2":lv0.lvl>=10?"1":"0"}" id="avbtn" title="Choisir une illustration">
-          ${av && av.img ? `<img src="${esc(av.img)}" alt="">` : esc((p.pseudo||"?").slice(0,1).toUpperCase())}
-        </button>
+        <div style="text-align:center">
+          <button class="avatar halo${lv0.lvl>=30?"3":lv0.lvl>=20?"2":lv0.lvl>=10?"1":"0"}" id="avbtn"
+            title="Choisir une illustration" style="${av && av.img ? avatarStyle() : ""}">
+            ${av && av.img ? "" : esc((p.pseudo||"?").slice(0,1).toUpperCase())}
+          </button>
+          ${av && av.img ? `<button class="btn small ghost" id="recadre" style="margin-top:.4rem;font-size:.74rem">Recadrer</button>`:""}
+        </div>
         <div style="min-width:0;flex:1">
           <div class="row" style="gap:.5rem">
             <h3 style="font-size:1.4rem">${esc(p.pseudo)}</h3>
@@ -6479,8 +6780,15 @@ function viewProfil(){
   view.querySelector("#avbtn").onclick = ()=>pickCard({
     title:"Choisir une illustration",
     filter:c=>!!c.img,
-    onPick:async c=>{ p.avatar = c.id; await sset("fm:profile", p); viewProfil(); }
+    onPick:async c=>{
+      p.avatar = c.id;
+      p.avatarCrop = {z:1, x:50, y:50};
+      await sset("fm:profile", p);
+      cropAvatar();
+    }
   });
+  const recadre = view.querySelector("#recadre");
+  if(recadre) recadre.onclick = ()=>cropAvatar();
   view.querySelectorAll("[data-font]").forEach(b=>b.onclick = async ()=>{
     const f = b.dataset.font;
     p.pseudo = f === "frak" ? toScript(p.pseudo, FRAK)
@@ -6556,7 +6864,13 @@ function pickCard({title, filter, onPick, multi=0, pre=[]}){
         <h3 style="font-size:1.15rem">${esc(title)}</h3>
         <button class="btn small ghost" id="close">Fermer</button>
       </div>
-      <input id="pq" placeholder="Rechercher…" style="margin:.6rem 0">
+      <div class="row" style="margin:.6rem 0 .5rem;gap:.4rem">
+        <input id="pq" placeholder="Rechercher une carte…" style="flex:2 1 180px;margin:0">
+        <select id="pu" style="flex:1 1 140px;margin:0">
+          <option value="">Tous les univers</option>
+          ${[...new Set(list.map(c=>c.univ))].sort().map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join("")}
+        </select>
+      </div>
       ${multi?`<div class="row" style="margin-bottom:.5rem">
         <button class="btn small" id="ok" ${chosen.length!==multi?"disabled":""}>Valider ${chosen.length}/${multi}</button>
         <button class="btn small ghost" id="auto">Compléter au mieux</button>
@@ -6568,7 +6882,8 @@ function pickCard({title, filter, onPick, multi=0, pre=[]}){
     const pg = m.querySelector("#pg");
     const paint = ()=>{
       const q = (m.querySelector("#pq").value||"").toLowerCase();
-      pg.innerHTML = list.filter(c=>!q||(c.title+" "+c.univ).toLowerCase().includes(q))
+      const u = m.querySelector("#pu") ? m.querySelector("#pu").value : "";
+      pg.innerHTML = list.filter(c=>(!q||(c.title+" "+c.univ).toLowerCase().includes(q)) && (!u || c.univ === u))
         .slice(0,120)
         .map(c=>`<div class="pickwrap ${chosen.includes(c.id)?"on":""}" data-id="${esc(c.id)}">${cardHTML(c,{compact:true})}</div>`).join("");
       pg.querySelectorAll(".pickwrap").forEach(el=>el.onclick = ()=>{
@@ -6581,6 +6896,8 @@ function pickCard({title, filter, onPick, multi=0, pre=[]}){
       });
     };
     m.querySelector("#pq").oninput = paint;
+    const pu = m.querySelector("#pu");
+    if(pu) pu.onchange = paint;
     m.querySelector("#close").onclick = ()=>m.remove();
     const fuse = m.querySelector("#fuse");
     if(fuse) fuse.onclick = async ()=>{
@@ -7686,7 +8003,8 @@ function paintMe(){
   if(!pic || !nm) return;
   nm.textContent = p.pseudo || "";
   const c = p.avatar ? state.collection.find(x=>x.id===p.avatar) : null;
-  pic.innerHTML = (c && c.img) ? `<img src="${esc(c.img)}" alt="">` : esc((p.pseudo||"?").slice(0,1).toUpperCase());
+  if(c && c.img){ pic.innerHTML = ""; pic.setAttribute("style", avatarStyle()); }
+  else { pic.removeAttribute("style"); pic.innerHTML = esc((p.pseudo||"?").slice(0,1).toUpperCase()); }
 }
 document.getElementById("wikitag").onclick = openSettings;
 const soundBtn = document.getElementById("sound");
@@ -7707,11 +8025,17 @@ function openSettings(){
     <p class="sub" style="margin:.2rem 0 0">Le pseudo et la photo se changent dans l'onglet Profil.</p>
 
     <div class="row" style="margin-top:1rem">
+      <button class="btn small ghost" id="s-commons">Images de secours : ${state.profile.commons === false ? "désactivées" : "activées"}</button>
       <button class="btn small ghost" id="s-recheck">Revérifier les univers</button>
     </div>
   </div>`;
   m.onclick = e=>{ if(e.target===m) m.remove(); };
   document.body.appendChild(m);
+  m.querySelector("#s-commons").onclick = async ()=>{
+    state.profile.commons = state.profile.commons === false;
+    await sset("fm:profile", state.profile);
+    m.remove(); openSettings();
+  };
   m.querySelector("#s-recheck").onclick = async ()=>{
     await sset("fm:pool2", {t:0, pool:[]});
     poolPromise = null; state.pool = [];
@@ -7743,10 +8067,16 @@ function openSettings(){
   if(state.profile.camp){ state.profile.camps.push(state.profile.camp); state.profile.camp = null; }
   state.profile.camps.forEach(c=>{ if(c.win === undefined) c.win = Math.random()*100 < c.chance; });
   if(!state.profile.since){ state.profile.since = Date.now(); await sset("fm:profile", state.profile); }
+  // partie d'avant l'encaissement manuel : les primes déjà versées sont marquées payées
+  if(!state.profile.achClaimed){
+    state.profile.achClaimed = (state.profile.ach||[]).slice();
+    await sset("fm:profile", state.profile);
+  }
   farmTick();
   state.collection = (await sget("fm:col")) || [];
   paintSound();
   render();
+  paintAchDot();
   tick();
   checkAch();
   setInterval(tick, 1000);
