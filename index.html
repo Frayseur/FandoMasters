@@ -1573,7 +1573,7 @@ const RAR_SHORT = {"Commun":"C","Peu commun":"PC","Rare":"R","Super rare":"SR","
 const SELL = {"Commun":1,"Peu commun":1,"Rare":2,"Super rare":5,"Ultra rare":10,"Légendaire":20,"Relique":20};
 const PACK_PRICE = 20;
 const START_COINS = 60;
-const FREE_MAX = 5;                 // réserve maximale de boosters gratuits
+const FREE_MAX = 10;                 // réserve maximale de boosters gratuits
 const FREE_MS = 10*60*1000;         // un booster gratuit toutes les dix minutes
 const PITY = 12;                    // paquets sans Rare+ avant garantie
 
@@ -1584,7 +1584,7 @@ const ODDS = [
   ["Rare",        0.02800],
   ["Super rare",  0.00600],
   ["Ultra rare",  0.00180],
-  ["Légendaire",  0.00035]
+  ["Légendaire",  0.0035]
 ];
 /* Booster mythique : aucune Commune, et les hauts de table décuplés. */
 const ODDS_MYTHIC = [
@@ -2480,7 +2480,7 @@ function viewHub(){
     </div>`;
     document.body.appendChild(m);
     const tryPw = ()=>{
-      if(m.querySelector("#pw").value === "Alfort_NantesLisa2727"){
+      if(m.querySelector("#pw").value === "2727"){
         state.dev = true;
         sfx.ach();
         m.remove();
