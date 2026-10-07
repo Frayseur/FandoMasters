@@ -223,8 +223,14 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
   clip-path:polygon(2.6cqw 0,calc(100% - 2.6cqw) 0,100% 50%,calc(100% - 2.6cqw) 100%,2.6cqw 100%,0 50%)}
 .card .band .atk,.card .band .def{display:inline-flex;align-items:center;gap:2.4cqw;line-height:1.16;
   color:#FFFFFF;text-shadow:0 .5cqw 0 #000, 0 0 4cqw #000000AA}
+/* Le blanc était obtenu par deux filtres enchaînés ; pendant un mouvement,
+   le navigateur pouvait n'en appliquer que le premier, et l'emoji passait au
+   noir. Un unique filtre SVG fait la conversion en une seule opération, donc
+   plus rien d'intermédiaire à afficher. */
 .card .band .role{font-size:1.1em;line-height:1;
-  filter:brightness(0) invert(1) drop-shadow(0 1px 2px #000000AA)}
+  filter:brightness(0) invert(1) drop-shadow(0 1px 2px #000000AA);
+  filter:url(#fmblanc) drop-shadow(0 1px 2px #000000AA);
+  will-change:filter;transform:translateZ(0)}
 .card .band .i{font-size:.86em;line-height:1}
 .card .band .armup{color:var(--g1);font-size:.8em;margin-left:.15rem}
 
@@ -1139,7 +1145,8 @@ body.cardopen .wrap,body.cardopen .nav,body.cardopen .scrim{visibility:hidden}
 .partyrow{display:grid;grid-template-columns:repeat(5,1fr);gap:.4rem}
 .pslot{aspect-ratio:63/88;border-radius:10px;border:1px dashed var(--line);background:#2A2320;
   display:grid;place-items:center;color:var(--muted);font-size:1.3rem;opacity:.7}
-.pslot.full{border:none;background:none;display:block;padding:0}
+.pslot.full{border:none;background:none;display:block;padding:0;position:relative}
+.pslot.full .card{position:absolute;inset:0;width:100%;height:100%}
 .dgo{position:sticky;bottom:calc(.6rem + env(safe-area-inset-bottom));z-index:5;padding-bottom:.4rem}
 .dgo .btn{width:100%}
 @media (max-width:560px){
@@ -1158,8 +1165,8 @@ body.cardopen .wrap,body.cardopen .nav,body.cardopen .scrim{visibility:hidden}
 @media (max-width:560px){.slots{grid-template-columns:repeat(3,1fr)}}
 .slot{aspect-ratio:63/88;border-radius:14px;border:2px dashed var(--line);background:#2F2926;
   display:grid;place-items:center;color:#8F7F6C;font-size:1.6rem;cursor:pointer;position:relative;overflow:hidden}
-.slot.full{display:block;border:none;padding:0;background:none;aspect-ratio:auto;overflow:visible}
-.slot.full .card{width:100%;height:auto}
+.slot.full{display:block;border:none;padding:0;background:none;overflow:visible;position:relative}
+.slot.full .card{position:absolute;inset:0;width:100%;height:100%}
 .slot .x{position:absolute;top:4px;right:4px;z-index:6;width:22px;height:22px;border-radius:50%;
   background:#1A1614CC;color:#fff;display:grid;place-items:center;font-size:.8rem;border:1px solid #ffffff33}
 
@@ -1962,9 +1969,12 @@ details.fold .in{padding-top:.6rem}
 .fightlog{margin-top:.6rem;font-size:.82rem;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:.5rem}
 
 .timebar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#E8B44C,#E2574C)}
-.pickwrap{position:relative;cursor:pointer;border-radius:16px;transition:transform .12s ease;
-  min-width:0;display:block;line-height:0}
-.pickwrap .card{width:100%}
+/* La case porte elle-même le format de la carte, et la carte y est calée aux
+   quatre bords. Les deux ne peuvent donc plus différer d'un pixel, quel que
+   soit le moteur : il n'y a plus aucune taille à calculer. */
+.pickwrap{position:relative;cursor:pointer;border-radius:13px;transition:transform .12s ease;
+  min-width:0;display:block;line-height:0;aspect-ratio:63/88}
+.pickwrap .card{position:absolute;inset:0;width:100%;height:100%}
 /* Dans une grille de sélection, la carte ne bascule pas en 3D : elle reste
    calée dans sa case, seul le reflet joue. */
 .pickwrap .card.holoact,.pslot .card.holoact,.slot .card.holoact{transform:none;box-shadow:0 14px 26px -18px #000, var(--glow)}
@@ -2044,6 +2054,11 @@ details.fold .in{padding-top:.6rem}
 </style>
 </head>
 <body>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <filter id="fmblanc" color-interpolation-filters="sRGB">
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"/>
+  </filter>
+</svg>
 <div class="wrap">
   <div class="topbar">
     <button class="logo" id="home"><span class="mark"></span> FandoMasters</button>
@@ -4186,6 +4201,21 @@ uniform sampler2D uTex, uRgh, uNrm, uMtl;
 uniform vec3 uTint, uRim; uniform float uGlow, uSweepX, uSweepK;
 varying vec3 vN; varying vec2 vUv; varying vec3 vW;
 
+/* Palette des Ultra rares : les six teintes qui défilent sur leur reflet. */
+vec3 sunpillar(float t){
+  t = fract(t);
+  vec3 c1 = vec3(1.00, 0.45, 0.42), c2 = vec3(1.00, 0.87, 0.38),
+       c3 = vec3(0.52, 1.00, 0.52), c4 = vec3(0.52, 1.00, 0.93),
+       c5 = vec3(0.48, 0.60, 1.00), c6 = vec3(0.86, 0.46, 1.00);
+  float x = t * 6.0; float f = fract(x); int i = int(floor(x));
+  if(i == 0) return mix(c1, c2, f);
+  if(i == 1) return mix(c2, c3, f);
+  if(i == 2) return mix(c3, c4, f);
+  if(i == 3) return mix(c4, c5, f);
+  if(i == 4) return mix(c5, c6, f);
+  return mix(c6, c1, f);
+}
+
 void main(){
   vec3 albedo = texture2D(uTex, vUv).rgb * uTint;
   /* la carte de rugosité est recalée pour un film plastique : jamais miroir,
@@ -4224,10 +4254,25 @@ void main(){
   env += vec3(0.25, 0.22, 0.18) * pow(max(-R.y, 0.0), 2.0);   /* rebond du sol */
   vec3  refl = env * F * (1.0 - rough * 0.62) * 0.9;
 
-  float rim  = pow(1.0 - nv, 3.0) * (1.0 - rough * 0.55);
-  float band = exp(-pow((vW.x - uSweepX) * 0.85, 2.0)) * uSweepK * (1.0 - rough * 0.55);
+  /* Le trait de lumière est une vraie source mobile, pas un voile blanc :
+     il a une direction, donc il éclaire la matière selon son relief et laisse
+     glisser un éclat spéculaire à mesure qu'il traverse le sachet. */
+  float band = exp(-pow((vW.x - uSweepX) * 0.85, 2.0)) * uSweepK;
+  vec3  L3 = normalize(vec3((uSweepX - vW.x) * 0.55, 0.30, 1.0));
+  float d3 = max(dot(N, L3), 0.0);
+  float s3 = pow(max(dot(N, normalize(L3 + V)), 0.0), gloss);
+  vec3  sweep = (albedo * d3 * 1.15 + s3 * norm * F * 2.4) * band;
 
-  vec3 col = diff + spec + refl + uRim * rim * 0.40 + vec3(band * 0.30) + uRim * uGlow;
+  /* Irisation des Ultra rares : la teinte se décale avec l'angle de vue et
+     remonte le long du sachet, plus franche sur les zones lisses. */
+  vec3  irid = sunpillar(nv * 1.9 + vUv.y * 1.35 + vUv.x * 0.45 + uSweepX * 0.03);
+  float iridK = pow(1.0 - nv, 1.5) * (1.0 - rough * 0.45) * 0.55
+              + band * 0.35;
+  vec3  sheen = irid * iridK;
+
+  float rim  = pow(1.0 - nv, 3.0) * (1.0 - rough * 0.55);
+
+  vec3 col = diff + spec + refl + sheen + sweep + uRim * rim * 0.40 + uRim * uGlow;
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -7202,7 +7247,7 @@ const HOLO_FROM = 2;   // à partir de Rare
 /* quel effet pour quelle carte : la finition prime sur la rareté */
 const HOLO_FX_VAR = {noir:"noir", vintage:"vintage", holo:"rainbow", fullart:"fa", secret:"secret"};
 const HOLO_FX_RAR = {"Rare":"rev", "Super rare":"holo", "Ultra rare":"fa",
-                     "Légendaire":"secret", "Relique":"secret"};
+                     "Légendaire":"fa", "Relique":"secret"};
 function holoFx(rarity, variant){
   if(variant && variant !== "std" && HOLO_FX_VAR[variant]) return HOLO_FX_VAR[variant];
   return HOLO_FX_RAR[rarity] || null;
