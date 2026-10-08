@@ -13,12 +13,12 @@
 :root{
   /* Teintes relevées sur la maquette : crème, encre, violet, vert, corail,
      marine. Les nuances intermédiaires sont des voiles de ces teintes. */
-  --p1:#F8F0E3;   /* crème   */
-  --p2:#1F1A17;   /* encre   */
-  --p3:#6A5E92;   /* violet  */
-  --p4:#149682;   /* vert    */
-  --p5:#E8A294;   /* corail  */
-  --p6:#1C1F45;   /* marine  */
+  --p1:#1B141A;   /* papier   */
+  --p2:#FFE0F8;   /* encre    */
+  --p3:#FFE0F8;   /* accent 1 */
+  --p4:#D34CA8;   /* accent 2 */
+  --p5:#F2C3FF;   /* accent 3 */
+  --p6:#2F0021;   /* profond  */
 
   --ink:#F8F0E3;                      /* fond de page */
   --ink-2:rgba(31,26,23,.06);         /* creux et champs */
@@ -1105,17 +1105,24 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
 .up .lv{margin-left:auto;text-align:right;white-space:nowrap}
 
 /* profil */
-.lvlbadge{display:inline-block;padding:.12rem .55rem;border-radius:999px;font-size:.8rem;font-weight:800;
-  font-family:"Bricolage Grotesque",sans-serif;color:var(--p1);background:var(--p3)}
+.lvlbadge{display:inline-block;padding:.1rem .6rem;border-radius:999px;font-size:.72rem;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;font-family:"Bricolage Grotesque",sans-serif;
+  color:var(--p4);background:transparent;border:1px solid var(--p4)}
 .lvlbar{height:7px;border-radius:4px;background:var(--ink-2);border:1px solid var(--line);margin-top:.35rem;overflow:hidden;max-width:280px}
 .lvlbar i{display:block;height:100%;background:linear-gradient(90deg,var(--p5),var(--p3))}
-.titletag{display:inline-block;margin-top:.25rem;padding:.1rem .55rem;border-radius:999px;font-size:.8rem;
-  font-weight:700;color:var(--p1);background:var(--p3)}
+.titletag{display:inline-block;margin-top:.25rem;padding:.1rem .6rem;border-radius:999px;font-size:.78rem;
+  font-weight:700;color:var(--text);background:var(--a1-voile);border:1px solid var(--p3)}
 .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.9rem}
 @media (max-width:520px){.statgrid{grid-template-columns:repeat(2,1fr)}}
-.statgrid .st{background:var(--ink-2);border:1px solid var(--line);border-radius:12px;padding:.5rem .6rem;text-align:center}
-.statgrid .st b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:1.25rem;color:var(--brass)}
-.statgrid .st span{font-size:.74rem;color:var(--muted)}
+/* Les compteurs sont des fiches de papier : le chiffre à l'encre, le
+   libellé en petites capitales, un filet d'accent pour les lier. */
+.statgrid .st{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  padding:.7rem .6rem .6rem;text-align:center;position:relative;overflow:hidden}
+.statgrid .st::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--p4)}
+.statgrid .st b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:1.45rem;
+  line-height:1.1;color:var(--text);font-variant-numeric:tabular-nums}
+.statgrid .st span{font-size:.66rem;color:var(--muted);font-weight:700;
+  letter-spacing:.09em;text-transform:uppercase;line-height:1.3;display:block;margin-top:.15rem}
 /* fond de profil pleine largeur, à la manière de Steam :
    l'illustration s'étale d'un bord à l'autre de l'écran, en miroir à droite */
 .pstage{position:absolute;left:50%;transform:translateX(-50%);width:100vw;max-width:100vw;height:330px;
@@ -1130,9 +1137,9 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
 #view{position:relative}
 .profilehead{position:relative;z-index:2;min-height:150px}
 .profilehead.hasbanner{background:#6A5E92CC;backdrop-filter:blur(10px);border-color:#ffffff26}
-.avatar.halo1{box-shadow:0 0 14px -2px #E8A29466}
-.avatar.halo2{box-shadow:0 0 22px 0 #E8A29499, 0 0 0 1px #E8A29455}
-.avatar.halo3{box-shadow:0 0 30px 2px #E8A294CC, 0 0 0 2px #E8A29488;animation:halopulse 3.2s ease-in-out infinite}
+.avatar.halo1{box-shadow:0 0 0 3px var(--a3-voile)}
+.avatar.halo2{box-shadow:0 0 0 4px var(--a3-voile), 0 0 16px -2px var(--p5)}
+.avatar.halo3{box-shadow:0 0 0 4px var(--a3-voile), 0 0 24px 0 var(--p5);animation:halopulse 3.2s ease-in-out infinite}
 @keyframes halopulse{0%,100%{box-shadow:0 0 26px 0 #E8A294AA, 0 0 0 2px #E8A29477}
                      50%{box-shadow:0 0 40px 4px #E8A294E6, 0 0 0 2px #E8A294AA}}
 @media (prefers-reduced-motion:reduce){.avatar.halo3{animation:none}}
@@ -1210,12 +1217,12 @@ body.cardopen .wrap,body.cardopen .nav{visibility:hidden}
   border:3px solid var(--brass);cursor:grab;touch-action:none;box-shadow:0 0 0 6px #0006, 0 10px 24px -14px #000}
 .cropbox:active{cursor:grabbing}
 .avatar{position:relative;z-index:2;width:92px;height:92px;border-radius:50%;flex:none;overflow:hidden;background:var(--ink-2);
-  border:3px solid var(--brass);display:grid;place-items:center;font-family:"Bricolage Grotesque",sans-serif;
+  border:2px solid var(--p3);display:grid;place-items:center;font-family:"Bricolage Grotesque",sans-serif;
   font-weight:800;font-size:2rem;color:var(--muted)}
 .avatar img{width:100%;height:100%;object-fit:cover}
 .slots{display:grid;grid-template-columns:repeat(5,1fr);gap:.5rem}
 @media (max-width:560px){.slots{grid-template-columns:repeat(3,1fr)}}
-.slot{aspect-ratio:63/88;border-radius:14px;border:2px dashed var(--line);background:var(--ink-2);
+.slot{aspect-ratio:63/88;border-radius:12px;border:1px dashed var(--line);background:transparent;
   display:grid;place-items:center;color:var(--muted);font-size:1.6rem;cursor:pointer;position:relative;overflow:hidden}
 .slot.full{display:block;border:none;padding:0;background:none;overflow:visible;position:relative}
 .slot.full .card{position:absolute;inset:0;width:100%;height:100%}
@@ -2244,6 +2251,21 @@ details.fold summary::before{color:var(--p3)}
 .thcode{margin-top:.8rem;padding:.8rem .9rem;border:1px solid var(--line);border-radius:10px;
   background:var(--ink-2);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:.8rem;line-height:1.6;white-space:pre;overflow-x:auto;color:var(--text)}
+
+/* ---- sélecteur de thème ---- */
+.themepick{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1rem}
+.themebtn{display:grid;gap:.4rem;justify-items:start;text-align:left;cursor:pointer;
+  background:transparent;color:var(--text);border:1px solid var(--line);
+  border-radius:13px;padding:.6rem}
+.themebtn:hover{border-color:var(--p3)}
+.themebtn.on{border-color:var(--p3);box-shadow:inset 0 0 0 1px var(--p3)}
+.themebtn b{font-size:.95rem;line-height:1.2}
+.themebtn small{color:var(--muted);font-size:.74rem;line-height:1.3}
+.themeview{width:100%;aspect-ratio:16/9;border-radius:8px;border:1px solid;
+  display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px;padding:8px;position:relative}
+.themeview i{width:14px;height:14px;border-radius:4px;display:block}
+.themeview u{width:72%;height:4px;border-radius:2px;display:block;opacity:.8;margin-top:2px;flex:0 0 100%}
+.themebtn.on .themeview{outline:2px solid var(--p3);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -3097,7 +3119,10 @@ function artRefusee(u){
 /* Et quand il ne suffit pas, on regarde l'image. Le verdict est gardé par
    adresse : une même pastille sert des centaines d'articles. */
 const ART_VU = new Map();
-const ART_CLE = "fm-local:artvide";
+/* Le numéro change dès que le détecteur change : les verdicts rendus par
+   l'ancienne version ne valent plus rien et doivent être réévalués. */
+const ART_CLE = "fm-local:artvide2";
+try{ localStorage.removeItem("fm-local:artvide"); }catch(e){}
 try{
   const brut = localStorage.getItem(ART_CLE);
   if(brut) for(const [k,v] of Object.entries(JSON.parse(brut))) ART_VU.set(k, v);
@@ -3119,26 +3144,53 @@ function artSauve(){
    mesure l'étalement : en dessous du seuil, c'est une pastille. */
 function artPresqueUnie(img){
   try{
-    const n = 24;
+    const n = 32;
     const cv = document.createElement("canvas");
     cv.width = n; cv.height = n;
     const cx = cv.getContext("2d", {willReadFrequently:true});
+    cx.clearRect(0, 0, n, n);
     cx.drawImage(img, 0, 0, n, n);
     const d = cx.getImageData(0, 0, n, n).data;
-    let sr=0, sg=0, sb=0, t=0;
-    for(let i=0; i<d.length; i+=4){ sr+=d[i]; sg+=d[i+1]; sb+=d[i+2]; t++; }
-    const mr=sr/t, mg=sg/t, mb=sb/t;
-    let ec = 0, teinte = 0;
-    for(let i=0; i<d.length; i+=4){
-      const r=d[i], g=d[i+1], b=d[i+2];
+
+    /* Un personnage détouré arrive sur fond transparent. Les pixels vides
+       ne sont pas de l'image : les compter reviendrait à voir du noir uni
+       là où il n'y a rien, et à jeter une illustration parfaitement bonne.
+       Au-delà de quelques pour cent de vide, c'est un détourage, donc une
+       vraie illustration : on s'arrête là. */
+    let vides = 0;
+    for(let i = 3; i < d.length; i += 4) if(d[i] < 200) vides++;
+    const total = d.length / 4;
+    if(vides / total > 0.06) return false;
+
+    /* Statistiques sur les seuls pixels pleins. */
+    const px = [];
+    for(let i = 0; i < d.length; i += 4){
+      if(d[i+3] < 200) continue;
+      px.push([d[i], d[i+1], d[i+2]]);
+    }
+    if(px.length < total * 0.5) return false;
+
+    let sr=0, sg=0, sb=0;
+    for(const p of px){ sr+=p[0]; sg+=p[1]; sb+=p[2]; }
+    const mr=sr/px.length, mg=sg/px.length, mb=sb/px.length;
+
+    let ec = 0, teinte = 0, proches = 0;
+    for(const [r,g,b] of px){
       ec += Math.abs(r-mr) + Math.abs(g-mg) + Math.abs(b-mb);
       teinte += Math.max(r,g,b) - Math.min(r,g,b);
+      /* la pastille d'attente est une plaque : une teinte domine largement */
+      if(Math.abs(r-mr) < 24 && Math.abs(g-mg) < 24 && Math.abs(b-mb) < 24) proches++;
     }
-    ec /= t*3; teinte /= t;
-    /* Peu d'écart ET presque pas de couleur : pastille grise. */
-    return ec < 26 && teinte < 16;
+    ec /= px.length * 3;
+    teinte /= px.length;
+    const part = proches / px.length;
+
+    /* Les trois conditions ensemble : peu d'écart, presque pas de couleur,
+       et une teinte dominante qui couvre la majorité du cadre. Une vraie
+       illustration échoue toujours à au moins l'une des trois. */
+    return ec < 22 && teinte < 14 && part > 0.62;
   }catch(e){
-    return false;   /* image d'une autre origine : on la garde */
+    return false;   /* lecture refusée : on garde l'image */
   }
 }
 
@@ -3210,20 +3262,28 @@ function artVerif(img){
    ===================================================================== */
 
 const TEINTES = [
-  {cle:"p1", nom:"Papier",            role:"Le fond de toutes les pages",       def:"#F8F0E3"},
-  {cle:"p2", nom:"Encre",             role:"Le texte, les filets, les titres",  def:"#1F1A17"},
-  {cle:"p3", nom:"Accent principal",  role:"Boutons, onglet actif, liens",      def:"#6A5E92"},
-  {cle:"p4", nom:"Accent secondaire", role:"Réussites, gains, valeurs sûres",   def:"#149682"},
-  {cle:"p5", nom:"Accent tertiaire",  role:"Mises en avant, alertes douces",    def:"#E8A294"},
-  {cle:"p6", nom:"Teinte profonde",   role:"Fonds sombres, l'Abîme",            def:"#1C1F45"}
+  {cle:"p1", nom:"Papier",            role:"Le fond de toutes les pages",       def:"#1B141A"},
+  {cle:"p2", nom:"Encre",             role:"Le texte, les filets, les titres",  def:"#FFE0F8"},
+  {cle:"p3", nom:"Accent principal",  role:"Boutons, onglet actif, liens",      def:"#FFE0F8"},
+  {cle:"p4", nom:"Accent secondaire", role:"Réussites, gains, valeurs sûres",   def:"#D34CA8"},
+  {cle:"p5", nom:"Accent tertiaire",  role:"Mises en avant, alertes douces",    def:"#F2C3FF"},
+  {cle:"p6", nom:"Teinte profonde",   role:"Fonds sombres, l'Abîme",            def:"#2F0021"}
+];
+
+/* Les deux thèmes officiels du jeu. Le joueur bascule de l'un à l'autre d'un
+   geste ; les six réglages restent accessibles en dessous pour qui veut sa
+   propre palette. */
+const THEMES = [
+  {id:"neon",   nom:"Néon",   desc:"Rose sur nuit — le thème du jeu", cols:["#1B141A", "#FFE0F8", "#FFE0F8", "#D34CA8", "#F2C3FF", "#2F0021"]},
+  {id:"papier", nom:"Papier", desc:"Crème et encre — le thème clair", cols:["#F8F0E3", "#1F1A17", "#6A5E92", "#149682", "#E8A294", "#1C1F45"]}
 ];
 
 const PALETTES = [
-  {nom:"Maquette",  cols:["#F8F0E3","#1F1A17","#6A5E92","#149682","#E8A294","#1C1F45"]},
+  {nom:"Néon",      cols:["#1B141A", "#FFE0F8", "#FFE0F8", "#D34CA8", "#F2C3FF", "#2F0021"]},
+  {nom:"Papier",    cols:["#F8F0E3", "#1F1A17", "#6A5E92", "#149682", "#E8A294", "#1C1F45"]},
   {nom:"Fandom",    cols:["#F7F7F7","#17181C","#00D6D6","#FA005A","#FFC500","#0E1020"]},
   {nom:"Pocket",    cols:["#FFFBF2","#2B2117","#D9A441","#3FA796","#E06C5A","#2C3E66"]},
-  {nom:"Parchemin", cols:["#EFE6D2","#2A2318","#8A5A2B","#4C7A4A","#B4452F","#2B2318"]},
-  {nom:"Nuit",      cols:["#14161C","#ECE7DD","#8E7CF0","#39C7A6","#F2866F","#0A0C12"]}
+  {nom:"Parchemin", cols:["#EFE6D2","#2A2318","#8A5A2B","#4C7A4A","#B4452F","#2B2318"]}
 ];
 
 /* -- conversions ----------------------------------------------------- */
@@ -3309,6 +3369,13 @@ function poserTeintes(c){
   /* la barre d'adresse du téléphone suit le papier */
   const m = document.querySelector('meta[name="theme-color"]');
   if(m) m.setAttribute("content", c[0]);
+}
+
+/* Le thème actif, s'il s'agit de l'un des deux officiels. */
+function themeActif(){
+  const c = teintesCourantes().map(x=>String(x).toUpperCase());
+  const t = THEMES.find(t=>t.cols.every((v,i)=>v.toUpperCase() === c[i]));
+  return t ? t.id : "perso";
 }
 
 function enregistrerTeintes(c){
@@ -3503,18 +3570,36 @@ function viewTheme(){
   const c = teintesCourantes();
   view.innerHTML = `
     <h2 style="font-size:1.6rem">Couleurs</h2>
-    <p class="sub">Six teintes commandent tout le site. Les panneaux, les filets,
+    <p class="sub">Deux thèmes, et tout le site suit. En dessous, les six teintes
+      qui les composent restent réglables une par une : les panneaux, les filets,
       les voiles et la couleur du texte posé sur chaque accent en sont déduits,
       donc tout reste lisible quoi que vous choisissiez. Les changements
       s'appliquent tout de suite et sont gardés sur cet appareil.</p>
 
-    <div class="palrow" id="presets">
-      ${PALETTES.map((p,i)=>`<button class="palbtn" data-preset="${i}" title="${esc(p.nom)}">
-        <span class="palsw">${p.cols.map(x=>`<i style="background:${esc(x)}"></i>`).join("")}</span>
-        <span class="pallb">${esc(p.nom)}</span></button>`).join("")}
+    <div class="themepick">
+      ${THEMES.map(t=>`<button class="themebtn ${themeActif()===t.id?"on":""}" data-theme="${t.id}">
+        <span class="themeview" style="background:${esc(t.cols[0])};border-color:${esc(melange(t.cols[1],t.cols[0],.72))}">
+          <i style="background:${esc(t.cols[2])}"></i>
+          <i style="background:${esc(t.cols[3])}"></i>
+          <i style="background:${esc(t.cols[4])}"></i>
+          <u style="background:${esc(t.cols[1])}"></u>
+          <u style="background:${esc(t.cols[1])};width:52%"></u>
+        </span>
+        <b>${esc(t.nom)}</b>
+        <small>${esc(t.desc)}</small>
+      </button>`).join("")}
     </div>
 
-    <div class="panel" id="teintes">
+    <details class="fold info" ${themeActif()==="perso"?"open":""}>
+      <summary>Ou composez la vôtre</summary>
+      <div class="in">
+        <div class="palrow" id="presets">
+          ${PALETTES.map((p,i)=>`<button class="palbtn" data-preset="${i}" title="${esc(p.nom)}">
+            <span class="palsw">${p.cols.map(x=>`<i style="background:${esc(x)}"></i>`).join("")}</span>
+            <span class="pallb">${esc(p.nom)}</span></button>`).join("")}
+        </div>
+
+        <div class="panel" id="teintes" style="margin-top:.6rem">
       ${TEINTES.map((t,i)=>`
         <div class="teinte" data-i="${i}">
           <input type="color" class="tcol" value="${esc(c[i])}" aria-label="${esc(t.nom)}">
@@ -3525,7 +3610,9 @@ function viewTheme(){
           <input type="text" class="thex" value="${esc(c[i])}" spellcheck="false"
                  maxlength="7" aria-label="Code hexadécimal de ${esc(t.nom)}">
         </div>`).join("")}
-    </div>
+        </div>
+      </div>
+    </details>
 
     <h3 style="font-size:1.05rem;margin:1.3rem 0 .5rem">Aperçu</h3>
     <div class="panel apercu" id="apercu">
@@ -3565,7 +3652,7 @@ function viewTheme(){
 
     <div class="row" style="margin-top:1.1rem;flex-wrap:wrap">
       <button class="btn" id="th-copier">Copier mes couleurs</button>
-      <button class="btn ghost" id="th-reset">Revenir à la maquette</button>
+      <button class="btn ghost" id="th-reset">Revenir au thème Néon</button>
     </div>
     <pre class="thcode" id="th-code"></pre>
   `;
@@ -3617,6 +3704,15 @@ function viewTheme(){
     });
   });
 
+  view.querySelectorAll("[data-theme]").forEach(b=>{
+    b.addEventListener("click", ()=>{
+      const t = THEMES.find(x=>x.id === b.dataset.theme);
+      enregistrerTeintes(t.cols.slice());
+      go("theme");
+      toast("Thème « " + t.nom + " »", "appliqué à tout le site", "info");
+    });
+  });
+
   view.querySelectorAll("[data-preset]").forEach(b=>{
     b.addEventListener("click", ()=>{
       const p = PALETTES[+b.dataset.preset];
@@ -3627,7 +3723,7 @@ function viewTheme(){
   });
 
   view.querySelector("#th-reset").addEventListener("click", ()=>{
-    enregistrerTeintes(TEINTES.map(t=>t.def));
+    enregistrerTeintes(THEMES[0].cols.slice());
     go("theme");
   });
 
