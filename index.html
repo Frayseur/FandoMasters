@@ -959,6 +959,15 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
   border:2px solid var(--dos-or);
   display:grid;place-items:center;overflow:hidden;
   box-shadow:0 12px 24px -16px #000, inset 0 0 0 1px #00000066}
+/* Tout ce que porte le dos doit disparaître avec lui quand la carte se
+   retourne. Un enfant qui a son propre filtre ou son propre plan sort du
+   calcul de la face cachée et reste affiché par-dessus le recto : on le
+   masque donc explicitement, lui aussi. */
+.flip .back::before,
+.flip .back::after,
+.flip .back .mk{
+  backface-visibility:hidden;-webkit-backface-visibility:hidden}
+
 /* filet intérieur, à 6 % du bord, comme sur le recto */
 .flip .back::before{
   content:"";position:absolute;inset:6px;border-radius:8px;pointer-events:none;
@@ -972,12 +981,16 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
   background-position:left top,right top,left bottom,right bottom;
   background-size:30px 30px;
   filter:invert(1) sepia(1) saturate(3) hue-rotate(5deg)}
+/* La lueur est peinte sous le logo plutôt qu'appliquée en filtre : un
+   filtre aplatit l'élément dans son propre plan et le soustrait au
+   retournement. */
 .flip .back .mk{
   position:relative;z-index:2;
   width:46%;max-width:66px;aspect-ratio:1/1;border-radius:0;transform:none;
-  background:var(--logo) center/contain no-repeat;
-  box-shadow:none;
-  filter:drop-shadow(0 2px 6px #000) drop-shadow(0 0 14px #C8A24A4D)}
+  background:
+    var(--logo) center/contain no-repeat,
+    radial-gradient(circle at 50% 50%, #C8A24A38 0%, transparent 68%);
+  box-shadow:none;filter:none}
 .flip.hint .in{animation:nudge 1.8s ease-in-out infinite}
 @keyframes nudge{0%,88%,100%{transform:none}94%{transform:rotateY(-12deg)}}
 .flip.done{cursor:default}
