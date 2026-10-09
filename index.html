@@ -2969,7 +2969,18 @@ function diagnosticNuage(){
     ["dernière raison", nuageRaisonLue() || "aucune"],
     ["dernière erreur d'envoi", nuageErreur || "aucune"]
   ];
-  return l.map(([k, v]) => k + " : " + v).join("\n");
+  let j = []; try{ j = JSON.parse(localStorage.getItem("fm-local:diag-journal") || "[]"); }catch(e){}
+  return l.map(([k, v]) => k + " : " + v).join("\n") + "\n\njournal :\n" + (j.slice(-14).join("\n") || "(vide)");
+}
+/* Journal des derniers événements de connexion, gardé sur l'appareil et
+   affiché dans le diagnostic : il montre ce qui s'est vraiment passé. */
+function diagLog(m){
+  try{
+    const l = JSON.parse(localStorage.getItem("fm-local:diag-journal") || "[]");
+    const d = new Date();
+    l.push(d.toTimeString().slice(0,8) + " " + m);
+    localStorage.setItem("fm-local:diag-journal", JSON.stringify(l.slice(-30)));
+  }catch(e){}
 }
 let nuageMemoire = null;   // secours si le navigateur refuse d'écrire
 function nuageSession(){
@@ -2981,6 +2992,7 @@ function nuageSession(){
 }
 /* Renvoie vrai si la session est bien gardée sur l'appareil. */
 function nuagePoseSession(s){
+  diagLog(s ? "session posée (user " + (s.user && s.user.id ? "oui" : "NON") + ")" : "session EFFACÉE");
   nuageMemoire = s || null;
   try{
     if(s){
@@ -3027,6 +3039,7 @@ function nuageGarde(d){
   }
   const s = {jeton:d.access_token, refresh:d.refresh_token, exp, user};
   const garde = nuagePoseSession(s);
+  diagLog("session relue : " + (nuageSession() && nuageSession().user ? "oui" : "NON") + " · stockage " + (garde ? "ok" : "refusé"));
   if(!garde) nuageRaison("le navigateur refuse d'enregistrer la session (" + nuageStockage() + ")");
   return s;
 }
@@ -3038,6 +3051,7 @@ async function nuageAuth(chemin, corps){
     body:JSON.stringify(corps)
   });
   const d = await r.json().catch(()=>({}));
+  diagLog("auth " + chemin.split("?")[0] + " → " + r.status + " [" + Object.keys(d).join(",") + "]");
   if(!r.ok){
     const msg = d.error_description || d.msg || d.message || d.error || "erreur " + r.status;
     throw new Error(msg);
@@ -4557,6 +4571,7 @@ create policy "chacun les siennes"
    les deux et il tranche. */
 async function apresConnexion(){
   const cas = await nuageCollision();
+  diagLog("après connexion : cas " + cas);
 
   if(cas === "aucune" || nuageRaisonLue().indexOf("refuse d'enregistrer") >= 0){
     view.innerHTML = `<h2 class="vuetitre">Compte</h2>
@@ -10932,8 +10947,9 @@ function openSettings(){
   /* Si le joueur est connecté, on récupère sa partie avant tout le reste :
      le jeu démarre ensuite sur des données à jour, sans savoir qu'elles
      viennent du réseau. */
+  diagLog("démarrage · session " + (nuageConnecte() ? "oui" : "non"));
   if(nuageConfigure() && nuageConnecte()){
-    try{ await nuageDescendre(); }catch(e){}
+    try{ const eu = await nuageDescendre(); diagLog("descente : " + eu); }catch(e){ diagLog("descente en erreur : " + e.message); }
     setTimeout(nuageRepousser, 1500);
   }
   await migrateLegacy();
