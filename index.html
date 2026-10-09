@@ -2619,6 +2619,24 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
   .amirow{flex-wrap:wrap}
   .amiact{width:100%;justify-content:flex-start;padding-left:calc(44px + .7rem)}
 }
+
+/* ---- marché ---- */
+.mliste{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:.7rem}
+.mvente,.mvendre{display:flex;gap:.8rem;align-items:flex-start;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:.7rem}
+.mvendre{background:none;border:none;padding:0}
+.mcarte{flex:none;width:96px;aspect-ratio:63/88;position:relative}
+.mcarte .card{position:absolute;inset:0;width:100%;height:100%}
+.mcarte .slot{width:100%;height:100%;display:grid;place-items:center;font-size:1.6rem}
+.minfo{min-width:0;flex:1;display:flex;flex-direction:column;gap:.15rem}
+.minfo>b{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.03em;line-height:1.1}
+.minfo .sub{margin:0;font-size:.8rem}
+.mprix{display:flex;align-items:baseline;gap:.45rem;margin:.25rem 0 .1rem}
+.mprix span{font-family:var(--f-data);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mprix strong{font-family:var(--f-data);font-size:1.15rem;color:var(--p4)}
+.mtag{font-family:var(--f-data);font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;padding:.2rem .5rem;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.mtag.ok{border-color:var(--p4);color:var(--p4)}
+.mtag.ko{border-color:var(--red);color:var(--red)}
+@media (max-width:560px){ .mliste{grid-template-columns:1fr} .mcarte{width:84px} }
 </style>
 </head>
 <body>
@@ -2656,7 +2674,7 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
       <button data-view="amis"><span class="ic">♢</span><b>Amis</b><small>Joueurs et échanges</small></button>
       <button data-view="compte"><span class="ic">☁</span><b>Compte</b><small>Sauvegarde en ligne</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
-      <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Échanges entre joueurs · bientôt</small></button>
+      <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Enchères entre joueurs</small></button>
     </div>
   </div>
 </div>
@@ -3240,10 +3258,10 @@ function nuagePousse(cle, valeur){
   const l = nuageAttente(); if(l.indexOf(cle) < 0){ l.push(cle); nuageAttentePose(l); }
   nuageEnAttente.set(cle, valeur);
   /* Le profil change sans cesse (le mana monte chaque seconde) : on l'envoie
-     au plus toutes les 12 secondes. La collection part vite. Un envoi déjà
+     au plus toutes les 30 secondes (et toujours en quittant l'onglet). La collection part vite. Un envoi déjà
      prévu n'est pas repoussé : il prendra la dernière valeur. */
   if(!nuageMinuteurs.has(cle))
-    nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), cle === "fm:profile" ? 12000 : 1200));
+    nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), cle === "fm:profile" ? 30000 : 1200));
 }
 
 async function nuageVide(cle){
@@ -3436,7 +3454,52 @@ async function nuageDescendre(forcer){
    pour les cartes, les exemplaires gagnés et perdus de chaque côté sont
    comptés ensemble.
    ====================================================================== */
-const egalJ = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+/* Comparaison insensible à l'ordre des clés : Postgres range les clés d'un
+   jsonb à sa façon, et deux objets identiques ne s'écrivaient plus pareil. */
+function stable(v){
+  if(Array.isArray(v)) return "[" + v.map(stable).join(",") + "]";
+  if(v && typeof v === "object")
+    return "{" + Object.keys(v).sort().filter(k => v[k] !== undefined)
+      .map(k => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}";
+  return JSON.stringify(v === undefined ? null : v);
+}
+const egalJ = (a, b) => stable(a) === stable(b);
+
+/* Réglages de profil : chacun porte la date de sa dernière modification
+   (persoMaj). Entre deux appareils, le réglage le plus récent gagne, quoi
+   qu'il arrive au reste de la partie. */
+const PERSO = ["banner","bannerImg","title","fav","slots","avatar","avatarImg","avatarCrop","pseudo"];
+let persoVu = null;
+function persoInstantane(p){ persoVu = Object.fromEntries(PERSO.map(k => [k, stable(p[k])])); }
+function tamponnerPerso(p){
+  if(!persoVu) return;
+  const t = Date.now();
+  p.persoMaj = p.persoMaj || {};
+  for(const k of PERSO) if(stable(p[k]) !== persoVu[k]) p.persoMaj[k] = t;
+  persoInstantane(p);
+}
+function maxParCle(a, b){
+  const o = Object.assign({}, a || {});
+  for(const [k, v] of Object.entries(b || {})) o[k] = Math.max(o[k] || 0, v || 0);
+  return o;
+}
+/* Première rencontre sans ancêtre commun : les réglages suivent leur date,
+   les compteurs prennent le plus grand, le reste suit le côté le plus récent. */
+function fusionDemarrage(l, s, localPlusRecent){
+  l = estObjet(l) ? l : {}; s = estObjet(s) ? s : {};
+  const out = {};
+  const pl = l.persoMaj || {}, ps = s.persoMaj || {};
+  for(const k of new Set([...Object.keys(l), ...Object.keys(s)])){
+    const L = l[k], S = s[k];
+    let v;
+    if(k === "persoMaj") v = maxParCle(L, S);
+    else if(PERSO.indexOf(k) >= 0) v = (pl[k] || 0) > (ps[k] || 0) ? L : (ps[k] || 0) > (pl[k] || 0) ? S : (S !== undefined ? S : L);
+    else if(typeof L === "number" && typeof S === "number") v = Math.max(L, S);
+    else v = localPlusRecent ? (L !== undefined ? L : S) : (S !== undefined ? S : L);
+    if(v !== undefined) out[k] = v;
+  }
+  return out;
+}
 const estObjet = x => !!x && typeof x === "object" && !Array.isArray(x);
 const CLES_MAX = /At$|^since$|^v$|^day$|^t$/;
 function memeMaj(a, b){ return !!a && !!b && Date.parse(a) === Date.parse(b); }
@@ -3444,8 +3507,15 @@ function memeMaj(a, b){ return !!a && !!b && Date.parse(a) === Date.parse(b); }
 function fusionObjet(b, l, s, prof = 0){
   b = estObjet(b) ? b : {}; l = estObjet(l) ? l : {}; s = estObjet(s) ? s : {};
   const out = {};
+  const pl = l.persoMaj || {}, ps = s.persoMaj || {};
   for(const k of new Set([...Object.keys(l), ...Object.keys(s)])){
     const L = l[k], S = s[k], B = b[k];
+    if(prof === 0 && k === "persoMaj"){ out[k] = maxParCle(L, S); continue; }
+    if(prof === 0 && PERSO.indexOf(k) >= 0 && !egalJ(L, S) && (pl[k] || 0) !== (ps[k] || 0)){
+      const v = (pl[k] || 0) > (ps[k] || 0) ? L : S;
+      if(v !== undefined) out[k] = v;
+      continue;
+    }
     if(egalJ(L, B)){ if(S !== undefined) out[k] = S; continue; }
     if(egalJ(S, B)){ if(L !== undefined) out[k] = L; continue; }
     if(typeof L === "number" && typeof S === "number"){
@@ -3460,7 +3530,7 @@ function fusionCol(b, l, s){
   const M = a => new Map((Array.isArray(a) ? a : []).filter(c => c && c.id).map(c => [c.id, c]));
   const B = M(b), L = M(l), S = M(s);
   const n = c => c ? (c.count || 1) : 0;
-  const sans = c => { if(!c) return ""; const o = Object.assign({}, c); delete o.count; delete o.text; return JSON.stringify(o); };
+  const sans = c => { if(!c) return ""; const o = Object.assign({}, c); delete o.count; delete o.text; return stable(o); };
   const out = [];
   for(const id of new Set([...L.keys(), ...S.keys()])){
     const cb = B.get(id), cl = L.get(id), cs = S.get(id);
@@ -3488,28 +3558,49 @@ function fusionner(cle, b, l, s){
 
 /* Rapproche une clé de l'appareil et du serveur, écrit le résultat des
    deux côtés, et le retient comme nouvelle base. */
-async function nuageSynchroniser(cle, locale, appliquer){
+/* Une seule synchro à la fois par clé : deux synchros qui se chevauchent
+   compteraient deux fois les mêmes gains. Et l'état local est relevé au
+   moment où la synchro démarre vraiment, pas au moment où elle est demandée. */
+const nuageVerrous = new Map();
+function nuageSynchroniser(cle, locale, appliquer){
+  const prec = nuageVerrous.get(cle) || Promise.resolve();
+  const suite = prec.catch(()=>{}).then(()=>{
+    if(appliquer && state && state.profile && state.profile.pseudo)
+      locale = JSON.parse(JSON.stringify(cle === "fm:col" ? state.collection : state.profile));
+    return nuageSynchroInterne(cle, locale, appliquer);
+  });
+  nuageVerrous.set(cle, suite);
+  return suite;
+}
+async function nuageSynchroInterne(cle, locale, appliquer){
   const moi = acct();
-  const srv = await nuageLire(cle);
-  let fusion = locale;
-  if(srv && srv.valeur != null){
-    const vue = await lireEspace(moi, "srvmaj:" + cle);
-    if(locale == null) fusion = srv.valeur;
-    else if(!memeMaj(srv.maj, vue)){
-      /* quelqu'un d'autre a écrit depuis notre dernier passage */
-      const base = await lireEspace(moi, "base:" + cle);
-      if(base != null) fusion = fusionner(cle, base, locale, srv.valeur);
-      else if(cle === "fm:col") fusion = fusionColMax(locale, srv.valeur);
+  const ses = nuageSession(); if(!ses || !ses.user) return null;
+  const vue  = await lireEspace(moi, "srvmaj:" + cle);
+  const base = await lireEspace(moi, "base:" + cle);
+  /* La date seule d'abord (quelques octets) : la valeur complète ne descend
+     que si une autre session a écrit depuis notre dernier passage. */
+  const d = await nuageRest(NUAGE_TABLE + "?joueur=eq." + encodeURIComponent(ses.user.id) +
+                            "&cle=eq." + encodeURIComponent(cle) + "&select=maj");
+  const majSrv = d && d[0] ? d[0].maj : null;
+  const inchange = !!majSrv && base != null && memeMaj(majSrv, vue);
+  let fusion = locale, valSrv;
+  if(majSrv && !inchange){
+    const r = await nuageLire(cle);
+    valSrv = r ? r.valeur : undefined;
+    if(valSrv != null){
+      if(locale == null) fusion = valSrv;
+      else if(base != null) fusion = fusionner(cle, base, locale, valSrv);
+      else if(cle === "fm:col") fusion = fusionColMax(locale, valSrv);
       else{
         const lm = await lireEspace(moi, "maj:" + cle);
-        fusion = (lm && Date.parse(lm) > Date.parse(srv.maj)) ? fusionObjet(srv.valeur, locale, srv.valeur) : fusionObjet(locale, locale, srv.valeur);
+        fusion = fusionDemarrage(locale, valSrv, !!(lm && Date.parse(lm) > Date.parse(majSrv)));
       }
-      diagLog("fusion " + cle + " avec une autre session");
+      if(locale != null) diagLog("fusion " + cle + (base != null ? "" : " (première)"));
     }
-  }
+  }else if(inchange) valSrv = base;
   if(fusion == null) return null;
-  let maj = srv ? srv.maj : null;
-  if(!(srv && egalJ(fusion, srv.valeur))) maj = await nuageEcrire(cle, fusion);
+  let maj = majSrv;
+  if(valSrv === undefined || !egalJ(fusion, valSrv)) maj = await nuageEcrire(cle, fusion);
   await ecrireEspace(moi, "base:" + cle, fusion);
   if(maj) await ecrireEspace(moi, "srvmaj:" + cle, maj);
   if(locale == null || !egalJ(fusion, locale)){
@@ -3530,6 +3621,7 @@ function appliquerFusion(cle, fusion, instantane){
     fin = instantane ? fusionObjet(instantane, cour, fusion) : fusion;
     for(const k of Object.keys(state.profile)) if(!(k in fin)) delete state.profile[k];
     Object.assign(state.profile, fin);
+    persoInstantane(state.profile);
   }else if(cle === "fm:col"){
     fin = instantane ? fusionCol(instantane, state.collection, fusion) : fusion;
     state.collection.length = 0;
@@ -3563,7 +3655,7 @@ async function nuageVerifier(){
     }
   }catch(e){}
 }
-setInterval(nuageVerifier, 40000);
+setInterval(nuageVerifier, 60000);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) nuageVerifier(); });
 
 /* Renvoie ce qui n'est pas encore parti (réseau coupé, page fermée trop tôt). */
@@ -3656,6 +3748,7 @@ async function sset(key, val, shared=false){
   try{
     if(HAS_WS){ await window.storage.set(wsKey(key,shared), JSON.stringify(val), shared); return; }
     if(key === "fm:col" && !shared && Array.isArray(val)) await rangerTextes(val);
+    if(key === "fm:profile" && !shared && val && typeof val === "object") tamponnerPerso(val);
     if(await idbPret){
       try{ await idbSet("kv", lsKey(key,shared), val); }
       catch(e){
@@ -4729,8 +4822,8 @@ function render(){
   if(!state.profile.pseudo && state.view !== "compte") return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
-     village:viewVillage, theme:viewTheme, compte:viewCompte, amis:viewAmis,
-     shop:viewSoon, market:viewSoon}[state.view]||viewHub)();
+     village:viewVillage, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur,
+     shop:viewSoon, market:viewMarche}[state.view]||viewHub)();
   poserSurtitre();
   majJauges();
 }
@@ -4753,6 +4846,7 @@ const SURTITRES = {
   theme:  "Réglages · habillage",
   compte: "Réglages · sauvegarde",
   amis:   "Communauté",
+  joueur: "Joueur",
   shop:   "Boutique",
   market: "Échanges"
 };
@@ -5143,7 +5237,9 @@ function vitrinePublique(){
   const carte = id => { const c = state.collection.find(x => x.id === id); return c ? carteEchange(c) : null; };
   const av = p.avatarImg && p.avatarImg.length < 160000 ? p.avatarImg : "";
   return {
-    niveau: lv.lvl, titre: p.title || null, fav: p.fav || null,
+    niveau: lv.lvl, xp: lv.left, xpMax: lv.need,
+    titre: p.title || null, titres: unlockedTitles().map(t => t.name),
+    fav: p.fav || null,
     avatar: av, crop: p.avatarCrop || null,
     banniere: p.banner ? bannerSrc(p.banner) : "",
     vitrine: (p.slots || []).map(carte).filter(Boolean).slice(0, 10),
@@ -5151,13 +5247,17 @@ function vitrinePublique(){
       cartes: state.collection.length,
       exemplaires: state.collection.reduce((n, c) => n + (c.count || 1), 0),
       univers: new Set(state.collection.map(c => c.univ)).size,
-      victoires: p.wins || 0
+      victoires: p.wins || 0,
+      defaites: Math.max(0, (p.duels || 0) - (p.wins || 0)),
+      campagnes: p.campWins || 0,
+      campagnesPerdues: p.campLost || 0
     },
     depuis: p.since || null
   };
 }
+let fmPret = false;   // la partie est entièrement chargée
 function publierProfil(){
-  if(!nuageConfigure() || !nuageConnecte() || !state.profile || !state.profile.pseudo) return;
+  if(!fmPret || !nuageConfigure() || !nuageConnecte() || !state.profile || !state.profile.pseudo) return;
   clearTimeout(profilMinuteur);
   const attente = Math.max(0, 20000 - (Date.now() - profilPublieA));
   profilMinuteur = setTimeout(async ()=>{
@@ -5199,6 +5299,32 @@ async function amisCharger(){
   }
 }
 
+/* Hors de la page Amis, on ne lit que ce qui demande une action : les
+   amitiés (quelques octets) et les échanges encore ouverts. L'historique
+   complet ne descend qu'à l'ouverture de la page. */
+async function amisChargerLeger(){
+  const moi = moiId(); if(!moi) return;
+  try{
+    const [rel, aRepondre, aRegler] = await Promise.all([
+      nuageRest("amities?select=demandeur,cible,statut&or=(demandeur.eq." + moi + ",cible.eq." + moi + ")"),
+      nuageRest("echanges?select=*&a=eq." + moi + "&statut=eq.proposee"),
+      nuageRest("echanges?select=*&de=eq." + moi + "&clos=eq.false")
+    ]);
+    amis.liste   = (rel || []).filter(r => r.statut === "acceptee").map(r => r.demandeur === moi ? r.cible : r.demandeur);
+    amis.recus   = (rel || []).filter(r => r.statut === "attente" && r.cible === moi).map(r => r.demandeur);
+    amis.envoyes = (rel || []).filter(r => r.statut === "attente" && r.demandeur === moi).map(r => r.cible);
+    amis.echanges = [...(aRepondre || []), ...(aRegler || [])];
+    const ids = [...new Set([...amis.recus, ...amis.echanges.map(e => e.de === moi ? e.a : e.de)])].filter(id => !amis.profils.has(id));
+    if(ids.length){
+      const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + ids.join(",") + ")");
+      for(const x of (pr || [])) amis.profils.set(x.joueur, x);
+    }
+    amis.erreur = "";
+    amis.charge = false;    // la page rechargera l'historique complet
+    await amisRegler();
+  }catch(e){ amis.erreur = String(e && e.message || e); }
+}
+
 /* Les échanges que j'ai proposés et qui ont reçu une réponse : je reçois
    les cartes de l'autre, ou je récupère les miennes. Chaque règlement est
    noté dans le profil avant d'être appliqué, pour ne jamais compter deux
@@ -5234,7 +5360,7 @@ async function amisRegler(){
 async function amisVeille(){
   if(!nuageConfigure() || !nuageConnecte() || document.hidden || !state.profile || !state.profile.pseudo) return;
   const avant = new Set([...amis.recus.map(x => "r" + x), ...amis.echanges.filter(e => e.statut === "proposee").map(e => "e" + e.id)]);
-  await amisCharger();
+  if(state.view === "amis") await amisCharger(); else await amisChargerLeger();
   if(amis.erreur) return;
   const moi = moiId();
   for(const id of amis.recus) if(!avant.has("r" + id) && !amis.vu.has("r" + id)){
@@ -5248,7 +5374,7 @@ async function amisVeille(){
   majPastilleAmis();
   if(state.view === "amis" && !document.body.classList.contains("overlay")) viewAmis();
 }
-setInterval(amisVeille, 45000);
+setInterval(amisVeille, 90000);
 function majPastilleAmis(){
   const moi = moiId();
   const n = amis.recus.length + amis.echanges.filter(e => e.a === moi && e.statut === "proposee").length;
@@ -5444,73 +5570,119 @@ async function accepterEchange(eid){
   logEvent("Échange conclu avec " + ((amis.profils.get(e.de) || {}).pseudo || "un ami"), "gold");
 }
 
-/* ---- profil d'un autre joueur ---- */
-async function voirJoueur(id){
+/* ---- profil d'un autre joueur : la même page que le sien ---- */
+function voirJoueur(id){
+  if(!id) return;
+  if(id === moiId()){ go("profil"); return; }
+  state.joueurVu = id;
+  state.joueurRetour = state.view === "joueur" ? (state.joueurRetour || "amis") : state.view;
+  go("joueur");
+}
+async function viewJoueur(){
+  const id = state.joueurVu;
+  const retour = state.joueurRetour || "amis";
+  const nomRetour = {amis:"Amis", market:"Marché"}[retour] || "Retour";
   let pr = amis.profils.get(id);
+  const peindre = ()=>{
+    if(state.view !== "joueur" || state.joueurVu !== id) return;
+    if(!pr){
+      view.innerHTML = `<h2 class="vuetitre">Profil</h2>
+        <div class="panel"><span class="spinner"></span> <span class="sub">Chargement du profil…</span></div>`;
+      return;
+    }
+    const v = pr.vitrine || {};
+    const st = v.stats || {};
+    const lvl = v.niveau || 1;
+    const halo = lvl >= 30 ? "3" : lvl >= 20 ? "2" : lvl >= 10 ? "1" : "0";
+    const c = v.crop || {z:1, x:50, y:50};
+    const avSt = v.avatar ? `background-image:url('${cssUrl(v.avatar)}');background-size:${(c.z*100).toFixed(0)}% auto;background-position:${c.x}% ${c.y}%;background-repeat:no-repeat` : "";
+    const nice = v.depuis ? new Date(v.depuis).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
+    const slots = (v.vitrine || []).slice(0, 10);
+    const ami = amis.liste.includes(id);
+    view.innerHTML = `
+      <div class="row" style="justify-content:space-between;align-items:center;position:relative;z-index:2">
+        <h2 class="vuetitre">Profil</h2>
+        <button class="btn small ghost" id="jretour">← ${nomRetour}</button>
+      </div>
+      <div class="panel profilehead ${v.banniere ? "hasbanner" : ""}" style="margin:.8rem 0 1rem">
+        ${v.banniere ? `<div class="pstage">
+          <span class="pb l" style="background-image:url('${cssUrl(v.banniere)}')"></span>
+          <span class="pb r" style="background-image:url('${cssUrl(v.banniere)}')"></span>
+          <span class="pveil"></span>
+        </div>` : ""}
+        <div class="row" style="gap:1rem;flex-wrap:nowrap;align-items:center;position:relative;z-index:2">
+          <div style="text-align:center">
+            <div class="avatar halo${halo}" style="display:grid;place-items:center;${esc(avSt)}">${v.avatar ? "" : esc((pr.pseudo || "?").slice(0, 1).toUpperCase())}</div>
+          </div>
+          <div style="min-width:0;flex:1">
+            <h3 style="font-size:1.4rem">${esc(pr.pseudo)}</h3>
+            <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
+              <span class="lvlbadge">Niv. ${lvl}</span>
+              ${v.titre ? `<span class="titletag">${esc(v.titre)}</span>` : ""}
+            </div>
+            ${v.xpMax ? `<div class="lvlbar" title="${v.xp} / ${v.xpMax} points"><i style="width:${Math.round((v.xp || 0) / v.xpMax * 100)}%"></i></div>
+            <p class="sub" style="margin:.15rem 0 0;font-size:.78rem">${v.xp} / ${v.xpMax} points vers le niveau ${lvl + 1}</p>` : ""}
+            ${nice ? `<p class="sub" style="margin:.2rem 0 0">Inscrit le ${nice}</p>` : ""}
+          </div>
+        </div>
+        <div class="row" style="margin:.9rem 0 0;position:relative;z-index:2;gap:.4rem">
+          ${ami ? `<button class="btn small" id="jech">Proposer un échange</button>
+                   <button class="btn small ghost" id="jretire">Retirer de mes amis</button>`
+            : amis.envoyes.includes(id) ? `<span class="sub">Demande d'ami envoyée</span>`
+            : amis.recus.includes(id) ? `<button class="btn small" id="jaccepte">Accepter sa demande</button>`
+            : `<button class="btn small" id="jajout">Demander en ami</button>`}
+        </div>
+        ${v.fav ? `<p class="sub" style="margin:.6rem 0 0;position:relative;z-index:2">Univers préféré : <b style="color:var(--brass)">${esc(v.fav)}</b></p>` : ""}
+        <div class="statgrid">
+          <div class="st"><b>${st.cartes || 0}</b><span>cartes distinctes</span></div>
+          <div class="st"><b>${st.exemplaires || 0}</b><span>exemplaires</span></div>
+          <div class="st"><b>${st.victoires || 0}</b><span>combats gagnés</span></div>
+          <div class="st"><b>${st.defaites || 0}</b><span>combats perdus</span></div>
+          <div class="st"><b>${st.campagnes || 0}</b><span>campagnes réussies</span></div>
+          <div class="st"><b>${st.campagnesPerdues || 0}</b><span>campagnes perdues</span></div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1.15rem;margin-bottom:.4rem">Titres</h3>
+      <div class="row" style="margin-bottom:1.2rem">
+        ${(v.titres || []).length
+          ? v.titres.map(t => `<span class="chip" aria-pressed="${v.titre === t}">${esc(t)}</span>`).join("")
+          : `<span class="sub">Aucun titre débloqué pour l'instant.</span>`}
+      </div>
+
+      <div class="row" style="justify-content:space-between;align-items:baseline">
+        <h3 style="font-size:1.15rem">Vitrine</h3>
+        <span class="sub">${slots.length} / 10</span>
+      </div>
+      <div class="slots" style="margin-top:.7rem">
+        ${Array.from({length:10}, (_, i) => slots[i]
+          ? `<div class="slot full">${cardHTML(slots[i])}</div>`
+          : `<div class="slot" style="cursor:default"></div>`).join("")}
+      </div>`;
+    view.querySelector("#jretour").onclick = ()=>go(retour);
+    const moi = moiId();
+    const agir = async (b, f, msg)=>{
+      b.disabled = true;
+      try{ await f(); if(msg) toast(msg, "", "info"); }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
+      await amisCharger(); peindre();
+    };
+    const je = view.querySelector("#jech"); if(je) je.onclick = ()=>composerEchange(id);
+    const ja = view.querySelector("#jajout");
+    if(ja) ja.onclick = ()=>agir(ja, ()=>nuageRest("amities", {method:"POST", body:JSON.stringify([{demandeur:moi, cible:id}])}), "Demande envoyée");
+    const jc = view.querySelector("#jaccepte");
+    if(jc) jc.onclick = ()=>agir(jc, ()=>nuageRest("amities?demandeur=eq." + id + "&cible=eq." + moi, {method:"PATCH", body:JSON.stringify({statut:"acceptee"})}), "Vous êtes amis");
+    const jr = view.querySelector("#jretire");
+    if(jr) jr.onclick = ()=>{ if(confirm("Retirer " + pr.pseudo + " de vos amis ?"))
+      agir(jr, ()=>nuageRest("amities?or=(and(demandeur.eq." + moi + ",cible.eq." + id + "),and(demandeur.eq." + id + ",cible.eq." + moi + "))", {method:"DELETE"}), "Ami retiré"); };
+  };
+  peindre();
   try{
     const r = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=eq." + id);
     if(r && r[0]){ pr = r[0]; amis.profils.set(id, pr); }
   }catch(e){}
-  if(!pr){ toast("Profil introuvable", "", "lose"); return; }
-  const v = pr.vitrine || {};
-  const moi = moiId();
-  const ami = amis.liste.includes(id);
-  const st = v.stats || {};
-  const depuis = v.depuis ? new Date(v.depuis).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
-  const m = document.createElement("div");
-  m.className = "modal";
-  m.innerHTML = `<div class="inner" style="max-width:720px">
-    <div class="row" style="justify-content:space-between;margin-bottom:.6rem">
-      <h3 style="font-size:1.15rem">Profil</h3>
-      <button class="btn small ghost" id="close">Fermer</button>
-    </div>
-    <div class="panel profilehead ${v.banniere ? "hasbanner" : ""}" style="margin:0 0 1rem">
-      ${v.banniere ? `<div class="pstage">
-        <span class="pb l" style="background-image:url('${cssUrl(v.banniere)}')"></span>
-        <span class="pb r" style="background-image:url('${cssUrl(v.banniere)}')"></span>
-        <span class="pveil"></span></div>` : ""}
-      <div class="row" style="gap:1rem;flex-wrap:nowrap;align-items:center;position:relative;z-index:2">
-        ${avatarDe(v, pr.pseudo, 86)}
-        <div style="min-width:0;flex:1">
-          <h3 style="font-size:1.4rem">${esc(pr.pseudo)}</h3>
-          <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
-            ${v.niveau ? `<span class="lvlbadge">Niv. ${v.niveau}</span>` : ""}
-            ${v.titre ? `<span class="titletag">${esc(v.titre)}</span>` : ""}
-          </div>
-          ${v.fav ? `<p class="sub" style="margin:.4rem 0 0">Univers préféré : <b>${esc(v.fav)}</b></p>` : ""}
-          ${depuis ? `<p class="sub" style="margin:.2rem 0 0">Inscrit le ${depuis}</p>` : ""}
-        </div>
-      </div>
-      <div class="statgrid" style="position:relative;z-index:2">
-        <div class="st"><b>${st.cartes || 0}</b><span>cartes distinctes</span></div>
-        <div class="st"><b>${st.exemplaires || 0}</b><span>exemplaires</span></div>
-        <div class="st"><b>${st.univers || 0}</b><span>univers</span></div>
-        <div class="st"><b>${st.victoires || 0}</b><span>combats gagnés</span></div>
-      </div>
-      <div class="row" style="margin-top:.9rem;gap:.4rem;position:relative;z-index:2">
-        ${id === moi ? `<span class="sub">C'est vous.</span>`
-          : ami ? `<button class="btn small" id="pech">Proposer un échange</button>`
-          : amis.envoyes.includes(id) ? `<span class="sub">Demande envoyée</span>`
-          : `<button class="btn small" id="padd">Demander en ami</button>`}
-      </div>
-    </div>
-    <h3 style="font-size:1.05rem;margin-bottom:.5rem">Vitrine</h3>
-    ${(v.vitrine || []).length ? cartesMini(v.vitrine) : `<p class="sub">Vitrine vide.</p>`}
-  </div>`;
-  document.body.appendChild(m);
-  const fermer = ()=>m.remove();
-  m.onclick = e => { if(e.target === m) fermer(); };
-  m.querySelector("#close").onclick = fermer;
-  const pe = m.querySelector("#pech"); if(pe) pe.onclick = ()=>{ fermer(); composerEchange(id); };
-  const pa = m.querySelector("#padd");
-  if(pa) pa.onclick = async ()=>{
-    pa.disabled = true;
-    try{
-      await nuageRest("amities", {method:"POST", body:JSON.stringify([{demandeur:moi, cible:id}])});
-      toast("Demande envoyée", pr.pseudo + " doit l'accepter", "info");
-      fermer(); await amisCharger(); if(state.view === "amis") viewAmis();
-    }catch(e){ pa.disabled = false; toast("Demande impossible", String(e.message || e), "lose"); }
-  };
+  if(!amis.charge) await amisCharger();
+  if(!pr && state.view === "joueur"){ view.innerHTML = `<h2 class="vuetitre">Profil</h2><div class="panel"><p class="sub" style="margin:0">Profil introuvable.</p></div>`; return; }
+  peindre();
 }
 
 /* ---- choix de cartes dans une liste ---- */
@@ -5623,6 +5795,462 @@ async function composerEchange(id){
   document.body.appendChild(m);
   m.onclick = e => { if(e.target === m) m.remove(); };
   dessiner();
+}
+
+/* ======================================================================
+   Marché — l'hôtel des ventes
+   ----------------------------------------------------------------------
+   Comme sur WikiMasters : on met une carte aux enchères avec un prix de
+   départ et une durée, les autres joueurs surenchérissent, le meilleur
+   l'emporte à la fin du compte à rebours. Une offre posée dans les deux
+   dernières minutes repousse la fin de deux minutes, pour qu'on ne puisse
+   pas rafler une vente à la dernière seconde.
+   Séquestre : la carte quitte l'album à la mise en vente ; les Fandominus
+   d'une offre quittent la bourse quand on enchérit et reviennent si l'on
+   est dépassé. Le serveur ne rend chaque somme ou carte qu'une seule fois.
+   Le vendeur reçoit le prix moins une commission de 5 %.
+   ====================================================================== */
+const MARCHE_SQL = `-- FandoMasters · marché aux enchères (à lancer une fois)
+create table if not exists encheres (
+  id bigint generated always as identity primary key,
+  vendeur uuid not null references auth.users on delete cascade,
+  carte jsonb not null,
+  prix_depart int not null check (prix_depart between 1 and 100000000),
+  offre int,
+  meilleur uuid references auth.users on delete set null,
+  nb_offres int not null default 0,
+  fin timestamptz not null,
+  regle_vendeur boolean not null default false,
+  regle_acheteur boolean not null default false,
+  cree timestamptz not null default now()
+);
+alter table encheres enable row level security;
+create policy "encheres visibles" on encheres for select to authenticated using (true);
+create policy "mettre en vente" on encheres for insert to authenticated
+  with check (vendeur = auth.uid() and offre is null and meilleur is null and nb_offres = 0
+    and not regle_vendeur and not regle_acheteur
+    and fin > now() and fin <= now() + interval '3 days 5 minutes');
+create index if not exists encheres_fin on encheres (fin);
+
+create table if not exists offres (
+  id bigint generated always as identity primary key,
+  enchere bigint not null references encheres on delete cascade,
+  joueur uuid not null references auth.users on delete cascade,
+  montant int not null,
+  rembourse boolean not null default false,
+  cree timestamptz not null default now()
+);
+alter table offres enable row level security;
+create policy "mes offres" on offres for select to authenticated using (joueur = auth.uid());
+
+create or replace function encherir(eid bigint, montant int) returns int
+language plpgsql security definer set search_path = public as $$
+declare e encheres; minimum int;
+begin
+  select * into e from encheres where id = eid for update;
+  if not found then raise exception 'vente introuvable'; end if;
+  if e.fin <= now() then raise exception 'vente terminee'; end if;
+  if e.vendeur = auth.uid() then raise exception 'impossible sur votre propre vente'; end if;
+  if e.meilleur = auth.uid() then raise exception 'vous etes deja en tete'; end if;
+  minimum := case when e.offre is null then e.prix_depart
+                  else e.offre + greatest(1, ceil(e.offre * 0.05)::int) end;
+  if montant < minimum then raise exception 'offre minimale : %', minimum; end if;
+  update encheres set offre = montant, meilleur = auth.uid(), nb_offres = nb_offres + 1,
+    fin = greatest(fin, now() + interval '2 minutes') where id = eid;
+  insert into offres (enchere, joueur, montant) values (eid, auth.uid(), montant);
+  return montant;
+end $$;
+
+create or replace function rembourser_offre(oid bigint) returns int
+language plpgsql security definer set search_path = public as $$
+declare o offres; e encheres;
+begin
+  select * into o from offres where id = oid and joueur = auth.uid() and not rembourse for update;
+  if not found then return 0; end if;
+  select * into e from encheres where id = o.enchere;
+  if found and e.meilleur = o.joueur and e.offre = o.montant then return 0; end if;
+  update offres set rembourse = true where id = oid;
+  return o.montant;
+end $$;
+
+create or replace function regler_achat(eid bigint) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare e encheres;
+begin
+  update encheres set regle_acheteur = true
+   where id = eid and meilleur = auth.uid() and fin <= now() and not regle_acheteur
+   returning * into e;
+  if not found then return null; end if;
+  return e.carte;
+end $$;
+
+create or replace function regler_vente(eid bigint) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare e encheres;
+begin
+  update encheres set regle_vendeur = true
+   where id = eid and vendeur = auth.uid() and fin <= now() and not regle_vendeur
+   returning * into e;
+  if not found then return null; end if;
+  return jsonb_build_object('offre', e.offre, 'carte', e.carte);
+end $$;
+
+create or replace function annuler_vente(eid bigint) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  update encheres set fin = now() where id = eid and vendeur = auth.uid() and nb_offres = 0 and fin > now();
+  return found;
+end $$;`;
+
+const MARCHE_TAXE = 0.05;
+const MARCHE_DUREES = [{h:1, nom:"1 h"}, {h:6, nom:"6 h"}, {h:24, nom:"24 h"}, {h:72, nom:"3 jours"}];
+const marche = {onglet:"ventes", ventes:[], miennes:[], offres:[], encheresOffres:[], charge:false, erreur:"",
+                q:"", rar:"", tri:"fin", carte:null, prix:0, duree:24, horloge:null};
+
+function piecesAffichees(){
+  const el = document.getElementById("coins");
+  if(el) el.textContent = short(state.profile.coins);
+  if(typeof majJauges === "function") majJauges();
+}
+function resteTemps(fin){
+  const ms = Date.parse(fin) - Date.now();
+  if(ms <= 0) return "terminée";
+  const m = Math.floor(ms / 60000), h = Math.floor(m / 60), j = Math.floor(h / 24);
+  if(j >= 1) return j + " j " + (h % 24) + " h";
+  if(h >= 1) return h + " h " + String(m % 60).padStart(2, "0") + " min";
+  if(m >= 1) return m + " min";
+  return Math.max(1, Math.floor(ms / 1000)) + " s";
+}
+function offreMini(e){
+  return e.offre == null ? e.prix_depart : e.offre + Math.max(1, Math.ceil(e.offre * 0.05));
+}
+
+async function marcheCharger(){
+  const moi = moiId(); if(!moi) return;
+  try{
+    const maintenant = new Date().toISOString();
+    const [ventes, miennes, offres] = await Promise.all([
+      nuageRest("encheres?select=*&fin=gt." + encodeURIComponent(maintenant) + "&order=fin.asc&limit=200"),
+      nuageRest("encheres?select=*&vendeur=eq." + moi + "&order=cree.desc&limit=30"),
+      nuageRest("offres?select=*&joueur=eq." + moi + "&order=cree.desc&limit=100")
+    ]);
+    marche.ventes = ventes || []; marche.miennes = miennes || []; marche.offres = offres || [];
+    const ids = [...new Set(marche.offres.map(o => o.enchere))];
+    marche.encheresOffres = ids.length ? (await nuageRest("encheres?select=*&id=in.(" + ids.join(",") + ")")) || [] : [];
+    const joueurs = [...new Set([...marche.ventes, ...marche.encheresOffres].flatMap(e => [e.vendeur, e.meilleur]).filter(Boolean))]
+      .filter(id => !amis.profils.has(id));
+    if(joueurs.length){
+      const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + joueurs.join(",") + ")");
+      for(const x of (pr || [])) amis.profils.set(x.joueur, x);
+    }
+    marche.erreur = ""; marche.charge = true;
+    await marcheRegler();
+  }catch(e){ marche.erreur = String(e && e.message || e); marche.charge = true; }
+}
+
+/* Ventes terminées, achats gagnés, offres dépassées : chaque appel au
+   serveur ne rend son dû qu'une fois, on n'applique que ce qu'il renvoie. */
+async function marcheRegler(){
+  const moi = moiId(); if(!moi) return;
+  const p = state.profile;
+  let change = false;
+  const fini = e => Date.parse(e.fin) <= Date.now();
+  for(const e of marche.miennes.filter(e => !e.regle_vendeur && fini(e))){
+    try{
+      const r = await nuageRest("rpc/regler_vente", {method:"POST", body:JSON.stringify({eid:e.id})});
+      if(!r) continue;
+      if(r.offre){
+        const net = Math.floor(r.offre * (1 - MARCHE_TAXE));
+        p.coins = (p.coins || 0) + net;
+        toast("Vente conclue", (r.carte && r.carte.title || "Carte") + " · +" + net + " ◆", "info");
+        logEvent("Vendu aux enchères : " + (r.carte && r.carte.title) + " pour " + r.offre + " ◆", "gold");
+      }else if(r.carte){
+        ajouterCopies([r.carte]);
+        toast("Invendu", (r.carte.title || "La carte") + " revient dans votre album", "info");
+      }
+      e.regle_vendeur = true; change = true;
+    }catch(err){}
+  }
+  for(const e of marche.encheresOffres.filter(e => e.meilleur === moi && !e.regle_acheteur && fini(e))){
+    try{
+      const carte = await nuageRest("rpc/regler_achat", {method:"POST", body:JSON.stringify({eid:e.id})});
+      if(!carte) continue;
+      ajouterCopies([carte]);
+      toast("Enchère remportée", (carte.title || "Carte") + " rejoint votre album", "ach");
+      logEvent("Enchère remportée : " + carte.title + " pour " + e.offre + " ◆", "gold");
+      e.regle_acheteur = true; change = true;
+    }catch(err){}
+  }
+  for(const o of marche.offres.filter(o => !o.rembourse)){
+    const e = marche.encheresOffres.find(x => x.id === o.enchere);
+    if(e && e.meilleur === moi && e.offre === o.montant) continue;   // en tête, ou gagnée
+    try{
+      const m = await nuageRest("rpc/rembourser_offre", {method:"POST", body:JSON.stringify({oid:o.id})});
+      if(m > 0){
+        p.coins = (p.coins || 0) + m;
+        toast("Offre dépassée", "+" + m + " ◆ rendus" + (e && e.carte ? " · " + e.carte.title : ""), "info");
+        change = true;
+      }
+      o.rembourse = true;
+    }catch(err){}
+  }
+  if(change){
+    await sset("fm:col", state.collection);
+    await sset("fm:profile", p);
+    piecesAffichees();
+  }
+}
+async function marcheChargerLeger(){
+  const moi = moiId(); if(!moi) return;
+  try{
+    const maintenant = encodeURIComponent(new Date().toISOString());
+    const [ventes, gagnees, offres] = await Promise.all([
+      nuageRest("encheres?select=*&vendeur=eq." + moi + "&regle_vendeur=eq.false&fin=lte." + maintenant),
+      nuageRest("encheres?select=*&meilleur=eq." + moi + "&regle_acheteur=eq.false&fin=lte." + maintenant),
+      nuageRest("offres?select=*&joueur=eq." + moi + "&rembourse=eq.false")
+    ]);
+    const ids = [...new Set((offres || []).map(o => o.enchere))].filter(id => !(gagnees || []).some(e => e.id === id));
+    const autres = ids.length ? (await nuageRest("encheres?select=*&id=in.(" + ids.join(",") + ")")) || [] : [];
+    marche.miennes = ventes || [];
+    marche.encheresOffres = [...(gagnees || []), ...autres];
+    marche.offres = offres || [];
+    marche.charge = false;   // la page rechargera la liste complète
+    await marcheRegler();
+  }catch(e){}
+}
+async function marcheVeille(){
+  if(!nuageConfigure() || !nuageConnecte() || document.hidden || !state.profile || !state.profile.pseudo) return;
+  if(state.view === "market") await marcheCharger(); else await marcheChargerLeger();
+  if(state.view === "market" && !document.body.classList.contains("overlay")) viewMarche();
+}
+setInterval(marcheVeille, 90000);
+
+function nomJoueur(id){ return (amis.profils.get(id) || {}).pseudo || "Joueur"; }
+
+function blocVente(e, mode){
+  const moi = moiId();
+  const c = e.carte || {};
+  const fin = Date.parse(e.fin) <= Date.now();
+  const enTete = e.meilleur === moi;
+  let etat = "";
+  if(mode === "offres"){
+    etat = fin ? (enTete ? `<span class="mtag ok">Remportée</span>` : `<span class="mtag">Perdue</span>`)
+               : (enTete ? `<span class="mtag ok">En tête</span>` : `<span class="mtag ko">Dépassé</span>`);
+  }else if(mode === "miennes"){
+    etat = !fin ? `<span class="mtag">En cours</span>`
+         : e.offre ? `<span class="mtag ok">Vendue ${e.offre} ◆</span>` : `<span class="mtag">Invendue</span>`;
+  }
+  let bouton = "";
+  if(mode === "ventes" && !fin){
+    bouton = e.vendeur === moi ? `<span class="sub">votre vente</span>`
+      : enTete ? `<span class="mtag ok">En tête</span>`
+      : `<button class="btn small" data-encherir="${e.id}">Enchérir · ${offreMini(e)} ◆</button>`;
+  }
+  if(mode === "offres" && !fin && !enTete) bouton = `<button class="btn small" data-encherir="${e.id}">Surenchérir · ${offreMini(e)} ◆</button>`;
+  if(mode === "miennes" && !fin && !e.nb_offres) bouton = `<button class="btn small ghost" data-annulerv="${e.id}">Retirer</button>`;
+  return `<div class="mvente">
+    <div class="mcarte">${cardHTML(c, {compact:true})}</div>
+    <div class="minfo">
+      <b>${esc(c.title || "Carte")}</b>
+      <span class="sub">${esc(c.univ || "")} · ${esc(c.rarity || "")}</span>
+      <div class="mprix"><span>${e.offre != null ? "Offre actuelle" : "Prix de départ"}</span>
+        <strong>${(e.offre != null ? e.offre : e.prix_depart).toLocaleString("fr-FR")} ◆</strong></div>
+      <span class="sub">${e.nb_offres || 0} offre${(e.nb_offres || 0) > 1 ? "s" : ""} · <span class="mtemps" data-fin="${esc(e.fin)}">${resteTemps(e.fin)}</span></span>
+      <span class="sub">vendue par <button class="lien" data-joueur="${esc(e.vendeur)}">${esc(e.vendeur === moi ? "vous" : nomJoueur(e.vendeur))}</button>
+        ${e.meilleur && e.meilleur !== moi ? ` · en tête : <button class="lien" data-joueur="${esc(e.meilleur)}">${esc(nomJoueur(e.meilleur))}</button>` : ""}</span>
+      <div class="row" style="gap:.4rem;margin-top:.35rem;align-items:center">${etat}${bouton}</div>
+    </div>
+  </div>`;
+}
+
+function viewMarche(){
+  if(!nuageConfigure() || !nuageConnecte()){
+    view.innerHTML = `<h2 class="vuetitre">Marché</h2>
+      <div class="panel"><p class="sub" style="margin:0 0 .8rem">Le marché réunit tous les joueurs : il faut un compte.</p>
+      <button class="btn" id="vcompte">Créer un compte ou se connecter</button></div>`;
+    view.querySelector("#vcompte").onclick = ()=>go("compte");
+    return;
+  }
+  const moi = moiId();
+  const ong = marche.onglet;
+  const tab = (id, nom, n) => `<button class="chip" data-mong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
+  const enCours = marche.miennes.filter(e => Date.parse(e.fin) > Date.now()).length;
+  const mesOffres = marche.encheresOffres.filter(e => Date.parse(e.fin) > Date.now()).length;
+  let corps = "";
+  if(!marche.charge){
+    corps = `<div class="panel"><span class="spinner"></span> <span class="sub">Ouverture du marché…</span></div>`;
+  }else if(marche.erreur){
+    const manque = /404|PGRST|relation|does not exist|schema cache/i.test(marche.erreur);
+    corps = `<div class="panel">
+      <p class="sub" style="margin:0 0 .6rem">${manque
+        ? "Le marché n'existe pas encore sur le serveur. Copiez ce script dans Supabase → SQL Editor → Run, puis revenez ici. (Le script des amis doit avoir été lancé avant.)"
+        : "Le serveur n'a pas répondu : " + esc(marche.erreur)}</p>
+      ${manque ? `<pre class="sql">${esc(MARCHE_SQL)}</pre><button class="btn small ghost" id="mcopie">Copier le script</button>` : ""}
+      <button class="btn small ghost" id="mreessai" style="margin-left:.4rem">Réessayer</button></div>`;
+  }else if(ong === "ventes"){
+    const q = marche.q.toLowerCase();
+    let l = marche.ventes.filter(e => e.carte && (!q || ((e.carte.title || "") + " " + (e.carte.univ || "")).toLowerCase().includes(q))
+                                   && (!marche.rar || e.carte.rarity === marche.rar));
+    const prix = e => e.offre != null ? e.offre : e.prix_depart;
+    if(marche.tri === "bas") l.sort((a, b) => prix(a) - prix(b));
+    else if(marche.tri === "haut") l.sort((a, b) => prix(b) - prix(a));
+    else if(marche.tri === "neuf") l.sort((a, b) => Date.parse(b.cree) - Date.parse(a.cree));
+    else l.sort((a, b) => Date.parse(a.fin) - Date.parse(b.fin));
+    corps = `<div class="row" style="gap:.4rem;margin-bottom:.7rem">
+        <input id="mq" placeholder="Carte ou univers…" value="${esc(marche.q)}" style="flex:2 1 160px;margin:0" autocomplete="off">
+        <select id="mrar" style="flex:1 1 120px;margin:0"><option value="">Toutes raretés</option>
+          ${RARITIES.map(r => `<option ${marche.rar === r ? "selected" : ""}>${esc(r)}</option>`).join("")}</select>
+        <select id="mtri" style="flex:1 1 120px;margin:0">
+          <option value="fin" ${marche.tri==="fin"?"selected":""}>Fin proche</option>
+          <option value="neuf" ${marche.tri==="neuf"?"selected":""}>Nouveautés</option>
+          <option value="bas" ${marche.tri==="bas"?"selected":""}>Prix croissant</option>
+          <option value="haut" ${marche.tri==="haut"?"selected":""}>Prix décroissant</option></select>
+      </div>
+      ${l.length ? `<div class="mliste">${l.map(e => blocVente(e, "ventes")).join("")}</div>`
+                 : `<div class="panel"><p class="sub" style="margin:0">Aucune vente en cours${q || marche.rar ? " pour ce filtre" : ""}. Soyez le premier : onglet « Vendre ».</p></div>`}`;
+  }else if(ong === "vendre"){
+    const c = marche.carte ? state.collection.find(x => x.id === marche.carte) : null;
+    corps = `<div class="panel">
+      <p class="sub" style="margin:0 0 .7rem">La carte quitte votre album pendant la vente. Sans offre à la fin, elle vous revient.
+        Vendue, vous touchez le prix final moins ${Math.round(MARCHE_TAXE*100)} % de commission.</p>
+      <div class="mvendre">
+        <div class="mcarte">${c ? cardHTML(c, {compact:true}) : `<div class="slot" id="mchoix" style="cursor:pointer">+</div>`}</div>
+        <div class="minfo">
+          <button class="btn small ghost" id="mchoisir">${c ? "Changer de carte" : "Choisir une carte"}</button>
+          ${c ? `<span class="sub">${esc(c.title)} · ${esc(c.rarity)} · ${c.count} exemplaire${c.count > 1 ? "s" : ""} · rachat ${SELL[c.rarity] || 1} ◆</span>` : ""}
+          <label class="sub" for="mprix" style="margin-top:.5rem">Prix de départ (◆)</label>
+          <input id="mprix" type="number" min="1" step="1" inputmode="numeric" value="${marche.prix || (c ? Math.max(1, (SELL[c.rarity] || 1) * 5) : 10)}" style="margin:0;max-width:180px">
+          <span class="sub" style="margin-top:.5rem">Durée</span>
+          <div class="row" style="gap:.35rem">${MARCHE_DUREES.map(d => `<button class="chip" data-duree="${d.h}" aria-pressed="${marche.duree === d.h}">${d.nom}</button>`).join("")}</div>
+          <button class="btn" id="mlancer" style="margin-top:.8rem" ${c ? "" : "disabled"}>Mettre aux enchères</button>
+        </div>
+      </div></div>`;
+  }else if(ong === "miennes"){
+    corps = marche.miennes.length ? `<div class="mliste">${marche.miennes.map(e => blocVente(e, "miennes")).join("")}</div>`
+      : `<div class="panel"><p class="sub" style="margin:0">Vous n'avez rien mis en vente.</p></div>`;
+  }else if(ong === "offres"){
+    const l = marche.encheresOffres.slice().sort((a, b) => Date.parse(b.fin) - Date.parse(a.fin));
+    corps = l.length ? `<div class="mliste">${l.map(e => blocVente(e, "offres")).join("")}</div>`
+      : `<div class="panel"><p class="sub" style="margin:0">Aucune offre pour l'instant.</p></div>`;
+  }
+
+  view.innerHTML = `
+    <h2 class="vuetitre">Marché</h2>
+    <p class="sub" style="margin:.1rem 0 .7rem">Enchères entre joueurs · bourse : <b>${short(state.profile.coins || 0)} ◆</b></p>
+    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
+      ${tab("ventes", "Enchères", marche.ventes.filter(e => e.vendeur !== moi).length)}
+      ${tab("vendre", "Vendre", 0)}
+      ${tab("miennes", "Mes ventes", enCours)}
+      ${tab("offres", "Mes offres", mesOffres)}
+    </div>
+    ${corps}`;
+
+  view.querySelectorAll("[data-mong]").forEach(b => b.onclick = ()=>{ marche.onglet = b.dataset.mong; viewMarche(); });
+  view.querySelectorAll("[data-joueur]").forEach(b => b.onclick = ()=>voirJoueur(b.dataset.joueur));
+  const mr = view.querySelector("#mreessai");
+  if(mr) mr.onclick = async ()=>{ marche.charge = false; viewMarche(); await marcheCharger(); viewMarche(); };
+  const mc = view.querySelector("#mcopie");
+  if(mc) mc.onclick = ()=>{ try{ navigator.clipboard.writeText(MARCHE_SQL); toast("Script copié", "collez-le dans Supabase → SQL Editor", "info"); }catch(e){} };
+  const mq = view.querySelector("#mq");
+  if(mq){
+    mq.oninput = ()=>{ marche.q = mq.value; const pos = mq.selectionStart; viewMarche(); const m2 = view.querySelector("#mq"); if(m2){ m2.focus(); m2.setSelectionRange(pos, pos); } };
+    view.querySelector("#mrar").onchange = e => { marche.rar = e.target.value; viewMarche(); };
+    view.querySelector("#mtri").onchange = e => { marche.tri = e.target.value; viewMarche(); };
+  }
+  view.querySelectorAll("[data-encherir]").forEach(b => b.onclick = ()=>encherirDialogue(+b.dataset.encherir));
+  view.querySelectorAll("[data-annulerv]").forEach(b => b.onclick = async ()=>{
+    b.disabled = true;
+    try{
+      const ok = await nuageRest("rpc/annuler_vente", {method:"POST", body:JSON.stringify({eid:+b.dataset.annulerv})});
+      if(!ok) throw new Error("une offre a déjà été posée");
+      await marcheCharger(); toast("Vente retirée", "la carte revient dans votre album", "info");
+    }catch(e){ toast("Retrait impossible", String(e.message || e), "lose"); }
+    viewMarche();
+  });
+  // vendre
+  const choisir = async ()=>{
+    const occupees = engagedIds();
+    const r = await choisirCartes({titre:"Carte à vendre", liste:state.collection.filter(c => !occupees.has(c.id)), max:1, deja:marche.carte ? [marche.carte] : []});
+    if(r && r[0]){ marche.carte = r[0]; marche.prix = 0; }
+    viewMarche();
+  };
+  const ch = view.querySelector("#mchoisir"); if(ch) ch.onclick = choisir;
+  const ch2 = view.querySelector("#mchoix"); if(ch2) ch2.onclick = choisir;
+  const pi = view.querySelector("#mprix"); if(pi) pi.oninput = ()=>{ marche.prix = Math.max(0, Math.floor(+pi.value || 0)); };
+  view.querySelectorAll("[data-duree]").forEach(b => b.onclick = ()=>{ marche.duree = +b.dataset.duree; viewMarche(); });
+  const ml = view.querySelector("#mlancer");
+  if(ml) ml.onclick = async ()=>{
+    const c = state.collection.find(x => x.id === marche.carte);
+    const prix = Math.floor(+view.querySelector("#mprix").value || 0);
+    if(!c){ toast("Choisissez une carte", "", "lose"); return; }
+    if(prix < 1){ toast("Prix invalide", "au moins 1 ◆", "lose"); return; }
+    ml.disabled = true;
+    const carte = carteEchange(c);
+    try{
+      await nuageRest("encheres", {method:"POST", body:JSON.stringify([{vendeur:moi, carte, prix_depart:prix,
+        fin:new Date(Date.now() + marche.duree * 3600000).toISOString()}])});
+      retirerCopies([carte]);
+      await sset("fm:col", state.collection); await sset("fm:profile", state.profile);
+      toast("Mise en vente", carte.title + " · départ " + prix + " ◆", "info");
+      marche.carte = null; marche.prix = 0; marche.onglet = "miennes";
+      await marcheCharger();
+    }catch(e){ toast("Mise en vente impossible", String(e.message || e), "lose"); }
+    viewMarche();
+  };
+  // compte à rebours
+  clearInterval(marche.horloge);
+  marche.horloge = setInterval(()=>{
+    if(state.view !== "market"){ clearInterval(marche.horloge); return; }
+    view.querySelectorAll(".mtemps").forEach(el => el.textContent = resteTemps(el.dataset.fin));
+  }, 1000);
+  if(!marche.charge){ marcheCharger().then(()=>{ if(state.view === "market") viewMarche(); }); }
+}
+
+function encherirDialogue(eid){
+  const e = marche.ventes.find(x => x.id === eid) || marche.encheresOffres.find(x => x.id === eid);
+  if(!e) return;
+  const mini = offreMini(e);
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `<div class="inner" style="max-width:420px">
+    <div class="row" style="justify-content:space-between"><h3 style="font-size:1.1rem">Enchérir</h3>
+      <button class="btn small ghost" id="close">Annuler</button></div>
+    <div class="mvendre" style="margin-top:.6rem">
+      <div class="mcarte">${cardHTML(e.carte || {}, {compact:true})}</div>
+      <div class="minfo">
+        <b>${esc((e.carte || {}).title || "")}</b>
+        <span class="sub">${e.offre != null ? "offre actuelle " + e.offre + " ◆" : "prix de départ " + e.prix_depart + " ◆"}</span>
+        <span class="sub">offre minimale : <b>${mini} ◆</b> · bourse : ${short(state.profile.coins || 0)} ◆</span>
+        <input id="emontant" type="number" min="${mini}" step="1" inputmode="numeric" value="${mini}" style="margin:.5rem 0 0;max-width:160px">
+        <span class="sub" style="font-size:.8rem">La somme est retenue tout de suite et vous revient si quelqu'un surenchérit.</span>
+        <button class="btn" id="eok" style="margin-top:.6rem">Confirmer l'offre</button>
+      </div>
+    </div></div>`;
+  document.body.appendChild(m);
+  m.onclick = ev => { if(ev.target === m) m.remove(); };
+  m.querySelector("#close").onclick = ()=>m.remove();
+  m.querySelector("#eok").onclick = async (ev)=>{
+    const b = ev.currentTarget;
+    const montant = Math.floor(+m.querySelector("#emontant").value || 0);
+    const p = state.profile;
+    if(montant < mini){ toast("Offre trop basse", "minimum " + mini + " ◆", "lose"); return; }
+    if((p.coins || 0) < montant){ toast("Bourse insuffisante", "il vous manque " + (montant - (p.coins || 0)) + " ◆", "lose"); return; }
+    b.disabled = true;
+    p.coins -= montant; piecesAffichees();
+    await sset("fm:profile", p);
+    try{
+      await nuageRest("rpc/encherir", {method:"POST", body:JSON.stringify({eid, montant})});
+      toast("Offre posée", montant + " ◆ sur " + ((e.carte || {}).title || "la carte"), "info");
+      m.remove();
+    }catch(err){
+      p.coins += montant; piecesAffichees(); await sset("fm:profile", p);
+      b.disabled = false;
+      toast("Offre refusée", String(err.message || err).replace(/^base \d+ : /, ""), "lose");
+      return;
+    }
+    await marcheCharger();
+    if(state.view === "market") viewMarche();
+  };
 }
 
 /* ---------- page « Couleurs » ---------- */
@@ -9591,6 +10219,23 @@ function avatarStyle(){
 /* La photo est recopiée dans le profil sous forme d'image autonome. Retenir
    une adresse Fandom ne suffit pas : les vignettes sont régénérées, le lien
    change, et la photo disparaissait. Une copie locale ne dépend de rien. */
+function reduireImage(src, S, q){
+  return new Promise(res=>{
+    const im = new Image();
+    im.onerror = ()=>res("");
+    im.onload = ()=>{
+      try{
+        const cv = document.createElement("canvas");
+        const r = Math.min(S / im.naturalWidth, S / im.naturalHeight, 1);
+        cv.width = Math.max(1, Math.round(im.naturalWidth * r));
+        cv.height = Math.max(1, Math.round(im.naturalHeight * r));
+        cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+        res(cv.toDataURL("image/jpeg", q));
+      }catch(e){ res(""); }
+    };
+    im.src = src;
+  });
+}
 function cacheAvatar(url){
   return new Promise(res=>{
     if(!url || url.startsWith("data:")) return res(url || "");
@@ -9601,13 +10246,13 @@ function cacheAvatar(url){
     im.onerror = ()=>fini(url);
     im.onload = ()=>{
       try{
-        const S = 320;
+        const S = 200;
         const cv = document.createElement("canvas");
         const r = Math.min(S / im.naturalWidth, S / im.naturalHeight, 1);
         cv.width = Math.max(1, Math.round(im.naturalWidth * r));
         cv.height = Math.max(1, Math.round(im.naturalHeight * r));
         cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
-        fini(cv.toDataURL("image/jpeg", 0.86));   // lève si l'image est « teintée »
+        fini(cv.toDataURL("image/jpeg", 0.8));    // lève si l'image est « teintée »
       }catch(e){ fini(url); }                      // pas de CORS : on garde l'adresse
     };
     im.src = url;
@@ -10566,7 +11211,8 @@ const TITLES = [
 ];
 function bannerSrc(id){
   const c = state.collection.find(x=>x.id === id);
-  return c && c.img ? c.img : "";
+  if(c && c.img) return c.img;
+  return id && id === state.profile.banner && state.profile.bannerImg ? state.profile.bannerImg : "";
 }
 function unlockedTitles(){
   const owned = new Set(state.profile.ach||[]);
@@ -10595,10 +11241,10 @@ function viewProfil(){
       <div class="row" style="gap:1rem;flex-wrap:nowrap;align-items:center;position:relative;z-index:2">
         <div style="text-align:center">
           <button class="avatar halo${lv0.lvl>=30?"3":lv0.lvl>=20?"2":lv0.lvl>=10?"1":"0"}" id="avbtn"
-            title="Choisir une illustration" style="${av && av.img ? esc(avatarStyle()) : ""}">
-            ${av && av.img ? "" : esc((p.pseudo||"?").slice(0,1).toUpperCase())}
+            title="Choisir une illustration" style="${(av && av.img) || p.avatarImg ? esc(avatarStyle()) : ""}">
+            ${(av && av.img) || p.avatarImg ? "" : esc((p.pseudo||"?").slice(0,1).toUpperCase())}
           </button>
-          ${av && av.img ? `<button class="btn small ghost" id="recadre" style="margin-top:.4rem;font-size:.74rem">Recadrer</button>`:""}
+          ${(av && av.img) || p.avatarImg ? `<button class="btn small ghost" id="recadre" style="margin-top:.4rem;font-size:.74rem">Recadrer</button>`:""}
         </div>
         <div style="min-width:0;flex:1">
           <div class="row" style="gap:.5rem">
@@ -10690,7 +11336,7 @@ function viewProfil(){
   view.querySelector("#pickbanner").onclick = ()=>pickCard({
     title:"Bannière du profil",
     filter:c=>!!c.img,
-    onPick:async c=>{ p.banner = c.id; await sset("fm:profile", p); viewProfil(); }
+    onPick:async c=>{ p.banner = c.id; p.bannerImg = c.img || ""; await sset("fm:profile", p); viewProfil(); }
   });
   const nb = view.querySelector("#nobanner");
   if(nb) nb.onclick = async ()=>{ p.banner = null; await sset("fm:profile", p); viewProfil(); };
@@ -12015,7 +12661,7 @@ function openSettings(){
   }catch(e){}
   diagLog("démarrage · session " + (nuageConnecte() ? "oui" : "non"));
   chargerEvenement();
-  setTimeout(()=>{ publierProfil(); amisVeille(); }, 4000);
+  setTimeout(()=>{ publierProfil(); amisVeille(); marcheVeille(); }, 4000);
   if(await idbPret){
     await idbReprise();
     try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().then(p=>{ idbPersistant = p; }); }catch(e){}
@@ -12026,6 +12672,7 @@ function openSettings(){
   }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
+  persoInstantane(state.profile);
   // les parties créées avant les Fandominus repartent avec la dotation complète
   if(!state.profile.v || state.profile.v < 3){
     state.profile.v = 3;
@@ -12055,6 +12702,15 @@ function openSettings(){
   await migrateStats();
   await repareCommons();
   await refreshRelics();
+  /* photos de profil enregistrées en grand (320 px) : on les réduit, elles
+     voyagent à chaque synchro et dans chaque liste d'amis */
+  if(state.profile.avatarImg && state.profile.avatarImg.startsWith("data:") && state.profile.avatarImg.length > 30000){
+    reduireImage(state.profile.avatarImg, 200, 0.8).then(async petit=>{
+      if(petit && petit.length < state.profile.avatarImg.length){
+        state.profile.avatarImg = petit; await sset("fm:profile", state.profile); paintMe();
+      }
+    });
+  }
   /* profils d'avant la copie locale : on fige la photo une bonne fois */
   if(state.profile.avatarImg && !state.profile.avatarImg.startsWith("data:")){
     cacheAvatar(state.profile.avatarImg).then(async copie=>{
@@ -12068,6 +12724,7 @@ function openSettings(){
   farmTick();
   state.collection = (await sget("fm:col")) || [];
   if(state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
+  fmPret = true;
   paintSound();
   render();
   paintAchDot();
