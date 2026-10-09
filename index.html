@@ -2944,6 +2944,33 @@ const NUAGE_TABLE   = "sauvegardes";
 
 function nuageConfigure(){ return !!(NUAGE.url && NUAGE.cle); }
 
+/* Diagnostic : combien de fois cette page s'est chargée sur cet appareil,
+   d'après la mémoire du navigateur. Si le chiffre ne monte pas d'un
+   chargement à l'autre, le navigateur n'y garde rien. */
+let diagCharges = "?", diagEcriture = "échec";
+try{
+  const n = (parseInt(localStorage.getItem("fm-local:diag-charges"), 10) || 0) + 1;
+  localStorage.setItem("fm-local:diag-charges", String(n));
+  diagCharges = String(n);
+  diagEcriture = localStorage.getItem("fm-local:diag-charges") === String(n) ? "ok" : "relecture différente";
+}catch(e){ diagEcriture = "bloqué (" + (e && e.name) + ")"; }
+function diagnosticNuage(){
+  const s = nuageSession();
+  let cadre = "page seule"; try{ if(window.top !== window.self) cadre = "dans un cadre (iframe)"; }catch(e){ cadre = "dans un cadre (iframe)"; }
+  const l = [
+    ["adresse", location.origin + location.pathname],
+    ["page", cadre],
+    ["mémoire du navigateur", diagEcriture],
+    ["chargements comptés", diagCharges],
+    ["session", s && s.user ? "oui · " + (s.user.email || "?") : "non"],
+    ["jeton valable encore", s && s.exp ? Math.max(0, Math.round((s.exp - Date.now())/60000)) + " min" : "—"],
+    ["espace de jeu", acct().slice(0, 8)],
+    ["en attente d'envoi", nuageAttente().join(", ") || "rien"],
+    ["dernière raison", nuageRaisonLue() || "aucune"],
+    ["dernière erreur d'envoi", nuageErreur || "aucune"]
+  ];
+  return l.map(([k, v]) => k + " : " + v).join("\n");
+}
 let nuageMemoire = null;   // secours si le navigateur refuse d'écrire
 function nuageSession(){
   try{
@@ -4454,6 +4481,10 @@ create policy "chacun les siennes"
       </div>`}
 
     <details class="fold info" style="margin-top:1.2rem">
+      <summary>Diagnostic</summary>
+      <div class="in"><pre class="sql" id="diag" style="white-space:pre-wrap;margin:0"></pre></div>
+    </details>
+    <details class="fold info" style="margin-top:1.2rem">
       <summary>Que part-il sur le serveur ?</summary>
       <div class="in">
         <p class="sub" style="margin:0">Deux choses, et rien d'autre : votre profil
@@ -4463,6 +4494,7 @@ create policy "chacun les siennes"
       </div>
     </details>`;
 
+  const dg = view.querySelector("#diag"); if(dg) dg.textContent = diagnosticNuage();
   if(co){
     view.querySelector("#c-sortir").onclick = async ()=>{
       nuageToutVider();
