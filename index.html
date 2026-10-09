@@ -2985,7 +2985,7 @@ function libererStockage(){
     for(let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
       if(!k) continue;
-      if(/:fm:pool2$/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
+      if(/fm:pool2$/.test(k) || /fm:ml2:/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
     }
     sup.forEach(k=>{ n += (localStorage.getItem(k) || "").length; localStorage.removeItem(k); });
   }catch(e){}
@@ -3250,6 +3250,9 @@ function majEtatNuage(){
    l'identifiant du joueur une fois connecté. Au moment de la connexion,
    la partie de l'appareil est donc dans l'espace invité, pas dans celui
    du compte qui vient de s'ouvrir — il faut aller la chercher là. */
+function viderEspace(espace){
+  try{ for(const c of NUAGE_CLES) localStorage.removeItem("fm-local:" + espace + ":" + c); }catch(e){}
+}
 function lireEspace(espace, cle){
   try{
     const v = localStorage.getItem("fm-local:" + espace + ":" + cle);
@@ -3289,6 +3292,7 @@ async function nuageDescendre(forcer){
     }catch(e){ return false; }
   }
   nuageAttentePose([]);
+  if(forcer && eu && acct() !== "invite") viderEspace("invite");
   return eu;
 }
 
@@ -3327,6 +3331,9 @@ async function nuageMonter(source){
     n++;
     if(moi && depuis !== moi) ecrireEspace(moi, cle, v);
   }
+  /* La partie est maintenant en ligne et dans l'espace du compte : on retire
+     la copie invitée, qui doublerait la place prise dans le navigateur. */
+  if(moi && depuis === "invite" && n) viderEspace("invite");
   return n;
 }
 
@@ -3403,6 +3410,24 @@ async function migrateLegacy(){
       }
     }catch(e){}
   }
+}
+
+/* Le texte d'une carte est le début de l'article. 1 200 signes suffisent à
+   l'affichage ; au-delà, des centaines de cartes saturent le navigateur. */
+const TEXTE_MAX = 1200;
+function coupeTexte(t){
+  t = String(t || "");
+  if(t.length <= TEXTE_MAX) return t;
+  const c = t.slice(0, TEXTE_MAX);
+  const fin = Math.max(c.lastIndexOf(". "), c.lastIndexOf("! "), c.lastIndexOf("? "));
+  return fin > TEXTE_MAX * 0.5 ? c.slice(0, fin + 1) : c.replace(/\s+\S*$/, "") + "…";
+}
+function allegerCollection(col){
+  let n = 0;
+  for(const c of col){
+    if(c && typeof c.text === "string" && c.text.length > TEXTE_MAX){ c.text = coupeTexte(c.text); n++; }
+  }
+  return n;
 }
 
 /* Une partie passée par l'échelle courte 1–10 est remontée à l'échelle
@@ -3830,7 +3855,7 @@ function makeCard(page, w, forced){
     title: page.title,
     url: page.fullurl || (base(w)+"/wiki/"+encodeURIComponent(page.title)),
     desc: desc.slice(0,160),
-    text: (page.extract||"").slice(0,2500),
+    text: coupeTexte(page.extract||""),
     img: page.thumbnail && !artRefusee(page.thumbnail.source) ? page.thumbnail.source : null,
     rarity:r, atk, def, count:1, note: Math.round(note)
   };
@@ -5191,7 +5216,7 @@ function viewHub(){
 let poolPromise = null;
 function ensurePool(){ if(!poolPromise) poolPromise = buildPool(); return poolPromise; }
 async function buildPool(){
-  const cached = await sget("fm:pool2");
+  const cached = await sget("fm:pool2", true);
   if(cached && cached.pool && cached.pool.length && (Date.now()-cached.t) < 7*864e5){
     state.pool = cached.pool;
     POOL_MISSES = cached.misses || [];
@@ -5208,7 +5233,7 @@ async function buildPool(){
     if(state.view === "cat" && !state.catW) viewCatalog();
   }
   state.pool = res.filter(Boolean);
-  if(state.pool.length) await sset("fm:pool2", {t:Date.now(), pool:state.pool, misses:POOL_MISSES});
+  if(state.pool.length) await sset("fm:pool2", {t:Date.now(), pool:state.pool, misses:POOL_MISSES}, true);
   if(state.view==="hub"||state.view==="pack") render();
   return state.pool;
 }
@@ -5220,7 +5245,7 @@ function shuffled(arr){ return [...arr].sort(()=>Math.random()-0.5); }
    Mis en cache une semaine par univers. */
 async function mostLinked(w){
   const key = "fm:ml2:"+w.host+(w.path||"");
-  const c = await sget(key);
+  const c = await sget(key, true);
   if(c && c.list && c.list.length && (Date.now()-c.t) < 7*864e5) return c.list;
   let list = [];
   for(const page of ["Mostlinked","Mostrevisions"]){
@@ -5233,7 +5258,10 @@ async function mostLinked(w){
       if(list.length >= 20) break;
     }catch(e){}
   }
-  if(list.length) await sset(key, {t:Date.now(), list});
+  if(list.length){
+    list = list.slice(0, 300);   // le haut du palmarès suffit, et le navigateur est petit
+    await sset(key, {t:Date.now(), list}, true);
+  }
   return list;
 }
 
@@ -10962,7 +10990,7 @@ function openSettings(){
     m.remove(); render();
   };
   m.querySelector("#s-recheck").onclick = async ()=>{
-    await sset("fm:pool2", {t:0, pool:[]});
+    await sset("fm:pool2", {t:0, pool:[]}, true);
     poolPromise = null; state.pool = [];
     m.remove(); render(); ensurePool();
   };
@@ -10972,6 +11000,13 @@ function openSettings(){
   /* Si le joueur est connecté, on récupère sa partie avant tout le reste :
      le jeu démarre ensuite sur des données à jour, sans savoir qu'elles
      viennent du réseau. */
+  /* Navigateur presque plein : on vide les caches avant que quoi que ce soit
+     d'important ne se voie refuser une écriture. */
+  try{
+    let tot = 0;
+    for(let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); tot += k.length + (localStorage.getItem(k) || "").length; }
+    if(tot > 1500000) libererStockage();
+  }catch(e){}
   diagLog("démarrage · session " + (nuageConnecte() ? "oui" : "non"));
   if(nuageConfigure() && nuageConnecte()){
     try{ const eu = await nuageDescendre(); diagLog("descente : " + eu); }catch(e){ diagLog("descente en erreur : " + e.message); }
@@ -11020,6 +11055,7 @@ function openSettings(){
   }
   farmTick();
   state.collection = (await sget("fm:col")) || [];
+  if(allegerCollection(state.collection)) await sset("fm:col", state.collection);
   paintSound();
   render();
   paintAchDot();
