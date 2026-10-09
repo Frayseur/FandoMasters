@@ -2637,6 +2637,19 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
 .mtag.ok{border-color:var(--p4);color:var(--p4)}
 .mtag.ko{border-color:var(--red);color:var(--red)}
 @media (max-width:560px){ .mliste{grid-template-columns:1fr} .mcarte{width:84px} }
+
+/* ---- accueil et hors-jeu ---- */
+.accueil{max-width:480px;margin:6vh auto 0}
+.accueil .champ input{width:100%}
+body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{display:none !important}
+/* ---- coupure réseau ---- */
+#horsligne{position:fixed;inset:0;z-index:100000;display:none;place-items:center;
+  background:color-mix(in srgb, var(--p1) 88%, transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+#horsligne.on{display:grid}
+#horsligne .boite{max-width:340px;margin:0 16px;padding:1.4rem 1.3rem;border-radius:16px;text-align:center;
+  background:var(--panel);border:1px solid var(--line);box-shadow:0 20px 50px -20px #000}
+#horsligne h3{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.04em;margin:.6rem 0 .3rem}
+#horsligne .sub{margin:0}
 </style>
 </head>
 <body>
@@ -2951,7 +2964,7 @@ const CATS = ["Jeux vidéo","Films & séries","Livres & mangas"];
 
 const state = {
   pool:[],              // univers actifs, vérifiés : {label, host, path}
-  profile:{pseudo:"", coins:START_COINS, duels:0, wins:0, apiKey:"",
+  profile:{pseudo:"", coins:START_COINS, duels:0, wins:0,
            packs:0, correct:0, perfect:0, streak:0, bestStreak:0, ach:[],
            free:FREE_MAX, freeAt:Date.now(), dry:0},
   collection:[],
@@ -3122,11 +3135,14 @@ function nuageGarde(d){
 }
 
 async function nuageAuth(chemin, corps){
-  const r = await fetch(NUAGE.url + "/auth/v1/" + chemin, {
-    method:"POST",
-    headers:{"apikey":NUAGE.cle, "Content-Type":"application/json"},
-    body:JSON.stringify(corps)
-  });
+  let r;
+  try{
+    r = await fetch(NUAGE.url + "/auth/v1/" + chemin, {
+      method:"POST",
+      headers:{"apikey":NUAGE.cle, "Content-Type":"application/json"},
+      body:JSON.stringify(corps)
+    });
+  }catch(e){ signalerReseau(); throw e; }
   const d = await r.json().catch(()=>({}));
   diagLog("auth " + chemin.split("?")[0] + " → " + r.status + " [" + Object.keys(d).join(",") + "]");
   if(!r.ok){
@@ -3161,6 +3177,68 @@ async function nuageDeconnecter(){
   }
   nuagePoseSession(null);
 }
+
+/* ======================================================================
+   Coupure réseau
+   ----------------------------------------------------------------------
+   Le jeu vit en ligne : sans connexion, une fenêtre recouvre tout et bloque
+   la partie, puis disparaît d'elle-même quand le serveur répond de nouveau.
+   On sonde le serveur plutôt que de croire navigator.onLine, qui dit
+   « en ligne » dès qu'il y a un Wi-Fi, même sans Internet derrière.
+   ====================================================================== */
+const reseau = {coupe:false, minuteur:null, echecs:0};
+function fenetreHorsLigne(on){
+  let el = document.getElementById("horsligne");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "horsligne";
+    el.setAttribute("role", "alertdialog");
+    el.setAttribute("aria-live", "assertive");
+    el.innerHTML = `<div class="boite"><span class="spinner"></span>
+      <h3>Connexion perdue</h3>
+      <p class="sub">La partie reprend toute seule dès que la connexion revient.</p></div>`;
+    document.body.appendChild(el);
+  }
+  el.classList.toggle("on", on);
+}
+async function sonderReseau(){
+  if(!nuageConfigure()) return true;
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), 6000);
+  try{
+    await fetch(NUAGE.url + "/auth/v1/health", {headers:{"apikey":NUAGE.cle}, cache:"no-store", signal:ctrl.signal});
+    return true;
+  }catch(e){ return false; }
+  finally{ clearTimeout(t); }
+}
+function passerHorsLigne(){
+  if(reseau.coupe) return;
+  reseau.coupe = true;
+  fenetreHorsLigne(true);
+  clearInterval(reseau.minuteur);
+  reseau.minuteur = setInterval(async ()=>{
+    if(navigator.onLine === false) return;
+    if(await sonderReseau()) revenirEnLigne();
+  }, 4000);
+}
+function revenirEnLigne(){
+  if(!reseau.coupe) return;
+  reseau.coupe = false; reseau.echecs = 0;
+  clearInterval(reseau.minuteur);
+  fenetreHorsLigne(false);
+  try{ nuageRepousser(); nuageVerifier(); }catch(e){}
+}
+/* Une requête du jeu a échoué faute de réseau : on vérifie avant de bloquer,
+   une seule erreur passagère ne doit pas couper la partie. */
+async function signalerReseau(){
+  if(reseau.coupe) return;
+  if(++reseau.echecs < 2 && navigator.onLine !== false){
+    if(await sonderReseau()){ reseau.echecs = 0; return; }
+  }
+  if(!(await sonderReseau())) passerHorsLigne();
+}
+addEventListener("offline", ()=>passerHorsLigne());
+addEventListener("online", async ()=>{ if(await sonderReseau()) revenirEnLigne(); });
 
 /* Le jeton dure une heure. Quand il approche de l'échéance on le renouvelle
    avec le jeton de rafraîchissement, sans redemander le mot de passe. */
@@ -3197,7 +3275,10 @@ async function nuageRest(chemin, opts={}){
   }));
   const jeton = await nuageJeton();
   if(!jeton) throw new Error("session expirée");
-  let r = await envoyer(jeton);
+  let r;
+  try{ r = await envoyer(jeton); }
+  catch(e){ signalerReseau(); throw e; }
+  reseau.echecs = 0;
   /* Le serveur peut refuser un jeton avant l'échéance qu'on avait notée :
      horloge du téléphone décalée, session révoquée. On le renouvelle une
      fois et on réessaie avant de renoncer. */
@@ -3590,10 +3671,11 @@ async function nuageSynchroInterne(cle, locale, appliquer){
     if(valSrv != null){
       if(locale == null) fusion = valSrv;
       else if(base != null) fusion = fusionner(cle, base, locale, valSrv);
-      else if(cle === "fm:col") fusion = fusionColMax(locale, valSrv);
       else{
         const lm = await lireEspace(moi, "maj:" + cle);
-        fusion = fusionDemarrage(locale, valSrv, !!(lm && Date.parse(lm) > Date.parse(majSrv)));
+        const localPlusRecent = !!(lm && Date.parse(lm) > Date.parse(majSrv));
+        fusion = cle === "fm:col" ? (localPlusRecent ? locale : valSrv)
+                                  : fusionDemarrage(locale, valSrv, localPlusRecent);
       }
       if(locale != null) diagLog("fusion " + cle + (base != null ? "" : " (première)"));
     }
@@ -4817,9 +4899,13 @@ function render(){
   paintMe();
   document.getElementById("univcount").textContent = state.pool.length ? state.pool.length+" univers" : "univers";
   paintNav();
-  /* Sur un appareil neuf, il faut pouvoir se connecter avant d'avoir créé
-     une partie : la page Compte passe avant l'écran d'accueil. */
-  if(!state.profile.pseudo && state.view !== "compte") return viewOnboard();
+  /* Pas de partie sans compte : tant que le joueur n'est pas connecté, il
+     reste sur l'accueil. Connecté sans pseudo, il le choisit d'abord. */
+  const horsJeu = nuageConfigure() && (!nuageConnecte() || state.mdpReset || !state.profile.pseudo);
+  document.body.classList.toggle("horsjeu", horsJeu);
+  if(nuageConfigure() && !nuageConnecte()) return viewAccueil();
+  if(state.mdpReset) return viewNouveauMdp();
+  if(!state.profile.pseudo) return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
      village:viewVillage, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur,
@@ -4871,131 +4957,187 @@ function go(v){
 
 
 /* ---------- page « Compte » ---------- */
-function viewCompte(){
-  if(!nuageConfigure()){
-    view.innerHTML = `
-      <h2 class="vuetitre">Compte</h2>
-      <p class="sub">La sauvegarde en ligne n'est pas encore branchée. Une fois
-        les deux réglages renseignés en haut du fichier, cette page sert à créer
-        un compte et à retrouver sa collection sur n'importe quel appareil.</p>
+/* Comptes autorisés à ouvrir la console de débogage et le diagnostic. */
+const ADMINS = ["81eb751c-1f87-411e-928b-02145f4c70f5"];
+function estAdmin(){ const id = moiId(); return !!id && ADMINS.indexOf(id) >= 0; }
 
-      <div class="panel">
-        <h3>Ce qu'il reste à faire</h3>
-        <ol class="marche">
-          <li>Créer un projet gratuit sur <b>supabase.com</b>.</li>
-          <li>Dans <i>SQL Editor</i>, coller et exécuter le script ci-dessous.</li>
-          <li>Dans <i>Project Settings → API</i>, relever l'<i>URL</i> et la clé
-            <i>anon public</i>.</li>
-          <li>Les reporter dans l'objet <code>NUAGE</code>, en haut du fichier HTML.</li>
-          <li>Dans <i>Authentication → Providers → Email</i>, décider si la
-            confirmation par courriel est exigée. Désactivée, l'inscription est
-            immédiate — pratique pour essayer.</li>
-        </ol>
-      </div>
+/* Messages du serveur d'authentification, en français. */
+function traduireErreur(m){
+  m = String(m || "");
+  const t = [
+    [/invalid login credentials/i, "Courriel ou mot de passe incorrect."],
+    [/already registered|already been registered/i, "Un compte existe déjà avec ce courriel."],
+    [/email not confirmed/i, "Courriel pas encore confirmé : ouvrez le lien reçu par courriel."],
+    [/should be different from the old/i, "Le nouveau mot de passe doit être différent de l'ancien."],
+    [/at least 6 characters|password should be/i, "Le mot de passe doit faire au moins 6 caractères."],
+    [/only request this after|rate limit|too many/i, "Trop de demandes : patientez une minute avant de réessayer."],
+    [/unable to validate email|invalid format|email address .* invalid/i, "Adresse courriel invalide."],
+    [/failed to fetch|networkerror|load failed/i, "Pas de connexion au serveur."]
+  ];
+  for(const [re, fr] of t) if(re.test(m)) return fr;
+  return m;
+}
+function adresseRetour(){ return location.origin + location.pathname; }
 
-      <h3>Le script à exécuter</h3>
-      <pre class="sql">create table sauvegardes (
-  joueur uuid    not null references auth.users on delete cascade,
-  cle    text    not null,
-  valeur jsonb   not null,
-  maj    timestamptz not null default now(),
-  primary key (joueur, cle)
-);
+async function nuageMdp(nouveau){
+  const jeton = await nuageJeton();
+  if(!jeton) throw new Error("session expirée, reconnectez-vous");
+  const r = await fetch(NUAGE.url + "/auth/v1/user", {method:"PUT",
+    headers:{"apikey":NUAGE.cle, "Authorization":"Bearer " + jeton, "Content-Type":"application/json"},
+    body:JSON.stringify({password:nouveau})});
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(traduireErreur(d.msg || d.message || d.error_description || d.error || "erreur " + r.status));
+}
+async function nuageOubli(courriel){
+  await nuageAuth("recover?redirect_to=" + encodeURIComponent(adresseRetour()), {email:courriel});
+}
 
-alter table sauvegardes enable row level security;
-
-create policy "chacun les siennes"
-  on sauvegardes for all
-  using      (auth.uid() = joueur)
-  with check (auth.uid() = joueur);</pre>
-      <p class="sub">La dernière règle est l'essentiel : c'est la base elle-même
-        qui interdit à un joueur de lire ou d'écrire les lignes d'un autre. Sans
-        elle, la clé publique suffirait à tout lire.</p>`;
-    return;
+/* Lien reçu par courriel (confirmation d'inscription, mot de passe perdu) :
+   le serveur renvoie sur le jeu avec la session dans l'adresse. */
+async function traiterLienAuth(){
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  if(h.get("error_description") || h.get("error")){
+    history.replaceState(null, "", location.pathname + location.search);
+    state.lienErreur = /expired|invalid/i.test(h.get("error_code") || h.get("error_description") || "")
+      ? "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau."
+      : (h.get("error_description") || "Lien invalide.").replace(/\+/g, " ");
+    return null;
   }
+  const jeton = h.get("access_token");
+  if(!jeton) return null;
+  history.replaceState(null, "", location.pathname + location.search);
+  const d = {access_token:jeton, refresh_token:h.get("refresh_token"), expires_in:+h.get("expires_in") || 3600};
+  try{
+    const r = await fetch(NUAGE.url + "/auth/v1/user", {headers:{"apikey":NUAGE.cle, "Authorization":"Bearer " + jeton}});
+    if(r.ok) d.user = await r.json();
+  }catch(e){}
+  nuageGarde(d);
+  nuageRaison("");
+  return h.get("type") || "lien";
+}
 
-  const co = nuageConnecte();
+function viewCompte(){
+  const admin = estAdmin();
   view.innerHTML = `
     <h2 class="vuetitre">Compte</h2>
-    <p class="sub">${co
-      ? "Votre partie est enregistrée en ligne. Connectez-vous avec le même courriel sur un autre appareil pour la retrouver."
-      : "Créez un compte pour que votre collection vous suive d'un appareil à l'autre. Sans compte, la partie reste sur ce navigateur."}</p>
-
-    ${co ? `
-      <div class="panel">
-        <h3>Connecté</h3>
-        <div class="row" style="align-items:baseline;gap:.5rem;margin-bottom:.2rem">
-          <b class="courriel">${esc(nuageCourriel())}</b>
-        </div>
-        <p class="sub nuetat ok" id="nuage-etat">à jour</p>
-        <div class="row" style="margin-top:.9rem">
-          <button class="btn ghost" id="c-envoyer">Envoyer cette partie</button>
-          <button class="btn ghost" id="c-sortir">Se déconnecter</button>
-        </div>
+    <div class="panel">
+      <h3>Connecté</h3>
+      <div class="row" style="align-items:baseline;gap:.5rem;margin-bottom:.2rem">
+        <b class="courriel">${esc(nuageCourriel())}</b>
       </div>
-      <p class="sub" style="margin-top:.9rem">« Envoyer cette partie » écrase la
-        sauvegarde en ligne par celle de cet appareil. Utile si deux appareils
-        ont divergé.</p>
-    ` : `
-      <div class="panel">
-        <div class="champ">
-          <label for="c-mail">Courriel</label>
-          <input type="email" id="c-mail" autocomplete="email" spellcheck="false"
-                 placeholder="vous@exemple.fr">
-        </div>
-        <div class="champ">
-          <label for="c-mdp">Mot de passe</label>
-          <input type="password" id="c-mdp" autocomplete="current-password"
-                 placeholder="au moins 6 caractères">
-        </div>
-        ${nuageRaisonLue() ? `<p class="sub err">Déconnecté : ${esc(nuageRaisonLue())}</p>` : ""}
-        <p class="sub err" id="c-err" hidden></p>
-        <div class="row" style="margin-top:.4rem">
-          <button class="btn" id="c-entrer">Se connecter</button>
-          <button class="btn ghost" id="c-creer">Créer un compte</button>
-        </div>
-      </div>`}
+      <p class="sub nuetat ok" id="nuage-etat">à jour</p>
+      <div class="row" style="margin-top:.9rem">
+        ${admin ? `<button class="btn ghost" id="c-envoyer">Envoyer cette partie</button>` : ""}
+        <button class="btn ghost" id="c-sortir">Se déconnecter</button>
+      </div>
+    </div>
 
-    <details class="fold info" style="margin-top:1.2rem">
+    <div class="panel" style="margin-top:1rem">
+      <h3>Mot de passe</h3>
+      <div class="champ">
+        <label for="m-neuf">Nouveau mot de passe</label>
+        <input type="password" id="m-neuf" autocomplete="new-password" placeholder="au moins 6 caractères">
+      </div>
+      <div class="champ">
+        <label for="m-conf">Confirmation</label>
+        <input type="password" id="m-conf" autocomplete="new-password">
+      </div>
+      <p class="sub err" id="m-err" hidden></p>
+      <button class="btn small" id="m-ok">Changer le mot de passe</button>
+    </div>
+
+    ${admin ? `<details class="fold info" style="margin-top:1.2rem">
       <summary>Diagnostic</summary>
       <div class="in"><pre class="sql" id="diag" style="white-space:pre-wrap;margin:0"></pre></div>
-    </details>
-    <details class="fold info" style="margin-top:1.2rem">
-      <summary>Que part-il sur le serveur ?</summary>
-      <div class="in">
-        <p class="sub" style="margin:0">Deux choses, et rien d'autre : votre profil
-          (pseudo, niveau, monnaies, réglages) et votre collection. Les cartes
-          elles-mêmes restent sur Fandom — ce qui est enregistré, c'est la liste
-          de celles que vous possédez.</p>
-      </div>
-    </details>`;
+    </details>` : ""}`;
 
-  const dg = view.querySelector("#diag"); if(dg) dg.textContent = diagnosticNuage();
-  idbMesurer();
-  if(co){
-    view.querySelector("#c-sortir").onclick = async ()=>{
-      nuageToutVider();
-      await nuageDeconnecter();
-      location.reload();
-    };
-    view.querySelector("#c-envoyer").onclick = async (e)=>{
-      const b = e.currentTarget;
-      b.disabled = true; b.textContent = "Envoi…";
+  const dg = view.querySelector("#diag"); if(dg){ dg.textContent = diagnosticNuage(); idbMesurer(); }
+  view.querySelector("#c-sortir").onclick = async ()=>{
+    nuageToutVider();
+    await nuageDeconnecter();
+    location.reload();
+  };
+  const env = view.querySelector("#c-envoyer");
+  if(env) env.onclick = async (e)=>{
+    const b = e.currentTarget;
+    b.disabled = true; b.textContent = "Envoi…";
+    try{
+      const n = await nuageMonter(acct());
+      toast(n ? "Partie envoyée" : "Rien à envoyer", n ? "la sauvegarde en ligne est à jour" : "", n ? "info" : "lose");
+    }catch(err){ toast("Envoi impossible", String(err.message || err), "lose"); }
+    b.disabled = false; b.textContent = "Envoyer cette partie";
+  };
+  const merr = view.querySelector("#m-err");
+  view.querySelector("#m-ok").onclick = async (e)=>{
+    const a1 = view.querySelector("#m-neuf").value, a2 = view.querySelector("#m-conf").value;
+    const dire = m => { merr.textContent = m; merr.hidden = !m; };
+    if(a1.length < 6) return dire("Au moins 6 caractères.");
+    if(a1 !== a2) return dire("Les deux mots de passe ne sont pas identiques.");
+    dire(""); e.currentTarget.disabled = true;
+    try{ await nuageMdp(a1); toast("Mot de passe changé", "", "info"); viewCompte(); }
+    catch(err){ dire(traduireErreur(err.message || err)); e.currentTarget.disabled = false; }
+  };
+  majEtatNuage();
+}
+
+/* ---------- accueil : se connecter ou créer un compte ---------- */
+function viewAccueil(){
+  const mode = state.accueil || "entrer";
+  view.innerHTML = `
+    <div class="accueil">
+      <div class="panel">
+        <h1 style="font-size:clamp(1.9rem,6vw,2.8rem);margin-bottom:1rem">Tous les univers dans le même paquet.</h1>
+        ${state.lienErreur ? `<p class="sub err">${esc(state.lienErreur)}</p>` : ""}
+        ${mode === "oubli" ? `
+          <h3 style="margin-bottom:.6rem">Mot de passe oublié</h3>
+          <div class="champ">
+            <label for="c-mail">Courriel du compte</label>
+            <input type="email" id="c-mail" autocomplete="email" spellcheck="false" placeholder="vous@exemple.fr">
+          </div>
+          <p class="sub err" id="c-err" hidden></p>
+          <p class="sub" id="c-ok" hidden></p>
+          <div class="row" style="margin-top:.4rem">
+            <button class="btn" id="c-lien">Recevoir un lien</button>
+            <button class="btn ghost" id="c-retour">Retour</button>
+          </div>` : `
+          <div class="champ">
+            <label for="c-mail">Courriel</label>
+            <input type="email" id="c-mail" autocomplete="email" spellcheck="false" placeholder="vous@exemple.fr">
+          </div>
+          <div class="champ">
+            <label for="c-mdp">Mot de passe</label>
+            <input type="password" id="c-mdp" autocomplete="current-password" placeholder="au moins 6 caractères">
+          </div>
+          <p class="sub err" id="c-err" hidden></p>
+          <p class="sub" id="c-ok" hidden></p>
+          <div class="row" style="margin-top:.4rem">
+            <button class="btn" id="c-entrer">Se connecter</button>
+            <button class="btn ghost" id="c-creer">Créer un compte</button>
+          </div>
+          <p class="sub" style="margin:.9rem 0 0"><button class="lien" id="c-oubli">Mot de passe oublié ?</button></p>`}
+      </div>
+      <p class="sub" style="font-size:.78rem;text-align:center;margin-top:.8rem">Contenu issu des wikis Fandom · licence CC BY-SA</p>
+    </div>`;
+
+  const err = view.querySelector("#c-err"), okm = view.querySelector("#c-ok");
+  const dire = m => { err.textContent = m; err.hidden = !m; okm.hidden = true; };
+  const info = m => { okm.textContent = m; okm.hidden = !m; err.hidden = true; };
+  const boutons = ()=>[...view.querySelectorAll(".btn")];
+
+  if(mode === "oubli"){
+    view.querySelector("#c-retour").onclick = ()=>{ state.accueil = "entrer"; viewAccueil(); };
+    view.querySelector("#c-lien").onclick = async ()=>{
+      const mail = view.querySelector("#c-mail").value.trim();
+      if(!mail) return dire("Indiquez le courriel du compte.");
+      boutons().forEach(b => b.disabled = true);
       try{
-        const n = await nuageMonter(acct());
-        if(n) toast("Partie envoyée", n + " sauvegarde" + (n>1?"s":"") + " en ligne, à jour", "info");
-        else toast("Rien à envoyer", "aucune partie sur cet appareil : créez un pseudo et jouez d'abord", "lose");
-      }catch(err){
-        toast("Envoi impossible", String(err.message || err), "lose");
-      }
-      b.disabled = false; b.textContent = "Envoyer cette partie";
+        await nuageOubli(mail);
+        info("Si un compte existe pour " + mail + ", un lien vient de partir. Ouvrez-le sur cet appareil pour choisir un nouveau mot de passe.");
+      }catch(e){ dire(traduireErreur(e.message || e)); }
+      boutons().forEach(b => b.disabled = false);
     };
-    majEtatNuage();
     return;
   }
-
-  const err = view.querySelector("#c-err");
-  const dire = m =>{ err.textContent = m; err.hidden = !m; };
 
   async function entrer(creation){
     const mail = view.querySelector("#c-mail").value.trim();
@@ -5003,30 +5145,63 @@ create policy "chacun les siennes"
     if(!mail || !mdp) return dire("Courriel et mot de passe sont nécessaires.");
     if(mdp.length < 6) return dire("Le mot de passe fait au moins six caractères.");
     dire("");
-    const boutons = [...view.querySelectorAll(".btn")];
-    boutons.forEach(b=>b.disabled = true);
+    boutons().forEach(b => b.disabled = true);
     try{
       if(creation){
-        const r = await nuageInscrire(mail, mdp);
+        const r = await nuageAuthInscrire(mail, mdp);
         if(r.confirmation){
-          boutons.forEach(b=>b.disabled = false);
-          return dire("Compte créé. Ouvrez le courriel de confirmation, puis connectez-vous.");
+          boutons().forEach(b => b.disabled = false);
+          return info("Compte créé. Ouvrez le lien reçu par courriel pour l'activer.");
         }
       }else{
         await nuageConnecter(mail, mdp);
       }
+      state.lienErreur = "";
       await apresConnexion();
     }catch(e){
-      boutons.forEach(b=>b.disabled = false);
-      dire(String(e.message || e));
+      boutons().forEach(b => b.disabled = false);
+      dire(traduireErreur(e.message || e));
     }
   }
-
   view.querySelector("#c-entrer").onclick = ()=>entrer(false);
   view.querySelector("#c-creer").onclick  = ()=>entrer(true);
-  view.querySelector("#c-mdp").addEventListener("keydown", e=>{
-    if(e.key === "Enter") entrer(false);
-  });
+  view.querySelector("#c-oubli").onclick  = ()=>{ state.accueil = "oubli"; viewAccueil(); };
+  view.querySelector("#c-mdp").addEventListener("keydown", e => { if(e.key === "Enter") entrer(false); });
+}
+async function nuageAuthInscrire(mail, mdp){
+  const d = await nuageAuth("signup?redirect_to=" + encodeURIComponent(adresseRetour()), {email:mail, password:mdp});
+  if(!d.access_token) return {confirmation:true};
+  nuageGarde(d);
+  return {confirmation:false};
+}
+
+/* ---------- nouveau mot de passe, après le lien reçu par courriel ---------- */
+function viewNouveauMdp(){
+  view.innerHTML = `
+    <div class="accueil"><div class="panel">
+      <h2 class="vuetitre" style="margin-bottom:.8rem">Nouveau mot de passe</h2>
+      <p class="sub" style="margin:0 0 .6rem">${esc(nuageCourriel())}</p>
+      <div class="champ"><label for="m-neuf">Nouveau mot de passe</label>
+        <input type="password" id="m-neuf" autocomplete="new-password" placeholder="au moins 6 caractères"></div>
+      <div class="champ"><label for="m-conf">Confirmation</label>
+        <input type="password" id="m-conf" autocomplete="new-password"></div>
+      <p class="sub err" id="m-err" hidden></p>
+      <button class="btn" id="m-ok">Enregistrer</button>
+    </div></div>`;
+  const merr = view.querySelector("#m-err");
+  view.querySelector("#m-ok").onclick = async (e)=>{
+    const a1 = view.querySelector("#m-neuf").value, a2 = view.querySelector("#m-conf").value;
+    const dire = m => { merr.textContent = m; merr.hidden = !m; };
+    if(a1.length < 6) return dire("Au moins 6 caractères.");
+    if(a1 !== a2) return dire("Les deux mots de passe ne sont pas identiques.");
+    e.currentTarget.disabled = true;
+    try{
+      await nuageMdp(a1);
+      state.mdpReset = false;
+      toast("Mot de passe enregistré", "", "info");
+      location.reload();
+    }catch(err){ dire(traduireErreur(err.message || err)); e.currentTarget.disabled = false; }
+  };
 }
 
 /* Au moment où le joueur entre dans son compte, il peut y avoir une partie
@@ -5115,8 +5290,11 @@ create table if not exists profils (
   maj timestamptz not null default now()
 );
 alter table profils enable row level security;
+drop policy if exists "profils visibles" on profils;
 create policy "profils visibles" on profils for select to authenticated using (true);
+drop policy if exists "mon profil" on profils;
 create policy "mon profil" on profils for insert to authenticated with check (auth.uid() = joueur);
+drop policy if exists "mon profil maj" on profils;
 create policy "mon profil maj" on profils for update to authenticated
   using (auth.uid() = joueur) with check (auth.uid() = joueur);
 create index if not exists profils_pseudo on profils (lower(pseudo));
@@ -5130,10 +5308,14 @@ create table if not exists amities (
   check (demandeur <> cible)
 );
 alter table amities enable row level security;
+drop policy if exists "mes amities" on amities;
 create policy "mes amities" on amities for select to authenticated using (auth.uid() in (demandeur, cible));
+drop policy if exists "demander" on amities;
 create policy "demander" on amities for insert to authenticated with check (auth.uid() = demandeur and statut = 'attente');
+drop policy if exists "accepter" on amities;
 create policy "accepter" on amities for update to authenticated
   using (auth.uid() = cible) with check (auth.uid() = cible and statut = 'acceptee');
+drop policy if exists "retirer" on amities;
 create policy "retirer" on amities for delete to authenticated using (auth.uid() in (demandeur, cible));
 
 create or replace function sont_amis(x uuid, y uuid) returns boolean
@@ -5142,6 +5324,7 @@ language sql stable security definer set search_path = public as $$
     and ((demandeur = x and cible = y) or (demandeur = y and cible = x)));
 $$;
 
+drop policy if exists "amis voient la collection" on sauvegardes;
 create policy "amis voient la collection" on sauvegardes for select to authenticated
   using (cle = 'fm:col' and sont_amis(auth.uid(), joueur));
 
@@ -5157,7 +5340,9 @@ create table if not exists echanges (
   maj timestamptz not null default now()
 );
 alter table echanges enable row level security;
+drop policy if exists "mes echanges" on echanges;
 create policy "mes echanges" on echanges for select to authenticated using (auth.uid() in (de, a));
+drop policy if exists "proposer" on echanges;
 create policy "proposer" on echanges for insert to authenticated
   with check (auth.uid() = de and statut = 'proposee' and not clos and sont_amis(de, a));
 
@@ -5189,12 +5374,30 @@ create table if not exists evenements (
   contenu jsonb not null default '{}'::jsonb
 );
 alter table evenements enable row level security;
+drop policy if exists "evenements publics" on evenements;
 create policy "evenements publics" on evenements for select using (true);`;
 
 const amis = {onglet:"amis", liste:[], recus:[], envoyes:[], echanges:[], profils:new Map(),
               charge:false, erreur:"", recherche:"", resultats:[], vu:new Set()};
 
 function moiId(){ const s = nuageSession(); return s && s.user ? s.user.id : null; }
+
+/* Registre des règlements : chaque carte ou somme reçue d'un échange ou du
+   marché y laisse sa marque avant d'être ajoutée. C'est un objet (et non une
+   liste) pour que deux appareils fusionnent leurs marques sans en perdre :
+   une marque perdue, c'était une carte comptée deux fois. */
+function dejaRegle(cle){
+  const p = state.profile;
+  if(Array.isArray(p.echRegles)){                      // ancien format
+    p.regles = p.regles || {};
+    for(const m of p.echRegles) p.regles["e" + m] = 1;
+    delete p.echRegles;
+  }
+  p.regles = p.regles || {};
+  if(p.regles[cle]) return true;
+  p.regles[cle] = 1;
+  return false;
+}
 
 /* Copie d'une carte pour un autre joueur : sans le texte, un exemplaire. */
 function carteEchange(c){
@@ -5332,14 +5535,12 @@ async function amisChargerLeger(){
 async function amisRegler(){
   const moi = moiId(); if(!moi) return;
   const p = state.profile;
-  p.echRegles = p.echRegles || [];
   let change = false;
   for(const e of amis.echanges){
     if(e.de !== moi || e.clos || e.statut === "proposee") continue;
-    const marque = "de:" + e.id;
-    if(p.echRegles.indexOf(marque) < 0){
-      p.echRegles.push(marque);
+    if(!dejaRegle("ede:" + e.id)){
       if(e.statut === "acceptee"){
+        p.echanges = (p.echanges || 0) + 1;
         ajouterCopies(e.demande || []);
         const nom = (amis.profils.get(e.a) || {}).pseudo || "Votre ami";
         toast("Échange accepté", nom + " vous envoie " + (e.demande||[]).length + " carte" + ((e.demande||[]).length > 1 ? "s" : ""), "info");
@@ -5352,8 +5553,7 @@ async function amisRegler(){
     }
     try{ await nuageRest("rpc/clore_echange", {method:"POST", body:JSON.stringify({eid:e.id})}); e.clos = true; }catch(err){}
   }
-  p.echRegles = p.echRegles.slice(-300);
-  if(change){ await sset("fm:col", state.collection); await sset("fm:profile", p); }
+  if(change){ await sset("fm:col", state.collection); await sset("fm:profile", p); checkAch(); }
 }
 
 /* Coup d'œil régulier : nouvelles demandes, nouveaux échanges, réponses. */
@@ -5558,13 +5758,13 @@ async function accepterEchange(eid){
   const r = await nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid, decision:"acceptee"})});
   if(r !== "acceptee") throw new Error("cet échange n'est plus disponible (" + r + ")");
   const p = state.profile;
-  p.echRegles = p.echRegles || [];
-  if(p.echRegles.indexOf("a:" + eid) < 0){
-    p.echRegles.push("a:" + eid);
+  if(!dejaRegle("ea:" + eid)){
+    p.echanges = (p.echanges || 0) + 1;
     retirerCopies(e.demande || []);
     ajouterCopies(e.donne || []);
     await sset("fm:col", state.collection);
     await sset("fm:profile", p);
+    checkAch();
   }
   toast("Échange conclu", (e.donne || []).length + " carte" + ((e.donne||[]).length > 1 ? "s" : "") + " ajoutée" + ((e.donne||[]).length > 1 ? "s" : "") + " à votre album", "info");
   logEvent("Échange conclu avec " + ((amis.profils.get(e.de) || {}).pseudo || "un ami"), "gold");
@@ -5753,8 +5953,7 @@ async function composerEchange(id){
         <h3 style="font-size:1.15rem">Échange avec ${esc(pr.pseudo)}</h3>
         <button class="btn small ghost" id="close">Fermer</button>
       </div>
-      <p class="sub" style="margin:0 0 .8rem">Jusqu'à 5 cartes de chaque côté, un exemplaire chacune. Les cartes que vous donnez
-        quittent votre album dès l'envoi et vous reviennent si ${esc(pr.pseudo)} refuse.</p>
+      <p class="sub" style="margin:0 0 .8rem">5 cartes maximum de chaque côté.</p>
       <div class="echcols">
         <div class="panel"><div class="row" style="justify-content:space-between;align-items:baseline">
           <b>Vous donnez</b><button class="btn small ghost" id="pdonne">Choisir</button></div>${cartesMini(d)}</div>
@@ -5825,7 +6024,9 @@ create table if not exists encheres (
   cree timestamptz not null default now()
 );
 alter table encheres enable row level security;
+drop policy if exists "encheres visibles" on encheres;
 create policy "encheres visibles" on encheres for select to authenticated using (true);
+drop policy if exists "mettre en vente" on encheres;
 create policy "mettre en vente" on encheres for insert to authenticated
   with check (vendeur = auth.uid() and offre is null and meilleur is null and nb_offres = 0
     and not regle_vendeur and not regle_acheteur
@@ -5841,6 +6042,7 @@ create table if not exists offres (
   cree timestamptz not null default now()
 );
 alter table offres enable row level security;
+drop policy if exists "mes offres" on offres;
 create policy "mes offres" on offres for select to authenticated using (joueur = auth.uid());
 
 create or replace function encherir(eid bigint, montant int) returns int
@@ -5895,11 +6097,16 @@ begin
   return jsonb_build_object('offre', e.offre, 'carte', e.carte);
 end $$;
 
-create or replace function annuler_vente(eid bigint) returns boolean
+drop function if exists annuler_vente(bigint);
+create or replace function annuler_vente(eid bigint) returns jsonb
 language plpgsql security definer set search_path = public as $$
+declare e encheres;
 begin
-  update encheres set fin = now() where id = eid and vendeur = auth.uid() and nb_offres = 0 and fin > now();
-  return found;
+  update encheres set fin = now(), regle_vendeur = true
+   where id = eid and vendeur = auth.uid() and nb_offres = 0 and fin > now() and not regle_vendeur
+   returning * into e;
+  if not found then return null; end if;
+  return e.carte;
 end $$;`;
 
 const MARCHE_TAXE = 0.05;
@@ -5958,8 +6165,10 @@ async function marcheRegler(){
   for(const e of marche.miennes.filter(e => !e.regle_vendeur && fini(e))){
     try{
       const r = await nuageRest("rpc/regler_vente", {method:"POST", body:JSON.stringify({eid:e.id})});
-      if(!r) continue;
+      if(!r){ e.regle_vendeur = true; continue; }
+      if(dejaRegle("mv" + e.id)){ e.regle_vendeur = true; continue; }
       if(r.offre){
+        p.ventes = (p.ventes || 0) + 1;
         const net = Math.floor(r.offre * (1 - MARCHE_TAXE));
         p.coins = (p.coins || 0) + net;
         toast("Vente conclue", (r.carte && r.carte.title || "Carte") + " · +" + net + " ◆", "info");
@@ -5974,7 +6183,9 @@ async function marcheRegler(){
   for(const e of marche.encheresOffres.filter(e => e.meilleur === moi && !e.regle_acheteur && fini(e))){
     try{
       const carte = await nuageRest("rpc/regler_achat", {method:"POST", body:JSON.stringify({eid:e.id})});
-      if(!carte) continue;
+      if(!carte){ e.regle_acheteur = true; continue; }
+      if(dejaRegle("ma" + e.id)){ e.regle_acheteur = true; continue; }
+      p.achats = (p.achats || 0) + 1;
       ajouterCopies([carte]);
       toast("Enchère remportée", (carte.title || "Carte") + " rejoint votre album", "ach");
       logEvent("Enchère remportée : " + carte.title + " pour " + e.offre + " ◆", "gold");
@@ -5986,7 +6197,7 @@ async function marcheRegler(){
     if(e && e.meilleur === moi && e.offre === o.montant) continue;   // en tête, ou gagnée
     try{
       const m = await nuageRest("rpc/rembourser_offre", {method:"POST", body:JSON.stringify({oid:o.id})});
-      if(m > 0){
+      if(m > 0 && !dejaRegle("mo" + o.id)){
         p.coins = (p.coins || 0) + m;
         toast("Offre dépassée", "+" + m + " ◆ rendus" + (e && e.carte ? " · " + e.carte.title : ""), "info");
         change = true;
@@ -5998,6 +6209,7 @@ async function marcheRegler(){
     await sset("fm:col", state.collection);
     await sset("fm:profile", p);
     piecesAffichees();
+    checkAch();
   }
 }
 async function marcheChargerLeger(){
@@ -6111,8 +6323,7 @@ function viewMarche(){
   }else if(ong === "vendre"){
     const c = marche.carte ? state.collection.find(x => x.id === marche.carte) : null;
     corps = `<div class="panel">
-      <p class="sub" style="margin:0 0 .7rem">La carte quitte votre album pendant la vente. Sans offre à la fin, elle vous revient.
-        Vendue, vous touchez le prix final moins ${Math.round(MARCHE_TAXE*100)} % de commission.</p>
+      <p class="sub" style="margin:0 0 .7rem">Commission de ${Math.round(MARCHE_TAXE*100)} % sur le prix final.</p>
       <div class="mvendre">
         <div class="mcarte">${c ? cardHTML(c, {compact:true}) : `<div class="slot" id="mchoix" style="cursor:pointer">+</div>`}</div>
         <div class="minfo">
@@ -6136,7 +6347,6 @@ function viewMarche(){
 
   view.innerHTML = `
     <h2 class="vuetitre">Marché</h2>
-    <p class="sub" style="margin:.1rem 0 .7rem">Enchères entre joueurs · bourse : <b>${short(state.profile.coins || 0)} ◆</b></p>
     <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
       ${tab("ventes", "Enchères", marche.ventes.filter(e => e.vendeur !== moi).length)}
       ${tab("vendre", "Vendre", 0)}
@@ -6161,9 +6371,18 @@ function viewMarche(){
   view.querySelectorAll("[data-annulerv]").forEach(b => b.onclick = async ()=>{
     b.disabled = true;
     try{
-      const ok = await nuageRest("rpc/annuler_vente", {method:"POST", body:JSON.stringify({eid:+b.dataset.annulerv})});
-      if(!ok) throw new Error("une offre a déjà été posée");
-      await marcheCharger(); toast("Vente retirée", "la carte revient dans votre album", "info");
+      const eid = +b.dataset.annulerv;
+      const r = await nuageRest("rpc/annuler_vente", {method:"POST", body:JSON.stringify({eid})});
+      if(!r) throw new Error("une offre a déjà été posée");
+      if(r && typeof r === "object"){
+        /* version à jour du serveur : la vente est close et réglée d'un coup */
+        if(!dejaRegle("mv" + eid)){
+          ajouterCopies([r]);
+          await sset("fm:col", state.collection); await sset("fm:profile", state.profile);
+        }
+        toast("Vente retirée", (r.title || "La carte") + " revient dans votre album", "info");
+      }
+      await marcheCharger();
     }catch(e){ toast("Retrait impossible", String(e.message || e), "lose"); }
     viewMarche();
   });
@@ -6186,11 +6405,22 @@ function viewMarche(){
     if(prix < 1){ toast("Prix invalide", "au moins 1 ◆", "lose"); return; }
     ml.disabled = true;
     const carte = carteEchange(c);
+    const debut = new Date(Date.now() - 5000).toISOString();
+    retirerCopies([carte]);
+    await sset("fm:col", state.collection); await sset("fm:profile", state.profile);
     try{
-      await nuageRest("encheres", {method:"POST", body:JSON.stringify([{vendeur:moi, carte, prix_depart:prix,
-        fin:new Date(Date.now() + marche.duree * 3600000).toISOString()}])});
-      retirerCopies([carte]);
-      await sset("fm:col", state.collection); await sset("fm:profile", state.profile);
+      try{
+        await nuageRest("encheres", {method:"POST", body:JSON.stringify([{vendeur:moi, carte, prix_depart:prix,
+          fin:new Date(Date.now() + marche.duree * 3600000).toISOString()}])});
+      }catch(err){
+        /* coupure pendant l'envoi : la vente existe peut-être quand même */
+        const deja = await nuageRest("encheres?select=id,carte&vendeur=eq." + moi + "&cree=gt." + encodeURIComponent(debut)).catch(()=>null);
+        if(!(deja || []).some(x => x.carte && x.carte.id === carte.id)){
+          ajouterCopies([carte]);
+          await sset("fm:col", state.collection);
+          throw err;
+        }
+      }
       toast("Mise en vente", carte.title + " · départ " + prix + " ◆", "info");
       marche.carte = null; marche.prix = 0; marche.onglet = "miennes";
       await marcheCharger();
@@ -6258,11 +6488,6 @@ function viewTheme(){
   const c = teintesCourantes();
   view.innerHTML = `
     <h2 class="vuetitre">Couleurs</h2>
-    <p class="sub">Deux thèmes, et tout le site suit. En dessous, les six teintes
-      qui les composent restent réglables une par une : les panneaux, les filets,
-      les voiles et la couleur du texte posé sur chaque accent en sont déduits,
-      donc tout reste lisible quoi que vous choisissiez. Les changements
-      s'appliquent tout de suite et sont gardés sur cet appareil.</p>
 
     <div class="themepick">
       ${THEMES.map(t=>`<button class="themebtn ${themeActif()===t.id?"on":""}" data-theme="${t.id}">
@@ -6434,38 +6659,26 @@ function viewTheme(){
 /* ---------- onboarding ---------- */
 function viewOnboard(){
   view.innerHTML = `
-  ${SANDBOX?`<div class="err" style="margin-bottom:1rem">Ouvert dans Claude : le réseau externe est bloqué ici, Fandom reste injoignable. Téléchargez le fichier et ouvrez-le dans votre navigateur pour jouer.</div>`:""}
-  <div class="panel">
-    <h1 style="font-size:clamp(1.9rem,6vw,2.8rem);margin-bottom:.6rem">Tous les univers dans le même paquet.</h1>
-    <p class="sub" style="margin-top:0">Chaque carte est un article Fandom réel, et les mondes sont mélangés d'office : une carte de Poudlard tombe à côté d'un dragon de Bordeciel ou d'un primarque de Warhammer. Le nombre de pages qui pointent vers l'article fixe sa rareté, sa longueur son attaque, sa richesse sa défense.</p>
-
-    <div style="margin:1.2rem 0 .35rem" class="sub">Votre pseudo</div>
+  <div class="accueil"><div class="panel">
+    <h1 style="font-size:clamp(1.9rem,6vw,2.8rem);margin-bottom:.8rem">Choisissez votre pseudo.</h1>
     <input id="pseudo" maxlength="18" placeholder="Frayseur" value="${esc(state.profile.pseudo)}">
-
-    ${HAS_WS?"":`<div style="margin:1.1rem 0 .35rem" class="sub">Clé API Anthropic — facultative, pour que les questions de duel soient écrites d'après les articles. Sans elle, les duels utilisent des questions générées localement.</div>
-    <input id="apikey" type="password" placeholder="sk-ant-…" value="${esc(state.profile.apiKey||"")}" autocomplete="off">`}
-
     <div class="row" style="margin-top:1.1rem">
       <button class="btn" id="start">Commencer avec ${FREE_MAX} boosters gratuits</button>
       <span class="sub" id="onbmsg"></span>
     </div>
-    ${nuageConfigure() ? `<p class="sub" style="margin:.9rem 0 0">Vous avez déjà joué
-      sur un autre appareil ? <button class="lien" id="dejacompte">Retrouver ma partie</button></p>` : ""}
-    <p class="sub" style="margin-bottom:0;font-size:.82rem">${UNIVERSES.length} univers en réserve. Contenu issu des wikis Fandom, sous licence libre (CC BY-SA). Collection et progression enregistrées sur cet appareil.</p>
-  </div>`;
-
-  const dc = view.querySelector("#dejacompte");
-  if(dc) dc.onclick = ()=>go("compte");
-
+    <p class="sub" style="margin:.9rem 0 0;font-size:.82rem">${esc(nuageCourriel())} · <button class="lien" id="autrecompte">changer de compte</button></p>
+  </div></div>`;
+  view.querySelector("#autrecompte").onclick = async ()=>{ await nuageDeconnecter(); location.reload(); };
   view.querySelector("#start").onclick = async ()=>{
     const pseudo = view.querySelector("#pseudo").value.trim();
     if(!pseudo){ view.querySelector("#onbmsg").innerHTML = `<span style="color:var(--red)">Indiquez un pseudo.</span>`; return; }
-    const kf = view.querySelector("#apikey"); if(kf) state.profile.apiKey = kf.value.trim();
     state.profile.pseudo = pseudo;
+    delete state.profile.apiKey;
     await saveAll();
     ensurePool();
     go("hub");
   };
+  view.querySelector("#pseudo").addEventListener("keydown", e => { if(e.key === "Enter") view.querySelector("#start").click(); });
 }
 
 function parseWiki(raw){
@@ -6541,15 +6754,13 @@ function viewHub(){
       <div class="grid" style="grid-template-columns:repeat(3,1fr);max-width:420px">${best.map(c=>cardHTML(c,{compact:true})).join("")}</div>`:""}
 
     <div class="betabox">
-      <h3 style="font-size:1rem;margin-bottom:.35rem">Version de développement</h3>
-      <p class="sub" style="margin:0 0 .4rem">FandoMasters est encore en chantier. Pour l'instant le jeu tourne entièrement en solo, sans connexion ni serveur : votre collection vit dans ce navigateur, sur cet appareil, et un autre navigateur ouvrira une partie vierge.</p>
-      <p class="sub" style="margin:0 0 .4rem">Cette version sert de socle à une grande mise à jour en ligne, avec comptes synchronisés, boutique et marché d'échange entre joueurs.</p>
+      <h3 style="font-size:1rem;margin-bottom:.35rem">Version bêta</h3>
       <p class="sub" style="margin:0">Vous êtes donc bêta-testeurs : bugs, idées, équilibrage, tout retour est utile. Écrivez au créateur sur Discord — <b style="color:var(--brass)">Frayseur</b>.</p>
     </div>
 
     <div class="credit">
       <span>Site créé par Frayseur</span>
-      <button class="conslink" id="console">console</button>
+      ${estAdmin() ? `<button class="conslink" id="console">console</button>` : ""}
     </div>
 
     <details class="fold ${state.dev?"":"hidden"}" id="devbox" style="margin-top:.8rem" ${state.dev?"open":""}>
@@ -6585,7 +6796,7 @@ function viewHub(){
   view.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   paintLog();
   paintDaily();
-  view.querySelector("#console").onclick = ()=>{
+  if(view.querySelector("#console")) view.querySelector("#console").onclick = ()=>{
     if(state.dev){ state.dev = false; viewHub(); return; }
     const m = document.createElement("div");
     m.className = "modal";
@@ -6600,7 +6811,7 @@ function viewHub(){
     </div>`;
     document.body.appendChild(m);
     const tryPw = ()=>{
-      if(m.querySelector("#pw").value === "2727"){
+      if(estAdmin() && m.querySelector("#pw").value === "2727"){
         state.dev = true;
         sfx.ach();
         m.remove();
@@ -10758,56 +10969,64 @@ function nWorlds(){ return new Set(state.collection.map(c=>c.univ)).size; }
 function maxDupe(){ return state.collection.reduce((m,c)=>Math.max(m,c.count),0); }
 
 const ACHIEVEMENTS = [
-  {id:"pack1",   name:"Premier paquet",        desc:"Ouvrir un paquet.",                          goal:1,   val:()=>state.profile.packs,   reward:5},
-  {id:"pack25",  name:"Main chaude",           desc:"Ouvrir 25 paquets.",                         goal:25,  val:()=>state.profile.packs,   reward:15},
-  {id:"pack100", name:"Ouvreur compulsif",     desc:"Ouvrir 100 paquets.",                        goal:100, val:()=>state.profile.packs,   reward:40},
-  {id:"col10",   name:"Début de collection",   desc:"Posséder 10 cartes distinctes.",             goal:10,  val:()=>state.collection.length, reward:5},
-  {id:"col50",   name:"Collectionneur",        desc:"Posséder 50 cartes distinctes.",             goal:50,  val:()=>state.collection.length, reward:15},
-  {id:"col200",  name:"Archiviste",            desc:"Posséder 200 cartes distinctes.",            goal:200, val:()=>state.collection.length, reward:50},
-  {id:"w5",      name:"Voyageur des mondes",   desc:"Des cartes de 5 univers différents.",        goal:5,   val:nWorlds,                   reward:10},
-  {id:"w10",     name:"Passeur de frontières", desc:"Des cartes de 10 univers différents.",       goal:10,  val:nWorlds,                   reward:25},
-  {id:"wall",    name:"Multivers complet",     desc:"Au moins une carte de chaque univers joignable.", goal:0, val:nWorlds,               reward:60, dyn:()=>Math.max(1,state.pool.length)},
-  {id:"r1",      name:"Première rare",         desc:"Obtenir une carte Rare.",                    goal:1,   val:()=>nRar("Rare"),          reward:5},
-  {id:"sr1",     name:"Première super rare",   desc:"Obtenir une carte Super rare.",              goal:1,   val:()=>nRar("Super rare"),    reward:10},
-  {id:"ur1",     name:"Première ultra rare",   desc:"Obtenir une carte Ultra rare.",              goal:1,   val:()=>nRar("Ultra rare"),    reward:20},
-  {id:"leg1",    name:"Une légende",           desc:"Obtenir une carte Légendaire.",              goal:1,   val:()=>nRar("Légendaire"),    reward:40},
-  {id:"leg5",    name:"Chasseur de légendes",  desc:"Posséder 5 cartes Légendaires.",             goal:5,   val:()=>nRar("Légendaire"),    reward:100},
-  {id:"dupe3",   name:"Triple emploi",         desc:"Avoir une même carte en 3 exemplaires.",     goal:3,   val:maxDupe,                   reward:5},
-  {id:"duel1",   name:"Premier duel",          desc:"Remporter un premier combat.",                          goal:1,   val:()=>state.profile.duels,   reward:5},
-  {id:"duel10",  name:"Rat de donjon",    desc:"Explorer 10 donjons.",                         goal:10,  val:()=>state.profile.duels,   reward:15},
-  {id:"win1",    name:"Première victoire",     desc:"Sortir vivant d'un donjon.",                            goal:1,   val:()=>state.profile.wins,    reward:10},
-  {id:"win10",   name:"Duelliste",             desc:"Sortir vivant de 10 donjons.",                           goal:10,  val:()=>state.profile.wins,    reward:30},
-  {id:"streak3", name:"Série noire",           desc:"Enchaîner 3 sorties réussies.",                     goal:3,   val:()=>state.profile.bestStreak, reward:20},
-  {id:"perfect", name:"Sans faute",            desc:"Sortir d'un donjon sans perdre un seul combat.",      goal:1,   val:()=>state.profile.perfect, reward:15},
-  {id:"know50",  name:"Érudit",                desc:"Donner 50 bonnes réponses.",                 goal:50,  val:()=>state.profile.correct, reward:25},
-  {id:"mana1",   name:"Première coulée",      desc:"Convertir du Mana en Fandominus.",           goal:1,   val:()=>state.profile.cast||0, reward:5},
-  {id:"mana10",  name:"Fondeur",             desc:"Couler 10 Fandominus à la machine.",         goal:10,  val:()=>state.profile.cast||0, reward:20},
-  {id:"myth1",   name:"Forge mythique",      desc:"Forger un booster mythique.",                goal:1,   val:()=>state.profile.forged||0, reward:30},
-  {id:"mana1m",  name:"Réservoir plein à ras",  desc:"Détenir 1 000 000 de Mana.",                  goal:1000000, val:()=>state.profile.mana||0, reward:20},
-  {id:"manamax", name:"Marée de Mana",          desc:"Remplir le réservoir de 50 millions.",        goal:0, dyn:()=>MANA_CAP, val:()=>state.profile.mana||0, reward:200},
-  {id:"click1k", name:"Doigt agile",            desc:"Frapper l'emblème 1 000 fois.",               goal:1000,  val:()=>state.profile.clicks||0, reward:15},
-  {id:"click10k",name:"Tendinite",              desc:"Frapper l'emblème 10 000 fois.",              goal:10000, val:()=>state.profile.clicks||0, reward:40},
-  {id:"up1",     name:"Premier recrutement",    desc:"Porter une amélioration à son plafond.",      goal:1,   val:()=>UPGRADES.filter(u=>lv(u.id)>=u.max).length, reward:20},
-  {id:"upall",   name:"Atelier parfait",        desc:"Toutes les améliorations au plafond.",        goal:0, dyn:()=>UPGRADES.length, val:()=>UPGRADES.filter(u=>lv(u.id)>=u.max).length, reward:150},
-  {id:"myopen",  name:"Goût du mythique",       desc:"Ouvrir un booster mythique.",                 goal:1,   val:()=>state.profile.mythOpened||0, reward:20},
-  {id:"myopen10",name:"Collectionneur mythique",desc:"Ouvrir 10 boosters mythiques.",               goal:10,  val:()=>state.profile.mythOpened||0, reward:60},
-  {id:"demforge",name:"Pacte infernal",         desc:"Forger un booster démonique.",                goal:1,   val:()=>state.profile.demon!=null?(state.profile.demonOpened||0)+(state.profile.demon||0):0, reward:60},
-  {id:"demopen", name:"Galerie des vilains",    desc:"Ouvrir un booster démonique.",                goal:1,   val:()=>state.profile.demonOpened||0, reward:40},
-  {id:"relic",   name:"Un Anneau pour les gouverner tous", desc:"Posséder l'Anneau Unique.",        goal:1,   val:()=>nRar("Relique"), reward:5000},
-  {id:"relic3",  name:"Cabinet des merveilles", desc:"Réunir 3 artefacts légendaires.",              goal:3,   val:()=>nRar("Relique"), reward:1000},
-  {id:"sell10",  name:"Grand ménage",           desc:"Renvoyer 10 cartes.",                         goal:10,  val:()=>state.profile.sold||0, reward:10},
-  {id:"sell100", name:"Brocanteur",             desc:"Renvoyer 100 cartes.",                        goal:100, val:()=>state.profile.sold||0, reward:40},
-  {id:"tens1",   name:"Par dix",                desc:"Ouvrir dix paquets d'un coup.",               goal:1,   val:()=>state.profile.tens||0, reward:15},
-  {id:"camp1",   name:"Première conquête",      desc:"Remporter une campagne.",                     goal:1,   val:()=>state.profile.campWins||0, reward:30},
-  {id:"camp10",  name:"Stratège",               desc:"Remporter 10 campagnes.",                     goal:10,  val:()=>state.profile.campWins||0, reward:120},
-  {id:"streak5", name:"Invaincu",               desc:"Enchaîner 5 sorties réussies.",              goal:5,   val:()=>state.profile.bestStreak||0, reward:40},
-  {id:"deck1",   name:"Stratège en herbe",    desc:"Composer un premier deck complet.",           goal:1,   val:()=>(state.profile.decks||[]).filter(deckFull).length, reward:20},
-  {id:"deck5",   name:"Général",             desc:"Tenir cinq decks complets.",                  goal:5,   val:()=>(state.profile.decks||[]).filter(deckFull).length, reward:80},
-  {id:"item1",   name:"Sac à malices",       desc:"Trouver un premier objet.",                   goal:1,   val:()=>state.profile.items||0, reward:10},
-  {id:"invup",   name:"Grande sacoche",      desc:"Acheter une extension d'inventaire.",         goal:1,   val:()=>state.profile.invUp||0, reward:25},
-  {id:"vitrine", name:"Vitrine complète",       desc:"Garnir les dix emplacements du profil.",      goal:10,  val:()=>(state.profile.slots||[]).length, reward:25},
-  {id:"avatar",  name:"Beau portrait",          desc:"Choisir une photo de profil.",                goal:1,   val:()=>state.profile.avatar?1:0, reward:5},
-  {id:"rich",    name:"Trésorier",             desc:"Détenir 2 000 Fandominus.",                  goal:2000, val:()=>state.profile.coins, reward:40}
+  {id:"pack1",   name:"Premier paquet",        desc:"Ouvrir un paquet.",                          goal:1,   val:()=>state.profile.packs,   reward:1},
+  {id:"pack25",  name:"Main chaude",           desc:"Ouvrir 25 paquets.",                         goal:25,  val:()=>state.profile.packs,   reward:3},
+  {id:"pack100", name:"Ouvreur compulsif",     desc:"Ouvrir 100 paquets.",                        goal:100, val:()=>state.profile.packs,   reward:8},
+  {id:"col10",   name:"Début de collection",   desc:"Posséder 10 cartes distinctes.",             goal:10,  val:()=>state.collection.length, reward:1},
+  {id:"col50",   name:"Collectionneur",        desc:"Posséder 50 cartes distinctes.",             goal:50,  val:()=>state.collection.length, reward:3},
+  {id:"col200",  name:"Archiviste",            desc:"Posséder 200 cartes distinctes.",            goal:200, val:()=>state.collection.length, reward:10},
+  {id:"w5",      name:"Voyageur des mondes",   desc:"Des cartes de 5 univers différents.",        goal:5,   val:nWorlds,                   reward:2},
+  {id:"w10",     name:"Passeur de frontières", desc:"Des cartes de 10 univers différents.",       goal:10,  val:nWorlds,                   reward:5},
+  {id:"wall",    name:"Multivers complet",     desc:"Au moins une carte de chaque univers joignable.", goal:0, val:nWorlds,               reward:12, dyn:()=>Math.max(1,state.pool.length)},
+  {id:"r1",      name:"Première rare",         desc:"Obtenir une carte Rare.",                    goal:1,   val:()=>nRar("Rare"),          reward:1},
+  {id:"sr1",     name:"Première super rare",   desc:"Obtenir une carte Super rare.",              goal:1,   val:()=>nRar("Super rare"),    reward:2},
+  {id:"ur1",     name:"Première ultra rare",   desc:"Obtenir une carte Ultra rare.",              goal:1,   val:()=>nRar("Ultra rare"),    reward:4},
+  {id:"leg1",    name:"Une légende",           desc:"Obtenir une carte Légendaire.",              goal:1,   val:()=>nRar("Légendaire"),    reward:8},
+  {id:"leg5",    name:"Chasseur de légendes",  desc:"Posséder 5 cartes Légendaires.",             goal:5,   val:()=>nRar("Légendaire"),    reward:20},
+  {id:"dupe3",   name:"Triple emploi",         desc:"Avoir une même carte en 3 exemplaires.",     goal:3,   val:maxDupe,                   reward:1},
+  {id:"duel1",   name:"Premier donjon",        desc:"Explorer un premier donjon.",                          goal:1,   val:()=>state.profile.duels,   reward:1},
+  {id:"duel10",  name:"Rat de donjon",    desc:"Explorer 10 donjons.",                         goal:10,  val:()=>state.profile.duels,   reward:3},
+  {id:"win1",    name:"Première victoire",     desc:"Sortir vivant d'un donjon.",                            goal:1,   val:()=>state.profile.wins,    reward:2},
+  {id:"win10",   name:"Duelliste",             desc:"Sortir vivant de 10 donjons.",                           goal:10,  val:()=>state.profile.wins,    reward:6},
+  {id:"streak3", name:"Série noire",           desc:"Enchaîner 3 sorties réussies.",                     goal:3,   val:()=>state.profile.bestStreak, reward:4},
+  {id:"perfect", name:"Sans faute",            desc:"Sortir d'un donjon sans perdre un seul combat.",      goal:1,   val:()=>state.profile.perfect, reward:3},
+  {id:"mana1",   name:"Première coulée",      desc:"Convertir du Mana en Fandominus.",           goal:1,   val:()=>state.profile.cast||0, reward:1},
+  {id:"mana10",  name:"Fondeur",             desc:"Couler 10 Fandominus à la machine.",         goal:10,  val:()=>state.profile.cast||0, reward:4},
+  {id:"myth1",   name:"Forge mythique",      desc:"Forger un booster mythique.",                goal:1,   val:()=>state.profile.forged||0, reward:6},
+  {id:"mana1m",  name:"Réservoir plein à ras",  desc:"Détenir 1 000 000 de Mana.",                  goal:1000000, val:()=>state.profile.mana||0, reward:4},
+  {id:"manamax", name:"Marée de Mana",          desc:"Remplir le réservoir de 50 millions.",        goal:0, dyn:()=>MANA_CAP, val:()=>state.profile.mana||0, reward:40},
+  {id:"click1k", name:"Doigt agile",            desc:"Frapper l'emblème 1 000 fois.",               goal:1000,  val:()=>state.profile.clicks||0, reward:3},
+  {id:"click10k",name:"Tendinite",              desc:"Frapper l'emblème 10 000 fois.",              goal:10000, val:()=>state.profile.clicks||0, reward:8},
+  {id:"up1",     name:"Premier recrutement",    desc:"Porter une amélioration à son plafond.",      goal:1,   val:()=>UPGRADES.filter(u=>lv(u.id)>=u.max).length, reward:4},
+  {id:"upall",   name:"Atelier parfait",        desc:"Toutes les améliorations au plafond.",        goal:0, dyn:()=>UPGRADES.length, val:()=>UPGRADES.filter(u=>lv(u.id)>=u.max).length, reward:30},
+  {id:"myopen",  name:"Goût du mythique",       desc:"Ouvrir un booster mythique.",                 goal:1,   val:()=>state.profile.mythOpened||0, reward:4},
+  {id:"myopen10",name:"Collectionneur mythique",desc:"Ouvrir 10 boosters mythiques.",               goal:10,  val:()=>state.profile.mythOpened||0, reward:12},
+  {id:"demforge",name:"Pacte infernal",         desc:"Forger un booster démonique.",                goal:1,   val:()=>state.profile.demon!=null?(state.profile.demonOpened||0)+(state.profile.demon||0):0, reward:12},
+  {id:"demopen", name:"Galerie des vilains",    desc:"Ouvrir un booster démonique.",                goal:1,   val:()=>state.profile.demonOpened||0, reward:8},
+  {id:"relic",   name:"Un Anneau pour les gouverner tous", desc:"Posséder l'Anneau Unique.",        goal:1,   val:()=>nRar("Relique"), reward:250},
+  {id:"relic3",  name:"Cabinet des merveilles", desc:"Réunir 3 artefacts légendaires.",              goal:3,   val:()=>nRar("Relique"), reward:200},
+  {id:"sell10",  name:"Grand ménage",           desc:"Renvoyer 10 cartes.",                         goal:10,  val:()=>state.profile.sold||0, reward:2},
+  {id:"sell100", name:"Brocanteur",             desc:"Renvoyer 100 cartes.",                        goal:100, val:()=>state.profile.sold||0, reward:8},
+  {id:"tens1",   name:"Par dix",                desc:"Ouvrir dix paquets d'un coup.",               goal:1,   val:()=>state.profile.tens||0, reward:3},
+  {id:"camp1",   name:"Première conquête",      desc:"Remporter une campagne.",                     goal:1,   val:()=>state.profile.campWins||0, reward:6},
+  {id:"camp10",  name:"Stratège",               desc:"Remporter 10 campagnes.",                     goal:10,  val:()=>state.profile.campWins||0, reward:25},
+  {id:"streak5", name:"Invaincu",               desc:"Enchaîner 5 sorties réussies.",              goal:5,   val:()=>state.profile.bestStreak||0, reward:8},
+  {id:"deck1",   name:"Stratège en herbe",    desc:"Composer un premier deck complet.",           goal:1,   val:()=>(state.profile.decks||[]).filter(deckFull).length, reward:4},
+  {id:"deck5",   name:"Général",             desc:"Tenir cinq decks complets.",                  goal:5,   val:()=>(state.profile.decks||[]).filter(deckFull).length, reward:16},
+  {id:"item1",   name:"Sac à malices",       desc:"Trouver un premier objet.",                   goal:1,   val:()=>state.profile.items||0, reward:2},
+  {id:"invup",   name:"Grande sacoche",      desc:"Acheter une extension d'inventaire.",         goal:1,   val:()=>state.profile.invUp||0, reward:5},
+  {id:"vitrine", name:"Vitrine complète",       desc:"Garnir les dix emplacements du profil.",      goal:10,  val:()=>(state.profile.slots||[]).length, reward:5},
+  {id:"avatar",  name:"Beau portrait",          desc:"Choisir une photo de profil.",                goal:1,   val:()=>state.profile.avatar?1:0, reward:1},
+  {id:"rich",    name:"Trésorier",             desc:"Détenir 2 000 Fandominus.",                  goal:2000, val:()=>state.profile.coins, reward:8},
+  {id:"compte",  name:"Joueur en ligne",        desc:"Créer son compte.",                           goal:1,   val:()=>nuageConnecte()?1:0, reward:2},
+  {id:"ami1",    name:"Premier allié",          desc:"Avoir un ami.",                               goal:1,   val:()=>amis.liste.length, reward:3},
+  {id:"ami5",    name:"Bande de héros",         desc:"Avoir cinq amis.",                            goal:5,   val:()=>amis.liste.length, reward:10},
+  {id:"ech1",    name:"Premier troc",           desc:"Conclure un échange.",                        goal:1,   val:()=>state.profile.echanges||0, reward:3},
+  {id:"ech10",   name:"Négociant",              desc:"Conclure dix échanges.",                      goal:10,  val:()=>state.profile.echanges||0, reward:12},
+  {id:"vente1",  name:"Adjugé !",               desc:"Vendre une carte aux enchères.",              goal:1,   val:()=>state.profile.ventes||0, reward:3},
+  {id:"vente10", name:"Commissaire-priseur",    desc:"Vendre dix cartes aux enchères.",             goal:10,  val:()=>state.profile.ventes||0, reward:12},
+  {id:"achat1",  name:"Coup de marteau",        desc:"Remporter une enchère.",                      goal:1,   val:()=>state.profile.achats||0, reward:3},
+  {id:"achat10", name:"Chineur",                desc:"Remporter dix enchères.",                     goal:10,  val:()=>state.profile.achats||0, reward:12}
 ];
 
 function achGoal(a){ return a.dyn ? a.dyn() : a.goal; }
@@ -11207,7 +11426,10 @@ const TITLES = [
   {id:"demforge",name:"Pactisant"},
   {id:"tens1",   name:"Maître du hasard"},
   {id:"myopen10",name:"Ouvreur mythique"},
-  {id:"know50",  name:"Érudit"}
+  {id:"ami5",    name:"Rassembleur"},
+  {id:"ech10",   name:"Négociant"},
+  {id:"vente10", name:"Commissaire-priseur"},
+  {id:"achat10", name:"Chineur"}
 ];
 function bannerSrc(id){
   const c = state.collection.find(x=>x.id === id);
@@ -11266,7 +11488,6 @@ function viewProfil(){
         <button class="btn small ghost" id="pickfav">${p.fav? "Changer d'univers préféré":"Choisir un univers préféré"}</button>
       </div>
       ${p.fav? `<p class="sub" style="margin:.6rem 0 0;position:relative;z-index:2">Univers préféré : <b style="color:var(--brass)">${esc(p.fav)}</b></p>`:""}
-      <p class="sub" style="margin:.5rem 0 0;font-size:.84rem;position:relative;z-index:2">La photo et la bannière se choisissent parmi les illustrations de vos propres cartes.</p>
 
       <div class="row" style="margin:.8rem 0 0;position:relative;z-index:2">
         <span class="sub">Écriture du pseudo :</span>
@@ -11285,7 +11506,6 @@ function viewProfil(){
     </div>
 
     <h3 style="font-size:1.15rem;margin-bottom:.4rem">Titres</h3>
-    <p class="sub" style="margin:.1rem 0 .6rem">Débloqués par vos succès. Celui que vous portez s'affiche sur votre profil.</p>
     <div class="row" style="margin-bottom:1.2rem">
       ${unlockedTitles().length
         ? `<button class="chip" data-title="" aria-pressed="${!p.title}">Aucun</button>` +
@@ -11297,7 +11517,6 @@ function viewProfil(){
       <h3 style="font-size:1.15rem">Vitrine</h3>
       <span class="sub">${slots.length} / 10</span>
     </div>
-    <p class="sub" style="margin:.2rem 0 .7rem">Dix emplacements pour vos pièces préférées. Touchez un emplacement vide pour y poser une carte.</p>
     <div class="slots" id="slots">
       ${Array.from({length:10}, (_,i)=>{
         const c = slots[i];
@@ -12375,8 +12594,7 @@ async function viewCatalog(){
   const w = state.catW;
   if(!w){
     view.innerHTML = `<div class="cat">
-      <div class="head"><h2 class="vuetitre">Toutes les cartes</h2>
-      <p class="sub" style="margin:.35rem 0 0">Choisissez un monde pour voir ce qu'il vous reste à décrocher.</p></div>
+      <div class="head"><h2 class="vuetitre">Toutes les cartes</h2></div>
       ${state.pool.length? `
         <div class="filters" style="margin:.8rem 0 .2rem">
           <input id="uq" placeholder="Chercher un univers…" value="${esc(state.uq||"")}">
@@ -12659,6 +12877,11 @@ function openSettings(){
     for(let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); tot += k.length + (localStorage.getItem(k) || "").length; }
     if(tot > 1500000) libererStockage();
   }catch(e){}
+  if(nuageConfigure()){
+    if(navigator.onLine === false || !(await sonderReseau())) passerHorsLigne();
+    const lien = await traiterLienAuth();
+    if(lien === "recovery") state.mdpReset = true;
+  }
   diagLog("démarrage · session " + (nuageConnecte() ? "oui" : "non"));
   chargerEvenement();
   setTimeout(()=>{ publierProfil(); amisVeille(); marcheVeille(); }, 4000);
