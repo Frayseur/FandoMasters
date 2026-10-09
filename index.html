@@ -2967,11 +2967,36 @@ function diagnosticNuage(){
     ["espace de jeu", acct().slice(0, 8)],
     ["en attente d'envoi", nuageAttente().join(", ") || "rien"],
     ["dernière raison", nuageRaisonLue() || "aucune"],
-    ["dernière erreur d'envoi", nuageErreur || "aucune"]
+    ["dernière erreur d'envoi", nuageErreur || "aucune"],
+    ["stockage", nuageStockage()],
+    ["écriture refusée depuis le chargement", stockagePlein ? "OUI" : "non"]
   ];
   let j = []; try{ j = JSON.parse(localStorage.getItem("fm-local:diag-journal") || "[]"); }catch(e){}
   return l.map(([k, v]) => k + " : " + v).join("\n") + "\n\njournal :\n" + (j.slice(-14).join("\n") || "(vide)");
 }
+/* Le navigateur n'accorde qu'environ 5 Mo à un site. Les caches (liste des
+   articles de chaque univers, verdicts sur les images) sont refaits à la
+   demande ; la partie du joueur, elle, ne se refait pas. Quand une écriture
+   est refusée faute de place, on vide d'abord les caches, puis on réessaie. */
+function libererStockage(){
+  let n = 0;
+  try{
+    const sup = [];
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(!k) continue;
+      if(/:fm:pool2$/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
+    }
+    sup.forEach(k=>{ n += (localStorage.getItem(k) || "").length; localStorage.removeItem(k); });
+  }catch(e){}
+  return n;
+}
+function lsPoser(k, v){
+  try{ localStorage.setItem(k, v); return true; }catch(e){}
+  libererStockage();
+  try{ localStorage.setItem(k, v); return true; }catch(e){ return false; }
+}
+
 /* Journal des derniers événements de connexion, gardé sur l'appareil et
    affiché dans le diagnostic : il montre ce qui s'est vraiment passé. */
 function diagLog(m){
@@ -2996,8 +3021,7 @@ function nuagePoseSession(s){
   nuageMemoire = s || null;
   try{
     if(s){
-      localStorage.setItem(NUAGE_SESSION, JSON.stringify(s));
-      return localStorage.getItem(NUAGE_SESSION) !== null;
+      return lsPoser(NUAGE_SESSION, JSON.stringify(s)) && localStorage.getItem(NUAGE_SESSION) !== null;
     }
     localStorage.removeItem(NUAGE_SESSION);
     return true;
@@ -3233,7 +3257,7 @@ function lireEspace(espace, cle){
   }catch(e){ return null; }
 }
 function ecrireEspace(espace, cle, val){
-  try{ localStorage.setItem("fm-local:" + espace + ":" + cle, JSON.stringify(val)); }catch(e){}
+  lsPoser("fm-local:" + espace + ":" + cle, JSON.stringify(val));
 }
 
 /* Les deux clés que le jeu enregistre. Tout passe par là. */
@@ -3259,7 +3283,7 @@ async function nuageDescendre(forcer){
         if(v != null){ await nuageEcrire(cle, v); }
         continue;
       }
-      localStorage.setItem(lsKey(cle, false), JSON.stringify(r.valeur));
+      if(!lsPoser(lsKey(cle, false), JSON.stringify(r.valeur))) throw new Error("place insuffisante dans le navigateur");
       ecrireEspace(moi, "maj:" + cle, r.maj);
       eu = true;
     }catch(e){ return false; }
@@ -3332,6 +3356,7 @@ function acct(){
 const HAS_WS = typeof window.storage === "object" && window.storage && typeof window.storage.get === "function";
 const SANDBOX = HAS_WS;            // artefact Claude : réseau externe bloqué
 const memStore = {};
+let stockagePlein = false;   // une écriture n'a tenu qu'en mémoire
 function lsKey(k,s){ return s ? ("fm-shared:"+k) : ("fm-local:"+acct()+":"+k); }
 function wsKey(k,s){ return s ? k : (acct()+"/"+k); }
 async function sget(key, shared=false){
@@ -3344,8 +3369,8 @@ async function sget(key, shared=false){
 async function sset(key, val, shared=false){
   try{
     if(HAS_WS){ await window.storage.set(wsKey(key,shared), JSON.stringify(val), shared); return; }
-    window.localStorage.setItem(lsKey(key,shared), JSON.stringify(val));
-  }catch(e){ memStore[lsKey(key,shared)] = val; }
+    if(!lsPoser(lsKey(key,shared), JSON.stringify(val))) throw new Error("stockage plein");
+  }catch(e){ memStore[lsKey(key,shared)] = val; stockagePlein = true; }
   /* L'appareil garde toujours la main : l'écriture locale est faite, le
      serveur suit. Si le réseau manque, la partie n'est pas perdue. */
   if(!shared && NUAGE_CLES.indexOf(key) >= 0) nuagePousse(key, val);
@@ -3374,7 +3399,7 @@ async function migrateLegacy(){
       } else {
         if(window.localStorage.getItem(lsKey(k,false))) continue;
         const old = window.localStorage.getItem("fm-local:"+k);
-        if(old) window.localStorage.setItem(lsKey(k,false), old);
+        if(old) lsPoser(lsKey(k,false), old);
       }
     }catch(e){}
   }
