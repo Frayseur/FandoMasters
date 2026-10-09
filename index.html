@@ -2968,7 +2968,8 @@ function diagnosticNuage(){
     ["en attente d'envoi", nuageAttente().join(", ") || "rien"],
     ["dernière raison", nuageRaisonLue() || "aucune"],
     ["dernière erreur d'envoi", nuageErreur || "aucune"],
-    ["stockage", nuageStockage()],
+    ["entrepôt", IDB_OK ? "IndexedDB" + (idbPersistant ? " (protégé)" : "") + (idbEstimation ? " · " + idbEstimation : "") : "localStorage seul"],
+    ["stockage localStorage", nuageStockage()],
     ["écriture refusée depuis le chargement", stockagePlein ? "OUI" : "non"]
   ];
   let j = []; try{ j = JSON.parse(localStorage.getItem("fm-local:diag-journal") || "[]"); }catch(e){}
@@ -3005,6 +3006,16 @@ function diagLog(m){
     const d = new Date();
     l.push(d.toTimeString().slice(0,8) + " " + m);
     localStorage.setItem("fm-local:diag-journal", JSON.stringify(l.slice(-30)));
+  }catch(e){}
+}
+let idbPersistant = false, idbEstimation = "";
+function idbMesurer(){
+  try{
+    if(navigator.storage && navigator.storage.estimate)
+      navigator.storage.estimate().then(e=>{
+        idbEstimation = Math.round((e.usage||0)/1024) + " Ko utilisés sur " + Math.round((e.quota||0)/1048576) + " Mo permis";
+        const dg = document.getElementById("diag"); if(dg) dg.textContent = diagnosticNuage();
+      });
   }catch(e){}
 }
 let nuageMemoire = null;   // secours si le navigateur refuse d'écrire
@@ -3199,7 +3210,7 @@ function nuagePousse(cle, valeur){
   /* Date de la dernière modification locale, et marque « pas encore envoyé » :
      si la page se recharge avant l'envoi, le serveur ne doit pas écraser
      l'appareil avec une version plus ancienne. */
-  ecrireEspace(acct(), "maj:" + cle, new Date().toISOString());
+  ecrireEspace(acct(), "maj:" + cle, new Date().toISOString());   // sans attendre
   const l = nuageAttente(); if(l.indexOf(cle) < 0){ l.push(cle); nuageAttentePose(l); }
   nuageEnAttente.set(cle, valeur);
   clearTimeout(nuageMinuteurs.get(cle));
@@ -3250,17 +3261,109 @@ function majEtatNuage(){
    l'identifiant du joueur une fois connecté. Au moment de la connexion,
    la partie de l'appareil est donc dans l'espace invité, pas dans celui
    du compte qui vient de s'ouvrir — il faut aller la chercher là. */
-function viderEspace(espace){
-  try{ for(const c of NUAGE_CLES) localStorage.removeItem("fm-local:" + espace + ":" + c); }catch(e){}
+/* ======================================================================
+   Entrepôt IndexedDB
+   ----------------------------------------------------------------------
+   localStorage plafonne à environ 5 Mo par site : quelques centaines de
+   cartes suffisaient à le remplir. IndexedDB offre des centaines de Mo,
+   voire des Go, et garde des objets sans passer par du texte JSON.
+   Deux magasins : « kv » pour les sauvegardes du jeu (mêmes noms de clés
+   qu'avant), « textes » pour le lore des cartes, rangé à part pour que la
+   collection reste légère. Si IndexedDB manque, tout retombe sur
+   localStorage comme avant.
+   ====================================================================== */
+const IDB_NOM = "fandomasters";
+let idbOuverture = null;
+function idbOuvrir(){
+  if(idbOuverture) return idbOuverture;
+  idbOuverture = new Promise((ok, ko)=>{
+    try{
+      if(!window.indexedDB) return ko(new Error("IndexedDB absent"));
+      const r = indexedDB.open(IDB_NOM, 1);
+      r.onupgradeneeded = ()=>{
+        const db = r.result;
+        if(!db.objectStoreNames.contains("kv")) db.createObjectStore("kv");
+        if(!db.objectStoreNames.contains("textes")) db.createObjectStore("textes");
+      };
+      r.onsuccess = ()=>ok(r.result);
+      r.onerror = ()=>ko(r.error || new Error("ouverture refusée"));
+      r.onblocked = ()=>ko(new Error("ouverture bloquée"));
+      setTimeout(()=>ko(new Error("ouverture trop longue")), 4000);
+    }catch(e){ ko(e); }
+  });
+  return idbOuverture;
 }
-function lireEspace(espace, cle){
+/* Prêt ou pas : on le sait une fois pour toutes, avant le démarrage. */
+let IDB_OK = false;
+const idbPret = idbOuvrir().then(()=>{ IDB_OK = true; return true; }).catch(e=>{
+  diagLog("IndexedDB indisponible : " + (e && e.message)); return false;
+});
+function idbReq(magasin, mode, faire){
+  return idbOuvrir().then(db => new Promise((ok, ko)=>{
+    const tx = db.transaction(magasin, mode);
+    const st = tx.objectStore(magasin);
+    let res;
+    const rq = faire(st);
+    if(rq) rq.onsuccess = ()=>{ res = rq.result; };
+    tx.oncomplete = ()=>ok(res);
+    tx.onerror = ()=>ko(tx.error || new Error("transaction refusée"));
+    tx.onabort = ()=>ko(tx.error || new Error("transaction annulée"));
+  }));
+}
+const idbGet = (m, k)    => idbReq(m, "readonly",  st => st.get(k));
+const idbSet = (m, k, v) => idbReq(m, "readwrite", st => st.put(v, k));
+const idbDel = (m, k)    => idbReq(m, "readwrite", st => st.delete(k));
+const idbCles = (m)      => idbReq(m, "readonly",  st => st.getAllKeys());
+
+/* Les anciennes sauvegardes de localStorage passent dans l'entrepôt, puis
+   libèrent leur place. Une seule fois, au démarrage. */
+async function idbReprise(){
+  if(!IDB_OK) return 0;
+  let n = 0;
+  const cles = [];
   try{
-    const v = localStorage.getItem("fm-local:" + espace + ":" + cle);
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && (/^fm-local:[^:]+:(fm|maj):/.test(k) || /^fm-shared:/.test(k))) cles.push(k);
+    }
+  }catch(e){ return 0; }
+  for(const k of cles){
+    try{
+      const brut = localStorage.getItem(k);
+      if(brut == null) continue;
+      const deja = await idbGet("kv", k);
+      if(deja == null) await idbSet("kv", k, JSON.parse(brut));
+      localStorage.removeItem(k);
+      n++;
+    }catch(e){ diagLog("reprise de " + k + " impossible : " + (e && e.message)); }
+  }
+  if(n) diagLog("reprise : " + n + " sauvegarde" + (n > 1 ? "s" : "") + " passée" + (n > 1 ? "s" : "") + " dans IndexedDB");
+  return n;
+}
+
+async function viderEspace(espace){
+  for(const c of NUAGE_CLES){
+    const k = "fm-local:" + espace + ":" + c;
+    try{ if(IDB_OK) await idbDel("kv", k); }catch(e){}
+    try{ localStorage.removeItem(k); }catch(e){}
+  }
+}
+async function lireEspace(espace, cle){
+  const k = "fm-local:" + espace + ":" + cle;
+  if(IDB_OK){
+    try{ const v = await idbGet("kv", k); if(v != null) return v; }catch(e){}
+  }
+  try{
+    const v = localStorage.getItem(k);
     return v ? JSON.parse(v) : null;
   }catch(e){ return null; }
 }
-function ecrireEspace(espace, cle, val){
-  lsPoser("fm-local:" + espace + ":" + cle, JSON.stringify(val));
+async function ecrireEspace(espace, cle, val){
+  const k = "fm-local:" + espace + ":" + cle;
+  if(IDB_OK){
+    try{ await idbSet("kv", k, val); return true; }catch(e){}
+  }
+  return lsPoser(k, JSON.stringify(val));
 }
 
 /* Les deux clés que le jeu enregistre. Tout passe par là. */
@@ -3277,22 +3380,22 @@ async function nuageDescendre(forcer){
       const r = await nuageLire(cle);
       if(!r || r.valeur == null) continue;
       const moi = acct();
-      const locale = lireEspace(moi, "maj:" + cle);
+      const locale = await lireEspace(moi, "maj:" + cle);
       const plusRecentIci = !forcer && (attente.indexOf(cle) >= 0 ||
         (locale && Date.parse(locale) > Date.parse(r.maj)));
       if(plusRecentIci){
         /* l'appareil a du neuf que le serveur n'a pas : on l'envoie */
-        const v = lireEspace(moi, cle);
+        const v = await lireEspace(moi, cle);
         if(v != null){ await nuageEcrire(cle, v); }
         continue;
       }
-      if(!lsPoser(lsKey(cle, false), JSON.stringify(r.valeur))) throw new Error("place insuffisante dans le navigateur");
-      ecrireEspace(moi, "maj:" + cle, r.maj);
+      if(!(await ecrireEspace(moi, cle, r.valeur))) throw new Error("place insuffisante dans le navigateur");
+      await ecrireEspace(moi, "maj:" + cle, r.maj);
       eu = true;
     }catch(e){ return false; }
   }
   nuageAttentePose([]);
-  if(forcer && eu && acct() !== "invite") viderEspace("invite");
+  if(forcer && eu && acct() !== "invite") await viderEspace("invite");
   return eu;
 }
 
@@ -3301,7 +3404,7 @@ let nuageEssais = 0;
 async function nuageRepousser(){
   if(!nuageConfigure() || !nuageConnecte()) return;
   for(const cle of nuageAttente()){
-    const v = lireEspace(acct(), cle);
+    const v = await lireEspace(acct(), cle);
     if(v == null) continue;
     try{
       await nuageEcrire(cle, v);
@@ -3325,15 +3428,15 @@ async function nuageMonter(source){
   const depuis = source || moi || "invite";
   let n = 0;
   for(const cle of NUAGE_CLES){
-    const v = lireEspace(depuis, cle);
+    const v = await lireEspace(depuis, cle);
     if(v == null) continue;
     await nuageEcrire(cle, v);
     n++;
-    if(moi && depuis !== moi) ecrireEspace(moi, cle, v);
+    if(moi && depuis !== moi) await ecrireEspace(moi, cle, v);
   }
   /* La partie est maintenant en ligne et dans l'espace du compte : on retire
      la copie invitée, qui doublerait la place prise dans le navigateur. */
-  if(moi && depuis === "invite" && n) viderEspace("invite");
+  if(moi && depuis === "invite" && n) await viderEspace("invite");
   return n;
 }
 
@@ -3343,7 +3446,7 @@ async function nuageCollision(){
   if(!nuageConnecte()) return "aucune";
   let distant = null;
   try{ distant = await nuageLire("fm:profile"); }catch(e){ return "erreur"; }
-  const local = lireEspace("invite", "fm:profile");
+  const local = await lireEspace("invite", "fm:profile");
   const aDistant = !!(distant && distant.valeur && distant.valeur.pseudo);
   const aLocal   = !!(local && local.pseudo);
   if(aDistant && aLocal) return "choix";
@@ -3369,6 +3472,14 @@ function wsKey(k,s){ return s ? k : (acct()+"/"+k); }
 async function sget(key, shared=false){
   try{
     if(HAS_WS){ const r = await window.storage.get(wsKey(key,shared), shared); return r ? JSON.parse(r.value) : null; }
+    if(await idbPret){
+      const k = lsKey(key,shared);
+      try{
+        const v = await idbGet("kv", k);
+        if(v != null) return v;
+      }catch(e){}
+      if(memStore[k] != null) return memStore[k];
+    }
     const v = window.localStorage.getItem(lsKey(key,shared));
     return v ? JSON.parse(v) : (memStore[lsKey(key,shared)] || null);
   }catch(e){ return memStore[lsKey(key,shared)] || null; }
@@ -3376,7 +3487,14 @@ async function sget(key, shared=false){
 async function sset(key, val, shared=false){
   try{
     if(HAS_WS){ await window.storage.set(wsKey(key,shared), JSON.stringify(val), shared); return; }
-    if(!lsPoser(lsKey(key,shared), JSON.stringify(val))) throw new Error("stockage plein");
+    if(key === "fm:col" && !shared && Array.isArray(val)) await rangerTextes(val);
+    if(await idbPret){
+      try{ await idbSet("kv", lsKey(key,shared), val); }
+      catch(e){
+        diagLog("écriture IndexedDB refusée : " + (e && e.message));
+        if(!lsPoser(lsKey(key,shared), JSON.stringify(val))) throw new Error("stockage plein");
+      }
+    }else if(!lsPoser(lsKey(key,shared), JSON.stringify(val))) throw new Error("stockage plein");
   }catch(e){ memStore[lsKey(key,shared)] = val; stockagePlein = true; }
   /* L'appareil garde toujours la main : l'écriture locale est faite, le
      serveur suit. Si le réseau manque, la partie n'est pas perdue. */
@@ -3386,6 +3504,9 @@ async function slist(prefix, shared=false){
   try{
     if(HAS_WS){ const r = await window.storage.list(wsKey(prefix,shared), shared); return (r && r.keys) || []; }
     const out=[], p=lsKey(prefix,shared), base=lsKey("",shared).length;
+    if(await idbPret){
+      try{ for(const k of await idbCles("kv")) if(typeof k === "string" && k.indexOf(p)===0) out.push(k.slice(base)); }catch(e){}
+    }
     for(let i=0;i<window.localStorage.length;i++){
       const k = window.localStorage.key(i);
       if(k && k.indexOf(p)===0) out.push(k.slice(base));
@@ -3404,17 +3525,45 @@ async function migrateLegacy(){
         const old = await window.storage.get(k, false).catch(()=>null);
         if(old) await window.storage.set(wsKey(k,false), old.value, false);
       } else {
-        if(window.localStorage.getItem(lsKey(k,false))) continue;
+        if(await sget(k)) continue;
         const old = window.localStorage.getItem("fm-local:"+k);
-        if(old) lsPoser(lsKey(k,false), old);
+        if(old){ await sset(k, JSON.parse(old)); window.localStorage.removeItem("fm-local:"+k); }
       }
     }catch(e){}
   }
 }
 
-/* Le texte d'une carte est le début de l'article. 1 200 signes suffisent à
-   l'affichage ; au-delà, des centaines de cartes saturent le navigateur. */
-const TEXTE_MAX = 1200;
+/* Le texte d'une carte est le début de l'article. Il vit dans son propre
+   magasin, hors de la collection : la collection reste légère à
+   enregistrer et à envoyer au serveur, et le texte se recharge depuis le
+   wiki si l'appareil ne l'a pas. */
+const TEXTE_MAX = 2500;
+async function rangerTextes(col){
+  if(!(await idbPret)) return;
+  for(const c of col){
+    if(!c || typeof c.text !== "string" || !c.text) continue;
+    try{ await idbSet("textes", c.id, c.text); delete c.text; }catch(e){ return; }
+  }
+}
+async function chargerLore(c){
+  if(c.text) return c.text;
+  if(await idbPret){
+    try{ const t = await idbGet("textes", c.id); if(t) return t; }catch(e){}
+  }
+  if(SANDBOX || !c.id) return "";
+  try{
+    const i = c.id.lastIndexOf(":");
+    const host = c.id.slice(0, i), pid = c.id.slice(i + 1);
+    if(!host || !/^\d+$/.test(pid)) return "";
+    const u = UNIVERSES.find(x => x.label === c.univ) || {};
+    const w = Object.assign({}, u, {host});
+    const d = await api({action:"query", pageids:pid, prop:"extracts", exintro:"1", explaintext:"1"}, w);
+    const p = d.query && d.query.pages && d.query.pages[0];
+    const t = p && p.extract ? coupeTexte(p.extract) : "";
+    if(t && IDB_OK) idbSet("textes", c.id, t).catch(()=>{});
+    return t;
+  }catch(e){ return ""; }
+}
 function coupeTexte(t){
   t = String(t || "");
   if(t.length <= TEXTE_MAX) return t;
@@ -4559,6 +4708,7 @@ create policy "chacun les siennes"
     </details>`;
 
   const dg = view.querySelector("#diag"); if(dg) dg.textContent = diagnosticNuage();
+  idbMesurer();
   if(co){
     view.querySelector("#c-sortir").onclick = async ()=>{
       nuageToutVider();
@@ -4652,8 +4802,8 @@ async function apresConnexion(){
   /* Deux parties : on décrit chacune avant de demander. */
   const distant = await nuageLire("fm:profile");
   const dcol = await nuageLire("fm:col");
-  const local = lireEspace("invite", "fm:profile");
-  const lcol  = lireEspace("invite", "fm:col");
+  const local = await lireEspace("invite", "fm:profile");
+  const lcol  = await lireEspace("invite", "fm:col");
   const decrire = (p, c) => p
     ? `${esc(p.pseudo || "sans pseudo")} · ${(c && c.length) || 0} carte${((c&&c.length)||0)>1?"s":""} · niveau ${levelFromXP((c||[]).reduce((n,x)=>n+([1,2,5,12,30,90,300][RARITIES.indexOf(x.rarity)]||1)*(x.count||1),0)).lvl}`
     : "partie vide";
@@ -6781,7 +6931,11 @@ function showCard(c){
   document.body.classList.add("cardopen");
   let qty = 1;
   const shut = ()=>{ m.remove(); document.body.classList.remove("cardopen"); };
-  const lore = (c.text || c.desc || "").trim();
+  let lore = (c.text || c.desc || "").trim();
+  chargerLore(c).then(t=>{
+    t = (t || "").trim();
+    if(t && t.length > lore.length && m.isConnected){ lore = t; draw(); }
+  });
 
   const draw = ()=>{
     const openLore = m.querySelector(".lore") ? m.querySelector(".lore").open : false;
@@ -11008,6 +11162,10 @@ function openSettings(){
     if(tot > 1500000) libererStockage();
   }catch(e){}
   diagLog("démarrage · session " + (nuageConnecte() ? "oui" : "non"));
+  if(await idbPret){
+    await idbReprise();
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().then(p=>{ idbPersistant = p; }); }catch(e){}
+  }
   if(nuageConfigure() && nuageConnecte()){
     try{ const eu = await nuageDescendre(); diagLog("descente : " + eu); }catch(e){ diagLog("descente en erreur : " + e.message); }
     setTimeout(nuageRepousser, 1500);
@@ -11055,7 +11213,7 @@ function openSettings(){
   }
   farmTick();
   state.collection = (await sget("fm:col")) || [];
-  if(allegerCollection(state.collection)) await sset("fm:col", state.collection);
+  if(state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
   paintSound();
   render();
   paintAchDot();
