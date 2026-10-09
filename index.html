@@ -2956,6 +2956,10 @@ function nuagePoseSession(s){
     else localStorage.removeItem(NUAGE_SESSION);
   }catch(e){}
 }
+/* Si la session se ferme toute seule, on garde la raison : elle s'affiche
+   sur la page Compte au lieu de laisser le joueur deviner. */
+function nuageRaison(r){ try{ if(r) localStorage.setItem("fm-local:nuage-raison", r); else localStorage.removeItem("fm-local:nuage-raison"); }catch(e){} }
+function nuageRaisonLue(){ try{ return localStorage.getItem("fm-local:nuage-raison") || ""; }catch(e){ return ""; } }
 function nuageConnecte(){ const s = nuageSession(); return !!(s && s.user && s.user.id); }
 function nuageCourriel(){ const s = nuageSession(); return s && s.user ? s.user.email : ""; }
 
@@ -2993,6 +2997,7 @@ async function nuageInscrire(courriel, mdp){
 async function nuageConnecter(courriel, mdp){
   const d = await nuageAuth("token?grant_type=password", {email:courriel, password:mdp});
   nuageGarde(d);
+  nuageRaison("");
 }
 
 async function nuageDeconnecter(){
@@ -3013,13 +3018,14 @@ async function nuageJeton(forcer){
   let s = nuageSession();
   if(!s) return null;
   if(!forcer && Date.now() < s.exp) return s.jeton;
-  if(!s.refresh){ nuagePoseSession(null); return null; }
+  if(!s.refresh){ nuageRaison("session expirée, pas de jeton de renouvellement"); nuagePoseSession(null); return null; }
   if(!nuageRenouvellement){
     nuageRenouvellement = (async ()=>{
       try{
         const d = await nuageAuth("token?grant_type=refresh_token", {refresh_token:s.refresh});
         return nuageGarde(d).jeton;
       }catch(e){
+        nuageRaison("renouvellement refusé : " + String(e && e.message || e));
         nuagePoseSession(null);
         return null;
       }finally{
@@ -3045,6 +3051,7 @@ async function nuageRest(chemin, opts={}){
      horloge du téléphone décalée, session révoquée. On le renouvelle une
      fois et on réessaie avant de renoncer. */
   if(r.status === 401){
+    try{ const j = JSON.parse(await r.clone().text()); nuageRaison("la base a refusé le jeton (401) : " + (j.message || j.hint || j.error || "")); }catch(e){ nuageRaison("la base a refusé le jeton (401)"); }
     const neuf = await nuageJeton(true);
     if(!neuf) throw new Error("session expirée");
     r = await envoyer(neuf);
@@ -3070,10 +3077,12 @@ async function nuageLire(cle){
 async function nuageEcrire(cle, valeur){
   const s = nuageSession();
   if(!s || !s.user) return;
+  const corps = JSON.stringify([{joueur:s.user.id, cle, valeur, maj:new Date().toISOString()}]);
   await nuageRest(NUAGE_TABLE, {
     method:"POST",
     headers:{"Prefer":"resolution=merge-duplicates"},
-    body:JSON.stringify([{joueur:s.user.id, cle, valeur, maj:new Date().toISOString()}])
+    body:corps,
+    keepalive: corps.length < 60000
   });
 }
 
@@ -3085,8 +3094,15 @@ const nuageMinuteurs = new Map();
 let nuageErreur = "";
 let nuageEtat = "repos";       // repos | envoi | erreur | hors-ligne
 
+function nuageAttente(){ try{ return JSON.parse(localStorage.getItem("fm-local:nuage-attente") || "[]"); }catch(e){ return []; } }
+function nuageAttentePose(l){ try{ localStorage.setItem("fm-local:nuage-attente", JSON.stringify(l)); }catch(e){} }
 function nuagePousse(cle, valeur){
   if(!nuageConfigure() || !nuageConnecte()) return;
+  /* Date de la dernière modification locale, et marque « pas encore envoyé » :
+     si la page se recharge avant l'envoi, le serveur ne doit pas écraser
+     l'appareil avec une version plus ancienne. */
+  ecrireEspace(acct(), "maj:" + cle, new Date().toISOString());
+  const l = nuageAttente(); if(l.indexOf(cle) < 0){ l.push(cle); nuageAttentePose(l); }
   nuageEnAttente.set(cle, valeur);
   clearTimeout(nuageMinuteurs.get(cle));
   nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), 1200));
@@ -3100,6 +3116,7 @@ async function nuageVide(cle){
   nuageEtat = "envoi"; majEtatNuage();
   try{
     await nuageEcrire(cle, v);
+    if(!nuageEnAttente.has(cle)) nuageAttentePose(nuageAttente().filter(c => c !== cle));
     nuageEtat = nuageEnAttente.size ? "envoi" : "repos";
   }catch(e){
     /* On remet la valeur en attente : elle repartira au prochain
@@ -3150,20 +3167,51 @@ const NUAGE_CLES = ["fm:profile", "fm:col"];
 
 /* Descend les sauvegardes du serveur dans le cache local, puis le jeu
    démarre normalement : aucune lecture du jeu ne part sur le réseau. */
-async function nuageDescendre(){
+async function nuageDescendre(forcer){
   if(!nuageConfigure() || !nuageConnecte()) return false;
   let eu = false;
+  const attente = nuageAttente();
   for(const cle of NUAGE_CLES){
     try{
       const r = await nuageLire(cle);
-      if(r && r.valeur != null){
-        localStorage.setItem(lsKey(cle, false), JSON.stringify(r.valeur));
-        eu = true;
+      if(!r || r.valeur == null) continue;
+      const moi = acct();
+      const locale = lireEspace(moi, "maj:" + cle);
+      const plusRecentIci = !forcer && (attente.indexOf(cle) >= 0 ||
+        (locale && Date.parse(locale) > Date.parse(r.maj)));
+      if(plusRecentIci){
+        /* l'appareil a du neuf que le serveur n'a pas : on l'envoie */
+        const v = lireEspace(moi, cle);
+        if(v != null){ await nuageEcrire(cle, v); }
+        continue;
       }
+      localStorage.setItem(lsKey(cle, false), JSON.stringify(r.valeur));
+      ecrireEspace(moi, "maj:" + cle, r.maj);
+      eu = true;
     }catch(e){ return false; }
   }
+  nuageAttentePose([]);
   return eu;
 }
+
+/* Renvoie ce qui n'est pas encore parti (réseau coupé, page fermée trop tôt). */
+let nuageEssais = 0;
+async function nuageRepousser(){
+  if(!nuageConfigure() || !nuageConnecte()) return;
+  for(const cle of nuageAttente()){
+    const v = lireEspace(acct(), cle);
+    if(v == null) continue;
+    try{
+      await nuageEcrire(cle, v);
+      nuageAttentePose(nuageAttente().filter(c => c !== cle));
+    }catch(e){
+      if(++nuageEssais < 6) setTimeout(nuageRepousser, 4000);
+      return;
+    }
+  }
+  nuageEssais = 0;
+}
+addEventListener("online", ()=>{ nuageRepousser(); });
 
 /* Envoie une partie de cet appareil vers le serveur, en une fois, et la
    recopie dans l'espace du compte pour que le rechargement la retrouve.
@@ -4364,6 +4412,7 @@ create policy "chacun les siennes"
           <input type="password" id="c-mdp" autocomplete="current-password"
                  placeholder="au moins 6 caractères">
         </div>
+        ${nuageRaisonLue() ? `<p class="sub err">Déconnecté : ${esc(nuageRaisonLue())}</p>` : ""}
         <p class="sub err" id="c-err" hidden></p>
         <div class="row" style="margin-top:.4rem">
           <button class="btn" id="c-entrer">Se connecter</button>
@@ -4445,7 +4494,7 @@ async function apresConnexion(){
   const cas = await nuageCollision();
 
   if(cas === "distant"){
-    await nuageDescendre();
+    await nuageDescendre(true);
     location.reload();
     return;
   }
@@ -4488,7 +4537,7 @@ async function apresConnexion(){
     </div>`;
 
   view.querySelector("#p-distant").onclick = async ()=>{
-    await nuageDescendre(); location.reload();
+    await nuageDescendre(true); location.reload();
   };
   view.querySelector("#p-local").onclick = async ()=>{
     await nuageMonter("invite"); location.reload();
@@ -10812,6 +10861,7 @@ function openSettings(){
      viennent du réseau. */
   if(nuageConfigure() && nuageConnecte()){
     try{ await nuageDescendre(); }catch(e){}
+    setTimeout(nuageRepousser, 1500);
   }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
