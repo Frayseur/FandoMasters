@@ -2650,6 +2650,11 @@ body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{di
   background:var(--panel);border:1px solid var(--line);box-shadow:0 20px 50px -20px #000}
 #horsligne h3{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.04em;margin:.6rem 0 .3rem}
 #horsligne .sub{margin:0}
+
+.echmontant{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:.45rem 0 0}
+.echmontant span{font-family:var(--f-data);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.echmontant input{max-width:130px;margin:0;text-align:right}
+.echres{display:flex;flex-wrap:wrap;gap:.35rem;margin:.35rem 0}
 </style>
 </head>
 <body>
@@ -5403,9 +5408,25 @@ function dejaRegle(cle){
 function carteEchange(c){
   const o = Object.assign({}, c); delete o.text; o.count = 1; return o;
 }
+/* Un échange peut aussi porter des Fandominus et du Mana : ils voyagent dans
+   la même liste que les cartes, sous la forme {ressource, montant}. */
+const RESSOURCES = {coins:{nom:"Fandominus", ic:"◆"}, mana:{nom:"Mana", ic:"★"}};
+const estRessource = x => !!x && !!RESSOURCES[x.ressource] && x.montant > 0;
+const seulementCartes = l => (l || []).filter(x => x && !x.ressource);
+function montantDe(l, r){ return (l || []).filter(x => x && x.ressource === r).reduce((n, x) => n + (x.montant || 0), 0); }
+function resumeEchange(l){
+  const n = seulementCartes(l).length, parts = [];
+  if(n) parts.push(n + " carte" + (n > 1 ? "s" : ""));
+  for(const r of Object.keys(RESSOURCES)){ const m = montantDe(l, r); if(m) parts.push(m.toLocaleString("fr-FR") + " " + RESSOURCES[r].ic); }
+  return parts.join(" + ") || "rien";
+}
 function retirerCopies(cartes){
   const p = state.profile;
   for(const x of cartes){
+    if(x && x.ressource){
+      if(estRessource(x)) p[x.ressource] = Math.max(0, (p[x.ressource] || 0) - x.montant);
+      continue;
+    }
     const c = state.collection.find(y => y.id === x.id);
     if(!c) continue;
     c.count = (c.count || 1) - 1;
@@ -5417,15 +5438,25 @@ function retirerCopies(cartes){
   }
 }
 function ajouterCopies(cartes){
+  const p = state.profile;
   for(const x of cartes){
+    if(x && x.ressource){
+      if(estRessource(x)){
+        p[x.ressource] = (p[x.ressource] || 0) + x.montant;
+        if(x.ressource === "mana") p.mana = Math.min(MANA_CAP, p.mana);
+      }
+      continue;
+    }
     const c = state.collection.find(y => y.id === x.id);
     if(c) c.count = (c.count || 1) + 1;
     else state.collection.push(carteEchange(x));
   }
 }
 function possede(cartes){
+  const p = state.profile;
+  for(const r of Object.keys(RESSOURCES)) if((p[r] || 0) < montantDe(cartes, r)) return false;
   const besoin = {};
-  for(const x of cartes) besoin[x.id] = (besoin[x.id] || 0) + 1;
+  for(const x of seulementCartes(cartes)) besoin[x.id] = (besoin[x.id] || 0) + 1;
   return Object.entries(besoin).every(([id, n]) => {
     const c = state.collection.find(y => y.id === id);
     return c && (c.count || 1) >= n;
@@ -5543,7 +5574,7 @@ async function amisRegler(){
         p.echanges = (p.echanges || 0) + 1;
         ajouterCopies(e.demande || []);
         const nom = (amis.profils.get(e.a) || {}).pseudo || "Votre ami";
-        toast("Échange accepté", nom + " vous envoie " + (e.demande||[]).length + " carte" + ((e.demande||[]).length > 1 ? "s" : ""), "info");
+        toast("Échange accepté", nom + " vous envoie " + resumeEchange(e.demande), "info");
         logEvent("Échange conclu avec " + nom, "gold");
       }else{
         ajouterCopies(e.donne || []);
@@ -5553,7 +5584,7 @@ async function amisRegler(){
     }
     try{ await nuageRest("rpc/clore_echange", {method:"POST", body:JSON.stringify({eid:e.id})}); e.clos = true; }catch(err){}
   }
-  if(change){ await sset("fm:col", state.collection); await sset("fm:profile", p); checkAch(); }
+  if(change){ await sset("fm:col", state.collection); await sset("fm:profile", p); piecesAffichees(); checkAch(); }
 }
 
 /* Coup d'œil régulier : nouvelles demandes, nouveaux échanges, réponses. */
@@ -5604,8 +5635,12 @@ function ligneJoueur(id, actions){
   </div>`;
 }
 function cartesMini(cartes){
-  if(!cartes || !cartes.length) return `<span class="sub">rien</span>`;
-  return `<div class="pickgrid echgrid">${cartes.map(c => `<div class="pickwrap" style="cursor:default">${cardHTML(c, {compact:true})}</div>`).join("")}</div>`;
+  const cs = seulementCartes(cartes);
+  const res = Object.keys(RESSOURCES).map(r => [r, montantDe(cartes, r)]).filter(([, m]) => m > 0);
+  if(!cs.length && !res.length) return `<span class="sub">rien</span>`;
+  return (res.length ? `<div class="echres">${res.map(([r, m]) =>
+      `<span class="mtag ok">${m.toLocaleString("fr-FR")} ${RESSOURCES[r].ic} ${RESSOURCES[r].nom}</span>`).join("")}</div>` : "")
+    + (cs.length ? `<div class="pickgrid echgrid">${cs.map(c => `<div class="pickwrap" style="cursor:default">${cardHTML(c, {compact:true})}</div>`).join("")}</div>` : "");
 }
 
 /* ---- la page ---- */
@@ -5754,7 +5789,7 @@ function viewAmis(){
 async function accepterEchange(eid){
   const e = amis.echanges.find(x => x.id === eid);
   if(!e) throw new Error("échange introuvable");
-  if(!possede(e.demande || [])) throw new Error("vous n'avez plus toutes les cartes demandées");
+  if(!possede(e.demande || [])) throw new Error("il vous manque des cartes, des Fandominus ou du Mana demandés");
   const r = await nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid, decision:"acceptee"})});
   if(r !== "acceptee") throw new Error("cet échange n'est plus disponible (" + r + ")");
   const p = state.profile;
@@ -5766,7 +5801,8 @@ async function accepterEchange(eid){
     await sset("fm:profile", p);
     checkAch();
   }
-  toast("Échange conclu", (e.donne || []).length + " carte" + ((e.donne||[]).length > 1 ? "s" : "") + " ajoutée" + ((e.donne||[]).length > 1 ? "s" : "") + " à votre album", "info");
+  toast("Échange conclu", "vous recevez " + resumeEchange(e.donne), "info");
+  piecesAffichees();
   logEvent("Échange conclu avec " + ((amis.profils.get(e.de) || {}).pseudo || "un ami"), "gold");
 }
 
@@ -5943,27 +5979,40 @@ async function composerEchange(id){
   const occupees = engagedIds();
   const miennes = state.collection.filter(c => !occupees.has(c.id));
   let donne = [], demande = [];
+  const montants = {donne:{coins:0, mana:0}, demande:{coins:0, mana:0}};
+  const p = state.profile;
   const m = document.createElement("div");
   m.className = "modal";
+  const champs = cote => Object.keys(RESSOURCES).map(r => `
+    <label class="echmontant"><span>${RESSOURCES[r].ic} ${RESSOURCES[r].nom}</span>
+      <input type="number" min="0" step="1" inputmode="numeric" data-cote="${cote}" data-res="${r}"
+        value="${montants[cote][r] || ""}" placeholder="0"></label>`).join("");
   const dessiner = ()=>{
     const d = donne.map(i => miennes.find(c => c.id === i)).filter(Boolean);
     const q = demande.map(i => leurs.find(c => c.id === i)).filter(Boolean);
+    const vide = !d.length && !q.length && !Object.values(montants.donne).some(Boolean) && !Object.values(montants.demande).some(Boolean);
     m.innerHTML = `<div class="inner" style="max-width:720px">
       <div class="row" style="justify-content:space-between;margin-bottom:.4rem">
         <h3 style="font-size:1.15rem">Échange avec ${esc(pr.pseudo)}</h3>
         <button class="btn small ghost" id="close">Fermer</button>
       </div>
-      <p class="sub" style="margin:0 0 .8rem">5 cartes maximum de chaque côté.</p>
+      <p class="sub" style="margin:0 0 .8rem">5 cartes maximum de chaque côté. Vous avez ${short(p.coins || 0)} ◆ et ${short(p.mana || 0)} ★.</p>
       <div class="echcols">
         <div class="panel"><div class="row" style="justify-content:space-between;align-items:baseline">
-          <b>Vous donnez</b><button class="btn small ghost" id="pdonne">Choisir</button></div>${cartesMini(d)}</div>
+          <b>Vous donnez</b><button class="btn small ghost" id="pdonne">Cartes</button></div>
+          ${champs("donne")}${seulementCartes(d).length ? cartesMini(d) : ""}</div>
         <div class="panel"><div class="row" style="justify-content:space-between;align-items:baseline">
-          <b>Vous demandez</b><button class="btn small ghost" id="pdemande">Choisir</button></div>
-          ${leurs.length ? cartesMini(q) : `<span class="sub">Sa collection est vide ou pas encore synchronisée.</span>`}</div>
+          <b>Vous demandez</b><button class="btn small ghost" id="pdemande" ${leurs.length ? "" : "disabled"}>Cartes</button></div>
+          ${champs("demande")}${q.length ? cartesMini(q) : ""}</div>
       </div>
-      <div class="row" style="margin-top:.8rem"><button class="btn" id="envoyer" ${d.length || q.length ? "" : "disabled"}>Proposer l'échange</button></div>
+      <div class="row" style="margin-top:.8rem"><button class="btn" id="envoyer" ${vide ? "disabled" : ""}>Proposer l'échange</button></div>
     </div>`;
     m.querySelector("#close").onclick = ()=>m.remove();
+    m.querySelectorAll("[data-res]").forEach(inp => inp.oninput = ()=>{
+      montants[inp.dataset.cote][inp.dataset.res] = Math.max(0, Math.floor(+inp.value || 0));
+      const vide2 = !donne.length && !demande.length && !Object.values(montants.donne).some(Boolean) && !Object.values(montants.demande).some(Boolean);
+      m.querySelector("#envoyer").disabled = vide2;
+    });
     m.querySelector("#pdonne").onclick = async ()=>{
       const r = await choisirCartes({titre:"Vos cartes à donner", liste:miennes, max:5, deja:donne});
       if(r) donne = r; dessiner();
@@ -5975,20 +6024,25 @@ async function composerEchange(id){
     };
     m.querySelector("#envoyer").onclick = async (ev)=>{
       const b = ev.currentTarget; b.disabled = true;
-      const cd = donne.map(i => miennes.find(c => c.id === i)).filter(Boolean).map(carteEchange);
-      const cq = demande.map(i => leurs.find(c => c.id === i)).filter(Boolean).map(carteEchange);
-      if(!possede(cd)){ toast("Cartes manquantes", "vous n'avez plus ces cartes", "lose"); b.disabled = false; return; }
+      const res = cote => Object.keys(RESSOURCES).filter(r => montants[cote][r] > 0).map(r => ({ressource:r, montant:montants[cote][r]}));
+      const cd = donne.map(i => miennes.find(c => c.id === i)).filter(Boolean).map(carteEchange).concat(res("donne"));
+      const cq = demande.map(i => leurs.find(c => c.id === i)).filter(Boolean).map(carteEchange).concat(res("demande"));
+      if(!possede(cd)){ toast("Pas assez", "vous n'avez pas tout ce que vous donnez", "lose"); b.disabled = false; return; }
+      /* séquestre avant l'envoi : rendu si le serveur refuse */
+      retirerCopies(cd);
+      await sset("fm:col", state.collection); await sset("fm:profile", state.profile); piecesAffichees();
       try{
         await nuageRest("echanges", {method:"POST", body:JSON.stringify([{de:moiId(), a:id, donne:cd, demande:cq}])});
-        retirerCopies(cd);
-        await sset("fm:col", state.collection);
-        await sset("fm:profile", state.profile);
         toast("Échange proposé", pr.pseudo + " doit l'accepter", "info");
         m.remove();
         amis.onglet = "echanges";
         await amisCharger();
         if(state.view === "amis") viewAmis();
-      }catch(e){ b.disabled = false; toast("Échange impossible", String(e.message || e), "lose"); }
+      }catch(e){
+        ajouterCopies(cd);
+        await sset("fm:col", state.collection); await sset("fm:profile", state.profile); piecesAffichees();
+        b.disabled = false; toast("Échange impossible", String(e.message || e), "lose");
+      }
     };
   };
   document.body.appendChild(m);
