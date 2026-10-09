@@ -2322,7 +2322,7 @@ body.overlay .wrap,body.overlay .nav,body.overlay .scrim{visibility:hidden}
 input[type=text],input[type=search],input[type=number],input[type=password],select,textarea{
   background:transparent;border:1px solid var(--line);border-radius:10px;
   color:var(--text);padding:.72rem .85rem}
-input::placeholder,textarea::placeholder{color:rgba(31,26,23,.38)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.7}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--p3)}
 
 /* -- Listes : filets fins plutôt que cartouches -- */
@@ -2563,6 +2563,39 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
 .invstats small{font-family:var(--f-data);font-size:.58rem;letter-spacing:.11em;
   text-transform:uppercase;color:var(--muted);line-height:1.3;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- page Compte ---- */
+.champ{display:grid;gap:.3rem;margin-bottom:.8rem}
+.champ label{font-family:var(--f-data);font-size:.66rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--muted)}
+.champ input{width:100%}
+.courriel{font-family:var(--f-data);font-size:.95rem;letter-spacing:.02em;
+  word-break:break-all}
+.nuetat{margin:.1rem 0 0;font-family:var(--f-data);font-size:.72rem;
+  letter-spacing:.08em;text-transform:uppercase}
+.nuetat.ok{color:var(--p4)}
+.nuetat.wip{color:var(--p5)}
+.nuetat.ko{color:var(--red);text-transform:none;letter-spacing:.02em;font-size:.78rem}
+.err{color:var(--red);margin:.2rem 0 .4rem;font-size:.88rem}
+
+.marche{margin:.2rem 0 0;padding-left:1.2rem;color:var(--muted);font-weight:300}
+.marche li{margin:.35rem 0}
+.marche code,.sql{font-family:var(--f-data)}
+.marche code{color:var(--p4);font-size:.92em}
+.sql{display:block;margin:.5rem 0 0;padding:.9rem 1rem;border:1px solid var(--line);
+  border-radius:10px;background:var(--ink-2);color:var(--text);
+  font-size:.74rem;line-height:1.65;white-space:pre;overflow-x:auto}
+
+.choixpartie{display:grid;gap:.6rem}
+.part{display:grid;gap:.25rem;text-align:left;cursor:pointer;padding:.9rem 1rem;
+  border:1px solid var(--line);border-radius:11px;background:transparent;color:var(--text)}
+.part:hover{border-color:var(--p4)}
+.part .t{font-family:var(--f-titre);text-transform:uppercase;font-size:1.02rem;
+  letter-spacing:.03em}
+.part .d{font-family:var(--f-data);font-size:.76rem;color:var(--muted)}
+
+.lien{background:none;border:none;padding:0;cursor:pointer;font:inherit;
+  color:var(--p4);text-decoration:underline;text-underline-offset:3px}
 </style>
 </head>
 <body>
@@ -2597,6 +2630,7 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
       <button data-view="profil"><span class="ic">☻</span><b>Profil</b><small>Vitrine et portrait</small></button>
       <button data-view="village"><span class="ic">⌂</span><b>Village</b><small>Marchands, forge et comptoir</small></button>
       <button data-view="theme"><span class="ic">◐</span><b>Couleurs</b><small>Réglez la palette du site</small></button>
+      <button data-view="compte"><span class="ic">☁</span><b>Compte</b><small>Sauvegarde en ligne</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
       <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Échanges entre joueurs · bientôt</small></button>
     </div>
@@ -2883,9 +2917,287 @@ const state = {
   fRar:"Tous", fUniv:"Tous", fDup:"Tous", q:"", page:1, pickOpen:false, catW:null, catList:null, catQ:"", uq:"", ucat:"Tous", picked:[], dq:""
 };
 
+
+/* ======================================================================
+   Sauvegarde en ligne — essai
+   ----------------------------------------------------------------------
+   Le jeu reste jouable sans rien de tout ça : tant que les deux réglages
+   ci-dessous sont vides, il fonctionne exactement comme avant, en solo,
+   dans le navigateur. Remplis-les et une page « Compte » apparaît.
+
+   On appelle l'API REST de Supabase directement en fetch plutôt que
+   d'embarquer sa bibliothèque : une centaine de lignes contre cent vingt
+   kilo-octets, et le fichier reste sans dépendance.
+
+   La clé « anon » est faite pour être publique. Ce qui protège les
+   données, c'est la règle de sécurité posée sur la table, côté base :
+   un joueur ne lit et n'écrit que ses propres lignes.
+   ====================================================================== */
+
+const NUAGE = {
+  url: "",     // https://xxxxxxxx.supabase.co
+  cle: ""      // la clé « anon public » du projet
+};
+
+const NUAGE_SESSION = "fm-local:nuage";
+const NUAGE_TABLE   = "sauvegardes";
+
+function nuageConfigure(){ return !!(NUAGE.url && NUAGE.cle); }
+
+function nuageSession(){
+  try{
+    const b = localStorage.getItem(NUAGE_SESSION);
+    return b ? JSON.parse(b) : null;
+  }catch(e){ return null; }
+}
+function nuagePoseSession(s){
+  try{
+    if(s) localStorage.setItem(NUAGE_SESSION, JSON.stringify(s));
+    else localStorage.removeItem(NUAGE_SESSION);
+  }catch(e){}
+}
+function nuageConnecte(){ const s = nuageSession(); return !!(s && s.user && s.user.id); }
+function nuageCourriel(){ const s = nuageSession(); return s && s.user ? s.user.email : ""; }
+
+function nuageGarde(d){
+  /* Supabase renvoie une durée de vie ; on retient l'échéance absolue. */
+  const exp = Date.now() + ((d.expires_in || 3600) - 60) * 1000;
+  const s = {jeton:d.access_token, refresh:d.refresh_token, exp, user:d.user || null};
+  nuagePoseSession(s);
+  return s;
+}
+
+async function nuageAuth(chemin, corps){
+  const r = await fetch(NUAGE.url + "/auth/v1/" + chemin, {
+    method:"POST",
+    headers:{"apikey":NUAGE.cle, "Content-Type":"application/json"},
+    body:JSON.stringify(corps)
+  });
+  const d = await r.json().catch(()=>({}));
+  if(!r.ok){
+    const msg = d.error_description || d.msg || d.message || d.error || "erreur " + r.status;
+    throw new Error(msg);
+  }
+  return d;
+}
+
+async function nuageInscrire(courriel, mdp){
+  const d = await nuageAuth("signup", {email:courriel, password:mdp});
+  /* Si la confirmation par courriel est exigée, il n'y a pas encore de
+     jeton : on le dit plutôt que de faire croire à une connexion. */
+  if(!d.access_token) return {confirmation:true};
+  nuageGarde(d);
+  return {confirmation:false};
+}
+
+async function nuageConnecter(courriel, mdp){
+  const d = await nuageAuth("token?grant_type=password", {email:courriel, password:mdp});
+  nuageGarde(d);
+}
+
+async function nuageDeconnecter(){
+  const s = nuageSession();
+  if(s && s.jeton){
+    try{
+      await fetch(NUAGE.url + "/auth/v1/logout", {method:"POST",
+        headers:{"apikey":NUAGE.cle, "Authorization":"Bearer " + s.jeton}});
+    }catch(e){}
+  }
+  nuagePoseSession(null);
+}
+
+/* Le jeton dure une heure. Quand il approche de l'échéance on le renouvelle
+   avec le jeton de rafraîchissement, sans redemander le mot de passe. */
+let nuageRenouvellement = null;
+async function nuageJeton(forcer){
+  let s = nuageSession();
+  if(!s) return null;
+  if(!forcer && Date.now() < s.exp) return s.jeton;
+  if(!s.refresh){ nuagePoseSession(null); return null; }
+  if(!nuageRenouvellement){
+    nuageRenouvellement = (async ()=>{
+      try{
+        const d = await nuageAuth("token?grant_type=refresh_token", {refresh_token:s.refresh});
+        return nuageGarde(d).jeton;
+      }catch(e){
+        nuagePoseSession(null);
+        return null;
+      }finally{
+        setTimeout(()=>{ nuageRenouvellement = null; }, 0);
+      }
+    })();
+  }
+  return nuageRenouvellement;
+}
+
+async function nuageRest(chemin, opts={}){
+  const envoyer = jeton => fetch(NUAGE.url + "/rest/v1/" + chemin, Object.assign({}, opts, {
+    headers: Object.assign({
+      "apikey": NUAGE.cle,
+      "Authorization": "Bearer " + jeton,
+      "Content-Type": "application/json"
+    }, opts.headers || {})
+  }));
+  const jeton = await nuageJeton();
+  if(!jeton) throw new Error("session expirée");
+  let r = await envoyer(jeton);
+  /* Le serveur peut refuser un jeton avant l'échéance qu'on avait notée :
+     horloge du téléphone décalée, session révoquée. On le renouvelle une
+     fois et on réessaie avant de renoncer. */
+  if(r.status === 401){
+    const neuf = await nuageJeton(true);
+    if(!neuf) throw new Error("session expirée");
+    r = await envoyer(neuf);
+  }
+  if(!r.ok) throw new Error("base : erreur " + r.status);
+  const t = await r.text();
+  return t ? JSON.parse(t) : null;
+}
+
+/* Lecture d'une sauvegarde. Renvoie {valeur, maj} ou null. */
+async function nuageLire(cle){
+  const s = nuageSession();
+  if(!s || !s.user) return null;
+  const q = "?joueur=eq." + encodeURIComponent(s.user.id) +
+            "&cle=eq." + encodeURIComponent(cle) + "&select=valeur,maj";
+  const d = await nuageRest(NUAGE_TABLE + q);
+  return (d && d[0]) ? d[0] : null;
+}
+
+async function nuageEcrire(cle, valeur){
+  const s = nuageSession();
+  if(!s || !s.user) return;
+  await nuageRest(NUAGE_TABLE, {
+    method:"POST",
+    headers:{"Prefer":"resolution=merge-duplicates"},
+    body:JSON.stringify([{joueur:s.user.id, cle, valeur, maj:new Date().toISOString()}])
+  });
+}
+
+/* Le jeu enregistre souvent ; on ne veut pas une requête par clic. Chaque
+   clé attend un court instant que les écritures se calment, puis part en
+   une seule fois. */
+const nuageEnAttente = new Map();
+const nuageMinuteurs = new Map();
+let nuageEtat = "repos";       // repos | envoi | erreur | hors-ligne
+
+function nuagePousse(cle, valeur){
+  if(!nuageConfigure() || !nuageConnecte()) return;
+  nuageEnAttente.set(cle, valeur);
+  clearTimeout(nuageMinuteurs.get(cle));
+  nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), 1200));
+}
+
+async function nuageVide(cle){
+  if(!nuageEnAttente.has(cle)) return;
+  const v = nuageEnAttente.get(cle);
+  nuageEnAttente.delete(cle);
+  nuageMinuteurs.delete(cle);
+  nuageEtat = "envoi"; majEtatNuage();
+  try{
+    await nuageEcrire(cle, v);
+    nuageEtat = nuageEnAttente.size ? "envoi" : "repos";
+  }catch(e){
+    /* On remet la valeur en attente : elle repartira au prochain
+       enregistrement, ou à la fermeture de la page. */
+    if(!nuageEnAttente.has(cle)) nuageEnAttente.set(cle, v);
+    nuageEtat = navigator.onLine === false ? "hors-ligne" : "erreur";
+  }
+  majEtatNuage();
+}
+
+function nuageToutVider(){
+  for(const cle of [...nuageEnAttente.keys()]){
+    clearTimeout(nuageMinuteurs.get(cle));
+    nuageVide(cle);
+  }
+}
+/* Dernière chance avant que l'onglet ne parte. */
+addEventListener("pagehide", nuageToutVider);
+addEventListener("visibilitychange", ()=>{ if(document.hidden) nuageToutVider(); });
+
+function majEtatNuage(){
+  const el = document.getElementById("nuage-etat");
+  if(!el) return;
+  const t = {repos:"à jour", "envoi":"envoi en cours…",
+             erreur:"envoi impossible, nouvel essai au prochain enregistrement",
+             "hors-ligne":"hors ligne, les parties sont gardées sur l'appareil"};
+  el.textContent = t[nuageEtat] || "";
+  el.className = "sub nuetat " + (nuageEtat === "repos" ? "ok" : nuageEtat === "envoi" ? "wip" : "ko");
+}
+
+/* Le stockage local est rangé par compte : « invite » hors connexion,
+   l'identifiant du joueur une fois connecté. Au moment de la connexion,
+   la partie de l'appareil est donc dans l'espace invité, pas dans celui
+   du compte qui vient de s'ouvrir — il faut aller la chercher là. */
+function lireEspace(espace, cle){
+  try{
+    const v = localStorage.getItem("fm-local:" + espace + ":" + cle);
+    return v ? JSON.parse(v) : null;
+  }catch(e){ return null; }
+}
+function ecrireEspace(espace, cle, val){
+  try{ localStorage.setItem("fm-local:" + espace + ":" + cle, JSON.stringify(val)); }catch(e){}
+}
+
+/* Les deux clés que le jeu enregistre. Tout passe par là. */
+const NUAGE_CLES = ["fm:profile", "fm:col"];
+
+/* Descend les sauvegardes du serveur dans le cache local, puis le jeu
+   démarre normalement : aucune lecture du jeu ne part sur le réseau. */
+async function nuageDescendre(){
+  if(!nuageConfigure() || !nuageConnecte()) return false;
+  let eu = false;
+  for(const cle of NUAGE_CLES){
+    try{
+      const r = await nuageLire(cle);
+      if(r && r.valeur != null){
+        localStorage.setItem(lsKey(cle, false), JSON.stringify(r.valeur));
+        eu = true;
+      }
+    }catch(e){ return false; }
+  }
+  return eu;
+}
+
+/* Envoie une partie de cet appareil vers le serveur, en une fois, et la
+   recopie dans l'espace du compte pour que le rechargement la retrouve.
+   « source » vaut « invite » à la connexion, l'identifiant du compte
+   quand le joueur renvoie sa partie depuis la page Compte. */
+async function nuageMonter(source){
+  const s = nuageSession();
+  const moi = s && s.user ? s.user.id : null;
+  const depuis = source || moi || "invite";
+  for(const cle of NUAGE_CLES){
+    const v = lireEspace(depuis, cle);
+    if(v == null) continue;
+    await nuageEcrire(cle, v);
+    if(moi && depuis !== moi) ecrireEspace(moi, cle, v);
+  }
+}
+
+/* À la première connexion sur un appareil, il peut y avoir une partie des
+   deux côtés. On ne tranche pas à la place du joueur : il choisit. */
+async function nuageCollision(){
+  if(!nuageConnecte()) return "aucune";
+  let distant = null;
+  try{ distant = await nuageLire("fm:profile"); }catch(e){ return "erreur"; }
+  const local = lireEspace("invite", "fm:profile");
+  const aDistant = !!(distant && distant.valeur && distant.valeur.pseudo);
+  const aLocal   = !!(local && local.pseudo);
+  if(aDistant && aLocal) return "choix";
+  if(aDistant) return "distant";
+  return "local";
+}
+
 /* ---------- stockage ---------- */
-/* espace de sauvegarde unique */
-function acct(){ return "invite"; }
+/* L'espace de sauvegarde porte l'identifiant du joueur connecté. Hors
+   connexion, tout le monde partage l'espace « invite » de l'appareil —
+   c'est le comportement d'origine. */
+function acct(){
+  const s = nuageSession();
+  return (s && s.user && s.user.id) ? s.user.id : "invite";
+}
 
 const HAS_WS = typeof window.storage === "object" && window.storage && typeof window.storage.get === "function";
 const SANDBOX = HAS_WS;            // artefact Claude : réseau externe bloqué
@@ -2904,6 +3216,9 @@ async function sset(key, val, shared=false){
     if(HAS_WS){ await window.storage.set(wsKey(key,shared), JSON.stringify(val), shared); return; }
     window.localStorage.setItem(lsKey(key,shared), JSON.stringify(val));
   }catch(e){ memStore[lsKey(key,shared)] = val; }
+  /* L'appareil garde toujours la main : l'écriture locale est faite, le
+     serveur suit. Si le réseau manque, la partie n'est pas perdue. */
+  if(!shared && NUAGE_CLES.indexOf(key) >= 0) nuagePousse(key, val);
 }
 async function slist(prefix, shared=false){
   try{
@@ -3210,24 +3525,61 @@ async function drawPages(n, w){
 
 /* Secours quand un article n'a aucune image : Wikimedia Commons, qui ne contient
    que des œuvres et photographies réelles, sous licence libre. */
-const commonsCache = new Map();
-async function commonsImage(title){
-  const key = (title||"").toLowerCase();
-  if(commonsCache.has(key)) return commonsCache.get(key);
-  let url = null;
-  try{
-    const q = new URLSearchParams({action:"query", format:"json", origin:"*",
-      generator:"search", gsrnamespace:"6", gsrlimit:"1",
-      gsrsearch:`filetype:bitmap ${title}`, prop:"imageinfo", iiprop:"url", iiurlwidth:"900"});
-    const r = await fetch("https://commons.wikimedia.org/w/api.php?" + q, {mode:"cors"});
-    const d = await r.json();
-    const pages = d && d.query && d.query.pages;
-    const first = pages && Object.values(pages)[0];
-    const info = first && first.imageinfo && first.imageinfo[0];
-    if(info) url = info.thumburl || info.url;
-  }catch(e){}
-  commonsCache.set(key, url);
-  return url;
+/* Le repli sur Wikimedia Commons a été retiré. Il cherchait une image par
+   le seul titre de l'article, sans rien savoir de l'univers : un article
+   de League of Legends intitulé « Classique » en revenait avec une photo
+   de calèches sur une route. Sur un wiki de fiction, une photographie du
+   monde réel n'est jamais la bonne illustration — mieux vaut le dessin de
+   repli, qui au moins ne ment pas. */
+
+/* L'illustration d'un article, par ordre de confiance : la vignette de
+   l'infobox d'abord, puis une figure du corps du texte, et seulement en
+   dernier recours n'importe quelle image.
+
+   Tout ce qui relève du gabarit est écarté avant de chercher : boîtes de
+   navigation, bandeaux d'avertissement, sommaires, icônes de références,
+   drapeaux. Prendre la première image venue ramenait régulièrement une
+   icône de modèle ou une vignette de pied de page à la place du sujet. */
+function illustrationDeLArticle(html){
+  const doc = document.createElement("div");
+  doc.innerHTML = html;
+
+  doc.querySelectorAll(
+    ".navbox, .navbox-inner, .nav, .navigation, .toc, #toc, " +
+    ".mw-references-wrap, .references, .reference, .mw-editsection, " +
+    ".ambox, .mbox, .messagebox, .stub, .noprint, .metadata, .sidebar, " +
+    ".succession-box, .hatnote, .dablink, .mw-empty-elt, " +
+    ".wikia-gallery-caption, .page-footer, footer, nav"
+  ).forEach(n => n.remove());
+
+  const pistes = [
+    ".pi-image-thumbnail",
+    "aside.portable-infobox img",
+    ".portable-infobox img",
+    ".infobox img",
+    "figure.thumb img",
+    ".thumbinner img",
+    ".mw-parser-output > figure img",
+    ".mw-parser-output > p img",
+    "img"
+  ];
+
+  for(const sel of pistes){
+    for(const im of doc.querySelectorAll(sel)){
+      const u = im.getAttribute("data-src") || im.getAttribute("src");
+      if(!u || !/\.(jpe?g|png|gif|webp)/i.test(u)) continue;
+      const net = u.split("/revision/")[0];
+      if(artRefusee(net)) continue;
+      /* Une icône de gabarit tient en quelques dizaines de pixels ; une
+         illustration d'article remplit son cadre. */
+      const l = +im.getAttribute("width") || 0;
+      const h = +im.getAttribute("height") || 0;
+      if((l && l < 80) || (h && h < 80)) continue;
+      if(/\/scale-to-width-down\/\d{1,2}(?:\/|$)/.test(net)) continue;
+      return net;
+    }
+  }
+  return null;
 }
 
 async function enrich(page, w){
@@ -3242,21 +3594,31 @@ async function enrich(page, w){
     if(html){
       if(!page.extract) page.extract = stripHtml(html);
       if(!page.thumbnail){
-        const d2 = document.createElement("div"); d2.innerHTML = html;
-        const img = [...d2.querySelectorAll("img")].map(i=>i.getAttribute("data-src")||i.getAttribute("src"))
-          .filter(Boolean).find(s=>/\.(jpe?g|png|gif|webp)/i.test(s));
-        if(img){
-          const net = img.split("/revision/")[0];
-          if(!artRefusee(net)) page.thumbnail = {source: net};
-        }
+        const net = illustrationDeLArticle(html);
+        if(net) page.thumbnail = {source: net};
       }
     }
   }catch(e){}
-  if(!page.thumbnail && state.profile.commons !== false){
-    const url = await commonsImage(page.title);
-    if(url) page.thumbnail = {source:url, commons:true};
-  }
   return page;
+}
+
+/* Les cartes tirées avant le retrait du repli Commons portent une
+   photographie du monde réel sans rapport avec leur univers. On leur
+   retire l'adresse : elles reprennent le dessin de repli, et retrouveront
+   la bonne illustration si l'article en gagne une. */
+async function repareCommons(){
+  let n = 0;
+  (state.collection || []).forEach(c=>{
+    if(c.img && /(^|\/\/)(upload\.wikimedia\.org|commons\.wikimedia\.org)/.test(c.img)){
+      c.img = null; n++;
+    }
+  });
+  if(n){
+    if(state.profile.banner && !state.collection.some(c=>c.id === state.profile.banner && c.img))
+      state.profile.banner = null;
+    await sset("fm:col", state.collection);
+    await sset("fm:profile", state.profile);
+  }
 }
 
 /* Notoriété : à quel point l'article est central dans son univers.
@@ -3865,10 +4227,13 @@ function render(){
   paintMe();
   document.getElementById("univcount").textContent = state.pool.length ? state.pool.length+" univers" : "univers";
   paintNav();
-  if(!state.profile.pseudo) return viewOnboard();
+  /* Sur un appareil neuf, il faut pouvoir se connecter avant d'avoir créé
+     une partie : la page Compte passe avant l'écran d'accueil. */
+  if(!state.profile.pseudo && state.view !== "compte") return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
-     village:viewVillage, theme:viewTheme, shop:viewSoon, market:viewSoon}[state.view]||viewHub)();
+     village:viewVillage, theme:viewTheme, compte:viewCompte,
+     shop:viewSoon, market:viewSoon}[state.view]||viewHub)();
   poserSurtitre();
   majJauges();
 }
@@ -3889,6 +4254,7 @@ const SURTITRES = {
   profil: "Joueur",
   village:"Comptoir",
   theme:  "Réglages · habillage",
+  compte: "Réglages · sauvegarde",
   shop:   "Boutique",
   market: "Échanges"
 };
@@ -3910,6 +4276,215 @@ function go(v){
   state.view=v; render();
 }
 
+
+
+/* ---------- page « Compte » ---------- */
+function viewCompte(){
+  if(!nuageConfigure()){
+    view.innerHTML = `
+      <h2 class="vuetitre">Compte</h2>
+      <p class="sub">La sauvegarde en ligne n'est pas encore branchée. Une fois
+        les deux réglages renseignés en haut du fichier, cette page sert à créer
+        un compte et à retrouver sa collection sur n'importe quel appareil.</p>
+
+      <div class="panel">
+        <h3>Ce qu'il reste à faire</h3>
+        <ol class="marche">
+          <li>Créer un projet gratuit sur <b>supabase.com</b>.</li>
+          <li>Dans <i>SQL Editor</i>, coller et exécuter le script ci-dessous.</li>
+          <li>Dans <i>Project Settings → API</i>, relever l'<i>URL</i> et la clé
+            <i>anon public</i>.</li>
+          <li>Les reporter dans l'objet <code>NUAGE</code>, en haut du fichier HTML.</li>
+          <li>Dans <i>Authentication → Providers → Email</i>, décider si la
+            confirmation par courriel est exigée. Désactivée, l'inscription est
+            immédiate — pratique pour essayer.</li>
+        </ol>
+      </div>
+
+      <h3>Le script à exécuter</h3>
+      <pre class="sql">create table sauvegardes (
+  joueur uuid    not null references auth.users on delete cascade,
+  cle    text    not null,
+  valeur jsonb   not null,
+  maj    timestamptz not null default now(),
+  primary key (joueur, cle)
+);
+
+alter table sauvegardes enable row level security;
+
+create policy "chacun les siennes"
+  on sauvegardes for all
+  using      (auth.uid() = joueur)
+  with check (auth.uid() = joueur);</pre>
+      <p class="sub">La dernière règle est l'essentiel : c'est la base elle-même
+        qui interdit à un joueur de lire ou d'écrire les lignes d'un autre. Sans
+        elle, la clé publique suffirait à tout lire.</p>`;
+    return;
+  }
+
+  const co = nuageConnecte();
+  view.innerHTML = `
+    <h2 class="vuetitre">Compte</h2>
+    <p class="sub">${co
+      ? "Votre partie est enregistrée en ligne. Connectez-vous avec le même courriel sur un autre appareil pour la retrouver."
+      : "Créez un compte pour que votre collection vous suive d'un appareil à l'autre. Sans compte, la partie reste sur ce navigateur."}</p>
+
+    ${co ? `
+      <div class="panel">
+        <h3>Connecté</h3>
+        <div class="row" style="align-items:baseline;gap:.5rem;margin-bottom:.2rem">
+          <b class="courriel">${esc(nuageCourriel())}</b>
+        </div>
+        <p class="sub nuetat ok" id="nuage-etat">à jour</p>
+        <div class="row" style="margin-top:.9rem">
+          <button class="btn ghost" id="c-envoyer">Envoyer cette partie</button>
+          <button class="btn ghost" id="c-sortir">Se déconnecter</button>
+        </div>
+      </div>
+      <p class="sub" style="margin-top:.9rem">« Envoyer cette partie » écrase la
+        sauvegarde en ligne par celle de cet appareil. Utile si deux appareils
+        ont divergé.</p>
+    ` : `
+      <div class="panel">
+        <div class="champ">
+          <label for="c-mail">Courriel</label>
+          <input type="email" id="c-mail" autocomplete="email" spellcheck="false"
+                 placeholder="vous@exemple.fr">
+        </div>
+        <div class="champ">
+          <label for="c-mdp">Mot de passe</label>
+          <input type="password" id="c-mdp" autocomplete="current-password"
+                 placeholder="au moins 6 caractères">
+        </div>
+        <p class="sub err" id="c-err" hidden></p>
+        <div class="row" style="margin-top:.4rem">
+          <button class="btn" id="c-entrer">Se connecter</button>
+          <button class="btn ghost" id="c-creer">Créer un compte</button>
+        </div>
+      </div>`}
+
+    <details class="fold info" style="margin-top:1.2rem">
+      <summary>Que part-il sur le serveur ?</summary>
+      <div class="in">
+        <p class="sub" style="margin:0">Deux choses, et rien d'autre : votre profil
+          (pseudo, niveau, monnaies, réglages) et votre collection. Les cartes
+          elles-mêmes restent sur Fandom — ce qui est enregistré, c'est la liste
+          de celles que vous possédez.</p>
+      </div>
+    </details>`;
+
+  if(co){
+    view.querySelector("#c-sortir").onclick = async ()=>{
+      nuageToutVider();
+      await nuageDeconnecter();
+      location.reload();
+    };
+    view.querySelector("#c-envoyer").onclick = async (e)=>{
+      const b = e.currentTarget;
+      b.disabled = true; b.textContent = "Envoi…";
+      try{
+        await nuageMonter(acct());
+        toast("Partie envoyée", "la sauvegarde en ligne est à jour", "info");
+      }catch(err){
+        toast("Envoi impossible", String(err.message || err), "lose");
+      }
+      b.disabled = false; b.textContent = "Envoyer cette partie";
+    };
+    majEtatNuage();
+    return;
+  }
+
+  const err = view.querySelector("#c-err");
+  const dire = m =>{ err.textContent = m; err.hidden = !m; };
+
+  async function entrer(creation){
+    const mail = view.querySelector("#c-mail").value.trim();
+    const mdp  = view.querySelector("#c-mdp").value;
+    if(!mail || !mdp) return dire("Courriel et mot de passe sont nécessaires.");
+    if(mdp.length < 6) return dire("Le mot de passe fait au moins six caractères.");
+    dire("");
+    const boutons = [...view.querySelectorAll(".btn")];
+    boutons.forEach(b=>b.disabled = true);
+    try{
+      if(creation){
+        const r = await nuageInscrire(mail, mdp);
+        if(r.confirmation){
+          boutons.forEach(b=>b.disabled = false);
+          return dire("Compte créé. Ouvrez le courriel de confirmation, puis connectez-vous.");
+        }
+      }else{
+        await nuageConnecter(mail, mdp);
+      }
+      await apresConnexion();
+    }catch(e){
+      boutons.forEach(b=>b.disabled = false);
+      dire(String(e.message || e));
+    }
+  }
+
+  view.querySelector("#c-entrer").onclick = ()=>entrer(false);
+  view.querySelector("#c-creer").onclick  = ()=>entrer(true);
+  view.querySelector("#c-mdp").addEventListener("keydown", e=>{
+    if(e.key === "Enter") entrer(false);
+  });
+}
+
+/* Au moment où le joueur entre dans son compte, il peut y avoir une partie
+   des deux côtés : celle de l'appareil et celle du serveur. On lui montre
+   les deux et il tranche. */
+async function apresConnexion(){
+  const cas = await nuageCollision();
+
+  if(cas === "distant"){
+    await nuageDescendre();
+    location.reload();
+    return;
+  }
+  if(cas === "local"){
+    await nuageMonter("invite");
+    location.reload();
+    return;
+  }
+  if(cas === "erreur"){
+    view.innerHTML = `<h2 class="vuetitre">Compte</h2>
+      <div class="panel"><p class="sub" style="margin:0">La base n'a pas répondu.
+      Vérifiez que la table <code>sauvegardes</code> existe et que la règle de
+      sécurité est posée.</p></div>`;
+    return;
+  }
+
+  /* Deux parties : on décrit chacune avant de demander. */
+  const distant = await nuageLire("fm:profile");
+  const dcol = await nuageLire("fm:col");
+  const local = lireEspace("invite", "fm:profile");
+  const lcol  = lireEspace("invite", "fm:col");
+  const decrire = (p, c) => p
+    ? `${esc(p.pseudo || "sans pseudo")} · ${(c && c.length) || 0} carte${((c&&c.length)||0)>1?"s":""} · niveau ${levelFromXP((c||[]).reduce((n,x)=>n+([1,2,5,12,30,90,300][RARITIES.indexOf(x.rarity)]||1)*(x.count||1),0)).lvl}`
+    : "partie vide";
+
+  view.innerHTML = `
+    <h2 class="vuetitre">Deux parties</h2>
+    <p class="sub">Cet appareil et votre compte en ligne ont chacun une partie.
+      Celle que vous ne gardez pas est remplacée — l'autre ne peut pas être
+      récupérée ensuite.</p>
+    <div class="panel choixpartie">
+      <button class="part" id="p-distant">
+        <span class="t">Garder la partie en ligne</span>
+        <span class="d">${decrire(distant && distant.valeur, dcol && dcol.valeur)}</span>
+      </button>
+      <button class="part" id="p-local">
+        <span class="t">Garder celle de cet appareil</span>
+        <span class="d">${decrire(local, lcol)}</span>
+      </button>
+    </div>`;
+
+  view.querySelector("#p-distant").onclick = async ()=>{
+    await nuageDescendre(); location.reload();
+  };
+  view.querySelector("#p-local").onclick = async ()=>{
+    await nuageMonter("invite"); location.reload();
+  };
+}
 
 /* ---------- page « Couleurs » ---------- */
 function viewTheme(){
@@ -4107,8 +4682,13 @@ function viewOnboard(){
       <button class="btn" id="start">Commencer avec ${FREE_MAX} boosters gratuits</button>
       <span class="sub" id="onbmsg"></span>
     </div>
+    ${nuageConfigure() ? `<p class="sub" style="margin:.9rem 0 0">Vous avez déjà joué
+      sur un autre appareil ? <button class="lien" id="dejacompte">Retrouver ma partie</button></p>` : ""}
     <p class="sub" style="margin-bottom:0;font-size:.82rem">${UNIVERSES.length} univers en réserve. Contenu issu des wikis Fandom, sous licence libre (CC BY-SA). Collection et progression enregistrées sur cet appareil.</p>
   </div>`;
+
+  const dc = view.querySelector("#dejacompte");
+  if(dc) dc.onclick = ()=>go("compte");
 
   view.querySelector("#start").onclick = async ()=>{
     const pseudo = view.querySelector("#pseudo").value.trim();
@@ -10198,18 +10778,12 @@ function openSettings(){
     </details>`:""}
 
     <div class="row" style="margin-top:1rem">
-      <button class="btn small ghost" id="s-commons">Images de secours : ${state.profile.commons === false ? "désactivées" : "activées"}</button>
       <button class="btn small ghost" id="s-holo">Reflets holographiques : ${state.profile.holo === false ? "désactivés" : "activés"}</button>
       <button class="btn small ghost" id="s-recheck">Revérifier les univers</button>
     </div>
   </div>`;
   m.onclick = e=>{ if(e.target===m) m.remove(); };
   document.body.appendChild(m);
-  m.querySelector("#s-commons").onclick = async ()=>{
-    state.profile.commons = state.profile.commons === false;
-    await sset("fm:profile", state.profile);
-    m.remove(); openSettings();
-  };
   m.querySelector("#s-holo").onclick = async ()=>{
     state.profile.holo = state.profile.holo === false;
     await sset("fm:profile", state.profile);
@@ -10224,6 +10798,12 @@ function openSettings(){
 }
 
 (async function boot(){
+  /* Si le joueur est connecté, on récupère sa partie avant tout le reste :
+     le jeu démarre ensuite sur des données à jour, sans savoir qu'elles
+     viennent du réseau. */
+  if(nuageConfigure() && nuageConnecte()){
+    try{ await nuageDescendre(); }catch(e){}
+  }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
   // les parties créées avant les Fandominus repartent avec la dotation complète
@@ -10253,6 +10833,7 @@ function openSettings(){
     await sset("fm:profile", state.profile);
   }
   await migrateStats();
+  await repareCommons();
   await refreshRelics();
   /* profils d'avant la copie locale : on fige la photo une bonne fois */
   if(state.profile.avatarImg && !state.profile.avatarImg.startsWith("data:")){
