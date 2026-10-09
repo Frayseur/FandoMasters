@@ -2944,30 +2944,63 @@ const NUAGE_TABLE   = "sauvegardes";
 
 function nuageConfigure(){ return !!(NUAGE.url && NUAGE.cle); }
 
+let nuageMemoire = null;   // secours si le navigateur refuse d'écrire
 function nuageSession(){
   try{
     const b = localStorage.getItem(NUAGE_SESSION);
-    return b ? JSON.parse(b) : null;
-  }catch(e){ return null; }
-}
-function nuagePoseSession(s){
-  try{
-    if(s) localStorage.setItem(NUAGE_SESSION, JSON.stringify(s));
-    else localStorage.removeItem(NUAGE_SESSION);
+    if(b) return JSON.parse(b);
   }catch(e){}
+  return nuageMemoire;
+}
+/* Renvoie vrai si la session est bien gardée sur l'appareil. */
+function nuagePoseSession(s){
+  nuageMemoire = s || null;
+  try{
+    if(s){
+      localStorage.setItem(NUAGE_SESSION, JSON.stringify(s));
+      return localStorage.getItem(NUAGE_SESSION) !== null;
+    }
+    localStorage.removeItem(NUAGE_SESSION);
+    return true;
+  }catch(e){ return false; }
+}
+/* Ce qui occupe la mémoire du navigateur, pour comprendre un refus. */
+function nuageStockage(){
+  try{
+    const l = [];
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      l.push([k, (localStorage.getItem(k) || "").length]);
+    }
+    l.sort((a,b)=>b[1]-a[1]);
+    const tot = l.reduce((n,x)=>n+x[1],0);
+    return Math.round(tot/1000) + " Ko, dont " + l.slice(0,3).map(x=>x[0].replace("fm-local:","")+" "+Math.round(x[1]/1000)+" Ko").join(", ");
+  }catch(e){ return "illisible : " + e.message; }
 }
 /* Si la session se ferme toute seule, on garde la raison : elle s'affiche
    sur la page Compte au lieu de laisser le joueur deviner. */
-function nuageRaison(r){ try{ if(r) localStorage.setItem("fm-local:nuage-raison", r); else localStorage.removeItem("fm-local:nuage-raison"); }catch(e){} }
-function nuageRaisonLue(){ try{ return localStorage.getItem("fm-local:nuage-raison") || ""; }catch(e){ return ""; } }
+let nuageRaisonMem = "";
+function nuageRaison(r){ nuageRaisonMem = r || ""; try{ if(r) localStorage.setItem("fm-local:nuage-raison", r); else localStorage.removeItem("fm-local:nuage-raison"); }catch(e){} }
+function nuageRaisonLue(){ if(nuageRaisonMem) return nuageRaisonMem; try{ return localStorage.getItem("fm-local:nuage-raison") || ""; }catch(e){ return ""; } }
 function nuageConnecte(){ const s = nuageSession(); return !!(s && s.user && s.user.id); }
 function nuageCourriel(){ const s = nuageSession(); return s && s.user ? s.user.email : ""; }
 
 function nuageGarde(d){
   /* Supabase renvoie une durée de vie ; on retient l'échéance absolue. */
   const exp = Date.now() + ((d.expires_in || 3600) - 60) * 1000;
-  const s = {jeton:d.access_token, refresh:d.refresh_token, exp, user:d.user || null};
-  nuagePoseSession(s);
+  let user = d.user || null;
+  if(!user || !user.id){
+    /* Le profil manque dans la réponse : l'identifiant est dans le jeton. */
+    try{
+      let p = d.access_token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+      p += "=".repeat((4 - p.length % 4) % 4);
+      const j = JSON.parse(atob(p));
+      user = {id:j.sub, email:j.email || (user && user.email) || ""};
+    }catch(e){}
+  }
+  const s = {jeton:d.access_token, refresh:d.refresh_token, exp, user};
+  const garde = nuagePoseSession(s);
+  if(!garde) nuageRaison("le navigateur refuse d'enregistrer la session (" + nuageStockage() + ")");
   return s;
 }
 
@@ -4492,6 +4525,14 @@ create policy "chacun les siennes"
    les deux et il tranche. */
 async function apresConnexion(){
   const cas = await nuageCollision();
+
+  if(cas === "aucune" || nuageRaisonLue().indexOf("refuse d'enregistrer") >= 0){
+    view.innerHTML = `<h2 class="vuetitre">Compte</h2>
+      <div class="panel"><p class="sub err" style="margin:0">Connexion acceptée par
+      le serveur, mais la session n'a pas pu être gardée sur cet appareil.
+      ${esc(nuageRaisonLue())}</p></div>`;
+    return;
+  }
 
   if(cas === "distant"){
     await nuageDescendre(true);
