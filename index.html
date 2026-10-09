@@ -378,7 +378,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 
 /* Full Art — l'illustration occupe toute la carte, le texte flotte par-dessus */
 .card[data-v="fullart"]{--g1:#FFE9B0;--g2:#7A5A18}
-.card[data-v="fullart"] .inner{position:relative;justify-content:flex-end}
+.card[data-v="fullart"] .inner{justify-content:flex-end}   /* garder position:absolute : sinon la carte se replie vers le haut */
 .card[data-v="fullart"] .art{position:absolute;inset:0;flex:none;z-index:0;margin:0;clip-path:none;
   box-shadow:inset 0 0 0 1.5px var(--g1)}
 .card[data-v="fullart"] .plate{position:absolute;top:3.7cqw;left:3.7cqw;right:3.7cqw;margin:0}
@@ -2655,6 +2655,118 @@ body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{di
 .echmontant span{font-family:var(--f-data);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .echmontant input{max-width:130px;margin:0;text-align:right}
 .echres{display:flex;flex-wrap:wrap;gap:.35rem;margin:.35rem 0}
+
+/* ---- ouverture multiple, façon arcade ---- */
+.b3d.arcade .b3dbg{background:
+  radial-gradient(120% 80% at 50% 110%, color-mix(in srgb, var(--b3dglow) 45%, transparent), transparent 60%),
+  repeating-conic-gradient(from 0deg at 50% 55%, color-mix(in srgb, var(--p5) 14%, transparent) 0 8deg, transparent 8deg 16deg),
+  var(--p1);animation:cdrayons 14s linear infinite}
+@keyframes cdrayons{to{background-position:0 0, 0 0, 0 0;filter:hue-rotate(25deg)}}
+.cdhud{position:absolute;left:0;right:0;top:5vh;text-align:center;z-index:4;color:var(--text)}
+.cdgros{display:flex;flex-direction:column;align-items:center;gap:.1rem}
+.cdgros .cdx{font-family:var(--f-titre);font-size:clamp(3rem,13vw,5.5rem);line-height:.9;letter-spacing:.02em;
+  color:var(--p5);text-shadow:0 4px 0 var(--p6), 0 0 28px color-mix(in srgb, var(--p5) 70%, transparent);
+  animation:cdpouls 1.1s ease-in-out infinite}
+.cdgros span{font-family:var(--f-titre);text-transform:uppercase;font-size:1.1rem;letter-spacing:.14em;color:#FFFFFF;text-shadow:0 2px 0 var(--p6)}
+.cdhud .cdn{font-family:var(--f-data);font-size:.95rem;letter-spacing:.12em;margin-top:.4rem;opacity:.85}
+@keyframes cdpouls{50%{transform:scale(1.07) rotate(-2deg)}}
+.cdpops{position:absolute;inset:0;z-index:5;pointer-events:none}
+.cdpop{position:absolute;width:0;height:0}
+.cdpop b{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:var(--f-titre);font-size:clamp(1.4rem,6vw,2.4rem);color:var(--p4);
+  -webkit-text-stroke:2px var(--p6);paint-order:stroke;text-shadow:0 3px 0 var(--p6);
+  animation:cdmot .8s cubic-bezier(.2,1.6,.4,1) forwards}
+.cdpop i{position:absolute;left:-5px;top:-5px;width:10px;height:10px;border-radius:2px;background:var(--p5);
+  box-shadow:0 0 10px var(--p5);transform:rotate(var(--r));animation:cdetin .75s ease-out forwards}
+.cdpop i:nth-child(3n){background:var(--p4);border-radius:50%}
+.cdpop i:nth-child(4n){background:var(--b3dglow, var(--p3))}
+@keyframes cdmot{0%{transform:translate(-50%,-50%) scale(.2) rotate(-12deg);opacity:0}
+  25%{transform:translate(-50%,-90%) scale(1.25) rotate(6deg);opacity:1}
+  100%{transform:translate(-50%,-160%) scale(1) rotate(0);opacity:0}}
+@keyframes cdetin{to{transform:translate(var(--dx),var(--dy)) rotate(calc(var(--r) + 220deg)) scale(.2);opacity:0}}
+.b3d.arcade.secoue canvas{animation:cdsecoue .22s ease-out}
+@keyframes cdsecoue{25%{transform:translate(5px,-4px)}50%{transform:translate(-4px,3px)}75%{transform:translate(2px,2px)}}
+
+select option, select optgroup{background-color:var(--p1);color:var(--text)}
+select{background-color:var(--panel)}
+/* ---- salle des ventes en direct ---- */
+.mvente{cursor:pointer;transition:transform .15s ease, box-shadow .15s ease}
+.mvente:hover{transform:translateY(-2px);box-shadow:0 10px 24px -14px var(--p5)}
+.salle{position:fixed;inset:0;z-index:900;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.salle .sfond{position:fixed;inset:0;background:
+  radial-gradient(90% 60% at 50% 30%, color-mix(in srgb, var(--p5) 26%, transparent), transparent 70%),
+  repeating-conic-gradient(from 0deg at 50% 30%, color-mix(in srgb, var(--p5) 9%, transparent) 0 7deg, transparent 7deg 14deg),
+  var(--p1);animation:cdrayons 18s linear infinite}
+.salle .sscene{position:relative;max-width:520px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;align-items:center}
+.salle .shaut{width:100%;display:flex;justify-content:space-between;align-items:center}
+.slive{font-family:var(--f-data);font-size:.72rem;letter-spacing:.14em;color:var(--red);display:flex;align-items:center;gap:.4rem}
+.slive i{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:slive 1s ease-in-out infinite}
+@keyframes slive{50%{opacity:.25}}
+.stemps{font-family:var(--f-data);font-size:clamp(2.2rem,11vw,3.2rem);letter-spacing:.06em;margin:.4rem 0 .2rem;color:var(--text);
+  text-shadow:0 3px 0 var(--p6)}
+.stemps.bientot{color:var(--p4)}
+.stemps.urgent{color:var(--red);animation:surgent .5s ease-in-out infinite}
+.stemps.fini{opacity:.5}
+@keyframes surgent{50%{transform:scale(1.12)}}
+.salle .scarte{width:min(56vw,230px);aspect-ratio:63/88;position:relative;margin:.3rem 0 .6rem;
+  filter:drop-shadow(0 18px 30px #000a);animation:sflotte 4s ease-in-out infinite}
+.salle .scarte .card{position:absolute;inset:0;width:100%;height:100%}
+@keyframes sflotte{50%{transform:translateY(-6px) rotate(-1deg)}}
+.sprix{display:flex;align-items:baseline;gap:.4rem;flex-wrap:wrap;justify-content:center}
+.sprix span{font-family:var(--f-data);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);width:100%;text-align:center}
+.sprix b{font-family:var(--f-titre);font-size:clamp(2.6rem,13vw,3.8rem);line-height:1;color:var(--p5);
+  text-shadow:0 4px 0 var(--p6), 0 0 26px color-mix(in srgb, var(--p5) 60%, transparent)}
+.sprix em{font-style:normal;font-size:1.6rem;color:var(--p5)}
+.sprix.saute b{animation:ssaute .6s cubic-bezier(.2,1.8,.4,1)}
+@keyframes ssaute{0%{transform:scale(.6)}40%{transform:scale(1.35) rotate(-3deg)}100%{transform:scale(1)}}
+.sinfos{font-size:.85rem;color:var(--muted);margin:.25rem 0 .5rem}
+.stete{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.04em;padding:.45rem .9rem;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel);margin-bottom:.8rem;display:flex;gap:.4rem;align-items:center}
+.stete.moi{border-color:var(--p5);box-shadow:0 0 18px -4px var(--p5)}
+.stete .lien{font-family:inherit;text-transform:inherit}
+.scouronne{animation:scour 1.6s ease-in-out infinite}
+@keyframes scour{50%{transform:translateY(-3px) rotate(-8deg)}}
+.sactions{width:100%}
+.sboutons{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.45rem}
+.sboutons .btn:first-child{font-size:1.05rem;animation:sappel 1.4s ease-in-out infinite}
+@keyframes sappel{50%{box-shadow:0 0 0 6px color-mix(in srgb, var(--p5) 25%, transparent)}}
+.smene{text-align:center;font-family:var(--f-titre);text-transform:uppercase;font-size:1.3rem;color:var(--p5);letter-spacing:.06em;
+  animation:cdpouls 1.2s ease-in-out infinite}
+.sadjuge{text-align:center;font-family:var(--f-titre);font-size:2.4rem;color:var(--p5);transform:rotate(-6deg);
+  border:4px solid var(--p5);border-radius:12px;padding:.1rem 1rem;width:max-content;margin:.2rem auto 0;
+  text-shadow:0 3px 0 var(--p6);animation:stampon .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stampon{0%{transform:rotate(-6deg) scale(2.4);opacity:0}100%{transform:rotate(-6deg) scale(1);opacity:1}}
+.shtitre{align-self:flex-start;font-size:1rem;margin:1.1rem 0 .4rem}
+.shisto{list-style:none;margin:0;padding:0;width:100%;display:flex;flex-direction:column;gap:.3rem}
+.shisto li{display:grid;grid-template-columns:1fr auto;gap:0 .6rem;padding:.5rem .7rem;border-radius:10px;
+  background:var(--panel);border:1px solid var(--line)}
+.shisto li b{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shisto li span{font-family:var(--f-data);color:var(--p4)}
+.shisto li small{grid-column:1/-1;color:var(--muted);font-size:.72rem}
+.shisto li.top{border-color:var(--p5)}
+.shisto li.moi b{color:var(--p5)}
+.shisto li.neuf{animation:sneuf .6s cubic-bezier(.2,1.4,.4,1)}
+.shisto li.vide{display:block;color:var(--muted);text-align:center}
+@keyframes sneuf{0%{transform:translateX(-30px) scale(.9);opacity:0;background:var(--p5)}100%{transform:none;opacity:1}}
+.sbandeau{position:fixed;left:0;right:0;top:34%;z-index:20;text-align:center;pointer-events:none;
+  padding:.8rem 0;background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--p6) 92%, transparent) 15%,color-mix(in srgb, var(--p6) 92%, transparent) 85%,transparent);
+  animation:sbandeau 1.7s cubic-bezier(.2,1,.3,1) forwards}
+.sbandeau b{display:block;font-family:var(--f-titre);font-size:clamp(1.8rem,9vw,3rem);letter-spacing:.04em;color:var(--p5);
+  -webkit-text-stroke:2px var(--p6);paint-order:stroke;text-shadow:0 4px 0 #0008}
+.sbandeau span{display:block;font-family:var(--f-data);letter-spacing:.12em;text-transform:uppercase;color:var(--text);margin-top:.15rem}
+.sbandeau.depasse b{color:#FF4D6D}
+.sbandeau.moi b{color:var(--p4)}
+.sbandeau.gagne b,.sbandeau.adjuge b{color:#FFD45A}
+@keyframes sbandeau{0%{transform:translateX(-110%) skewX(-12deg);opacity:0}15%{transform:translateX(0) skewX(-6deg);opacity:1}
+  80%{transform:translateX(0) skewX(0);opacity:1}100%{transform:translateX(110%) skewX(10deg);opacity:0}}
+.salle.choc .sscene{animation:cdsecoue .3s ease-out}
+.salle.choc .sfond{animation:sflash .5s ease-out, cdrayons 18s linear infinite}
+@keyframes sflash{0%{filter:brightness(2.2)}100%{filter:none}}
+.sgerbe{position:fixed;left:50%;top:40%;width:0;height:0;z-index:19;pointer-events:none}
+.sgerbe i{position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:2px;background:var(--p5);box-shadow:0 0 12px var(--p5);
+  transform:rotate(var(--r));animation:cdetin .9s ease-out forwards}
+.sgerbe i:nth-child(3n){background:#FFD45A;border-radius:50%}
+.sgerbe i:nth-child(4n){background:var(--p4)}
 </style>
 </head>
 <body>
@@ -2687,9 +2799,8 @@ body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{di
       <button data-view="inv"><span class="ic">▦</span><b>Inventaire</b><small>Potions et armements</small></button>
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
       <button data-view="profil"><span class="ic">☻</span><b>Profil</b><small>Vitrine et portrait</small></button>
-      <button data-view="village"><span class="ic">⌂</span><b>Village</b><small>Marchands, forge et comptoir</small></button>
       <button data-view="theme"><span class="ic">◐</span><b>Couleurs</b><small>Réglez la palette du site</small></button>
-      <button data-view="amis"><span class="ic">♢</span><b>Amis</b><small>Joueurs et échanges</small></button>
+      <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Donjons et duels</small></button>
       <button data-view="compte"><span class="ic">☁</span><b>Compte</b><small>Sauvegarde en ligne</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
       <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Enchères entre joueurs</small></button>
@@ -2702,7 +2813,7 @@ body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{di
     <button data-view="hub"><span class="ic">⌂</span><span class="lb">Accueil</span></button>
     <button data-view="pack"><span class="ic">▣</span><span class="lb">Ouvertures</span></button>
     <button data-view="album"><span class="ic">⿴</span><span class="lb">Album</span></button>
-    <button data-view="duel"><span class="ic">⚔</span><span class="lb">Combat</span></button>
+    <button data-view="amis"><span class="ic">♢</span><span class="lb">Amis</span></button>
     <button data-view="camp"><span class="ic">⚑</span><span class="lb">Campagnes</span></button>
     <button data-view="farm"><span class="ic">◉</span><span class="lb">Atelier</span></button>
     <button id="more"><span class="ic">⋯</span><span class="lb">Menu</span></button>
@@ -2873,6 +2984,10 @@ const UNIVERSES = [
   {label:"Squid Game",         host:"squid-game.fandom.com",    cat:"Films & séries"},
   {label:"X-Files",            host:"x-files.fandom.com",       cat:"Films & séries"},
   {label:"Supernatural",       host:"supernatural.fandom.com",  cat:"Films & séries"},
+  {label:"Hannibal",           host:"hannibal.fandom.com",      cat:"Films & séries"},
+  {label:"Reborn!",            host:"reborn.fandom.com", path:"/fr", cat:"Livres & mangas"},
+  {label:"Fields of Mistria",  host:"fields-of-mistria.fandom.com", cat:"Jeux vidéo"},
+  {label:"Ariana Grande",      host:"arianagrande.fandom.com",  cat:"Musique"},
 
   // — Livres, BD & mangas (suite) —
   {label:"Astérix",            host:"asterix.fandom.com",       cat:"Livres & mangas"},
@@ -2965,7 +3080,7 @@ const UNIVERSES = [
   {label:"Platinum End",       host:"platinum-end.fandom.com",     cat:"Livres & mangas"},
   {label:"Shingeki no Kyojin", host:"shingekinokyojin.fandom.com", cat:"Livres & mangas"}
 ];
-const CATS = ["Jeux vidéo","Films & séries","Livres & mangas"];
+const CATS = ["Jeux vidéo","Films & séries","Livres & mangas","Musique"];
 
 const state = {
   pool:[],              // univers actifs, vérifiés : {label, host, path}
@@ -4714,6 +4829,9 @@ function teintesCourantes(){
 function poserTeintes(c){
   const d = deriver(c), r = document.documentElement.style;
   for(const k in d) r.setProperty("--"+k, d[k]);
+  /* listes natives (sélecteurs) : le navigateur les dessine en clair ou en
+     sombre selon ce réglage, sinon texte clair sur fond blanc */
+  try{ r.colorScheme = lumi(c[0]) < 0.4 ? "dark" : "light"; }catch(e){}
   /* la barre d'adresse du téléphone suit le papier */
   const m = document.querySelector('meta[name="theme-color"]');
   if(m) m.setAttribute("content", c[0]);
@@ -4913,7 +5031,7 @@ function render(){
   if(!state.profile.pseudo) return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
-     village:viewVillage, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur,
+     village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur,
      shop:viewSoon, market:viewMarche}[state.view]||viewHub)();
   poserSurtitre();
   majJauges();
@@ -5609,8 +5727,10 @@ setInterval(amisVeille, 90000);
 function majPastilleAmis(){
   const moi = moiId();
   const n = amis.recus.length + amis.echanges.filter(e => e.a === moi && e.statut === "proposee").length;
-  document.querySelectorAll('[data-view="amis"] small').forEach(el => {
-    el.textContent = n ? n + " en attente" : "Joueurs et échanges";
+  document.querySelectorAll('[data-view="amis"]').forEach(b => {
+    let d = b.querySelector(".achdot");
+    if(n && !d){ d = document.createElement("span"); d.className = "achdot"; b.appendChild(d); }
+    if(d){ if(n) d.textContent = n; else d.remove(); }
   });
 }
 
@@ -6097,7 +6217,8 @@ create table if not exists offres (
 );
 alter table offres enable row level security;
 drop policy if exists "mes offres" on offres;
-create policy "mes offres" on offres for select to authenticated using (joueur = auth.uid());
+drop policy if exists "offres visibles" on offres;
+create policy "offres visibles" on offres for select to authenticated using (true);
 
 create or replace function encherir(eid bigint, montant int) returns int
 language plpgsql security definer set search_path = public as $$
@@ -6314,7 +6435,7 @@ function blocVente(e, mode){
   }
   if(mode === "offres" && !fin && !enTete) bouton = `<button class="btn small" data-encherir="${e.id}">Surenchérir · ${offreMini(e)} ◆</button>`;
   if(mode === "miennes" && !fin && !e.nb_offres) bouton = `<button class="btn small ghost" data-annulerv="${e.id}">Retirer</button>`;
-  return `<div class="mvente">
+  return `<div class="mvente" data-salle="${e.id}">
     <div class="mcarte">${cardHTML(c, {compact:true})}</div>
     <div class="minfo">
       <b>${esc(c.title || "Carte")}</b>
@@ -6410,7 +6531,7 @@ function viewMarche(){
     ${corps}`;
 
   view.querySelectorAll("[data-mong]").forEach(b => b.onclick = ()=>{ marche.onglet = b.dataset.mong; viewMarche(); });
-  view.querySelectorAll("[data-joueur]").forEach(b => b.onclick = ()=>voirJoueur(b.dataset.joueur));
+  view.querySelectorAll("[data-joueur]").forEach(b => b.onclick = (ev)=>{ ev.stopPropagation(); voirJoueur(b.dataset.joueur); });
   const mr = view.querySelector("#mreessai");
   if(mr) mr.onclick = async ()=>{ marche.charge = false; viewMarche(); await marcheCharger(); viewMarche(); };
   const mc = view.querySelector("#mcopie");
@@ -6421,7 +6542,11 @@ function viewMarche(){
     view.querySelector("#mrar").onchange = e => { marche.rar = e.target.value; viewMarche(); };
     view.querySelector("#mtri").onchange = e => { marche.tri = e.target.value; viewMarche(); };
   }
-  view.querySelectorAll("[data-encherir]").forEach(b => b.onclick = ()=>encherirDialogue(+b.dataset.encherir));
+  view.querySelectorAll("[data-encherir]").forEach(b => b.onclick = (ev)=>{ ev.stopPropagation(); ouvrirSalle(+b.dataset.encherir); });
+  view.querySelectorAll("[data-salle]").forEach(el => el.onclick = ev => {
+    if(ev.target.closest("button")) return;
+    ouvrirSalle(+el.dataset.salle);
+  });
   view.querySelectorAll("[data-annulerv]").forEach(b => b.onclick = async ()=>{
     b.disabled = true;
     try{
@@ -6535,6 +6660,209 @@ function encherirDialogue(eid){
     await marcheCharger();
     if(state.view === "market") viewMarche();
   };
+}
+
+/* ======================================================================
+   Salle des ventes en direct
+   ----------------------------------------------------------------------
+   Toucher une vente ouvre sa salle : grande carte, prix qui grimpe, compte
+   à rebours à la seconde, historique des offres et, à chaque surenchère,
+   l'annonce de l'enchérisseur avec effets de bataille. Le serveur est
+   relu toutes les 1,5 s tant que la salle est ouverte, et seulement elle.
+   ====================================================================== */
+const salle = {id:null, el:null, e:null, offres:[], minuteur:null, horloge:null, derniere:null, finVue:null};
+
+async function poserOffre(e, montant){
+  const p = state.profile;
+  const mini = offreMini(e);
+  if(montant < mini) throw new Error("offre minimale : " + mini + " ◆");
+  if((p.coins || 0) < montant) throw new Error("il vous manque " + (montant - (p.coins || 0)) + " ◆");
+  p.coins -= montant; piecesAffichees();
+  await sset("fm:profile", p);
+  try{
+    await nuageRest("rpc/encherir", {method:"POST", body:JSON.stringify({eid:e.id, montant})});
+  }catch(err){
+    p.coins += montant; piecesAffichees(); await sset("fm:profile", p);
+    throw new Error(String(err.message || err).replace(/^base \d+ : /, ""));
+  }
+}
+
+function fermerSalle(){
+  clearInterval(salle.minuteur); clearInterval(salle.horloge);
+  if(salle.el) salle.el.remove();
+  salle.el = null; salle.id = null; salle.e = null; salle.offres = []; salle.derniere = null;
+  document.body.classList.remove("cardopen");
+  if(state.view === "market"){ marcheCharger().then(()=>{ if(state.view === "market") viewMarche(); }); }
+}
+
+async function salleLire(){
+  const id = salle.id; if(!id) return;
+  try{
+    const [e, offres] = await Promise.all([
+      nuageRest("encheres?select=*&id=eq." + id),
+      nuageRest("offres?select=id,joueur,montant,cree&enchere=eq." + id + "&order=cree.desc&limit=25")
+    ]);
+    if(salle.id !== id || !e || !e[0]) return;
+    const ids = [...new Set([e[0].vendeur, e[0].meilleur, ...(offres || []).map(o => o.joueur)].filter(Boolean))].filter(x => !amis.profils.has(x));
+    if(ids.length){
+      const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + ids.join(",") + ")").catch(()=>[]);
+      for(const x of (pr || [])) amis.profils.set(x.joueur, x);
+    }
+    salleMaj(e[0], offres || []);
+  }catch(err){}
+}
+
+function salleMaj(e, offres){
+  const moi = moiId();
+  const avant = salle.e;
+  salle.e = e; salle.offres = offres;
+  const el = salle.el; if(!el) return;
+  const prix = e.offre != null ? e.offre : e.prix_depart;
+  const finie = Date.parse(e.fin) <= Date.now();
+  // une nouvelle offre est tombée
+  if(avant && e.nb_offres > avant.nb_offres){
+    const qui = e.meilleur === moi ? "VOUS" : nomJoueur(e.meilleur);
+    salleBataille(qui, e.offre, avant.meilleur === moi && e.meilleur !== moi, e.meilleur === moi);
+    salleCompteur(avant.offre != null ? avant.offre : avant.prix_depart, prix);
+  }else{
+    el.querySelector(".sprix b").textContent = prix.toLocaleString("fr-FR");
+  }
+  if(avant && Date.parse(e.fin) > Date.parse(avant.fin) + 30000 && !finie){
+    salleBandeau("PROLONGATION", "+2 minutes", "prolong");
+  }
+  el.querySelector(".sprix span").textContent = e.offre != null ? "Offre en tête" : "Prix de départ";
+  el.querySelector(".snb").textContent = e.nb_offres + " offre" + (e.nb_offres > 1 ? "s" : "");
+  const tete = el.querySelector(".stete");
+  tete.innerHTML = e.meilleur
+    ? `<span class="scouronne">👑</span><button class="lien" data-joueur="${esc(e.meilleur)}">${esc(e.meilleur === moi ? "Vous" : nomJoueur(e.meilleur))}</button> mène la danse`
+    : `Personne n'a encore enchéri`;
+  tete.classList.toggle("moi", e.meilleur === moi);
+  el.querySelector(".shisto").innerHTML = offres.length ? offres.map((o, i) => `
+    <li class="${i === 0 ? "top" : ""} ${o.joueur === moi ? "moi" : ""}" data-oid="${o.id}">
+      <b>${esc(o.joueur === moi ? "Vous" : nomJoueur(o.joueur))}</b>
+      <span>${o.montant.toLocaleString("fr-FR")} ◆</span>
+      <small>${ago(Date.parse(o.cree))}</small>
+    </li>`).join("") : `<li class="vide">Aucune offre pour l'instant.</li>`;
+  // nouvelles lignes : elles glissent
+  if(salle.derniere != null) el.querySelectorAll(".shisto li").forEach(li => { if(+li.dataset.oid > salle.derniere) li.classList.add("neuf"); });
+  salle.derniere = offres.length ? Math.max(...offres.map(o => o.id)) : 0;
+  // actions
+  const zone = el.querySelector(".sactions");
+  const mini = offreMini(e);
+  if(finie){
+    zone.innerHTML = `<div class="sadjuge">${e.meilleur ? "ADJUGÉ !" : "INVENDUE"}</div>
+      <p class="sub" style="text-align:center;margin:.3rem 0 0">${e.meilleur ? (e.meilleur === moi ? "La carte est à vous." : esc(nomJoueur(e.meilleur)) + " l'emporte pour " + prix.toLocaleString("fr-FR") + " ◆") : "Aucune offre."}</p>`;
+    if(salle.finVue !== e.id){ salle.finVue = e.id; if(e.meilleur) salleBandeau("ADJUGÉ !", e.meilleur === moi ? "VOUS L'EMPORTEZ" : nomJoueur(e.meilleur), e.meilleur === moi ? "gagne" : "adjuge"); }
+  }else if(e.vendeur === moi){
+    zone.innerHTML = `<p class="sub" style="text-align:center;margin:0">C'est votre vente : vous regardez les enchères monter.</p>`;
+  }else if(e.meilleur === moi){
+    zone.innerHTML = `<div class="smene">Vous êtes en tête</div>`;
+  }else{
+    const pas = Math.max(1, Math.ceil(prix * 0.1));
+    const opts = [mini, mini + pas, mini + pas * 3].filter((v, i, a) => a.indexOf(v) === i);
+    zone.innerHTML = `<div class="sboutons">${opts.map((v, i) => `<button class="btn ${i ? "ghost" : ""}" data-mise="${v}">${i ? "+" + (v - mini + 0).toLocaleString("fr-FR") + " · " : ""}${v.toLocaleString("fr-FR")} ◆</button>`).join("")}</div>
+      <div class="row" style="gap:.4rem;margin-top:.5rem;justify-content:center">
+        <input id="smontant" type="number" min="${mini}" step="1" inputmode="numeric" placeholder="${mini}" style="max-width:150px;margin:0">
+        <button class="btn small ghost" id="smiser">Miser</button>
+      </div>
+      <p class="sub" style="text-align:center;margin:.4rem 0 0;font-size:.8rem">Bourse : ${short(state.profile.coins || 0)} ◆</p>`;
+    const miser = async (v, b)=>{
+      if(b) b.disabled = true;
+      try{ await poserOffre(e, v); await salleLire(); }
+      catch(err){ toast("Offre refusée", err.message, "lose"); if(b) b.disabled = false; }
+    };
+    zone.querySelectorAll("[data-mise]").forEach(b => b.onclick = ()=>miser(+b.dataset.mise, b));
+    zone.querySelector("#smiser").onclick = (ev)=>miser(Math.floor(+zone.querySelector("#smontant").value || 0), ev.currentTarget);
+  }
+  el.querySelectorAll("[data-joueur]").forEach(b => b.onclick = ()=>{ const id = b.dataset.joueur; fermerSalle(); voirJoueur(id); });
+}
+
+/* le prix défile jusqu'à sa nouvelle valeur */
+function salleCompteur(de, a){
+  const b = salle.el && salle.el.querySelector(".sprix b"); if(!b) return;
+  const t0 = performance.now(), D = 650;
+  b.parentNode.classList.remove("saute"); void b.offsetWidth; b.parentNode.classList.add("saute");
+  (function pas(){
+    const k = Math.min(1, (performance.now() - t0) / D);
+    b.textContent = Math.round(de + (a - de) * (1 - Math.pow(1 - k, 3))).toLocaleString("fr-FR");
+    if(k < 1) requestAnimationFrame(pas);
+  })();
+}
+
+/* l'annonce de bataille : nom de l'enchérisseur, éclair, secousse */
+function salleBataille(qui, montant, depasse, moi){
+  if(!salle.el) return;
+  salleBandeau(moi ? "VOUS SURENCHÉRISSEZ !" : depasse ? "VOUS ÊTES DÉPASSÉ !" : "SURENCHÈRE !",
+               (moi ? "" : qui + " · ") + (montant || 0).toLocaleString("fr-FR") + " ◆",
+               moi ? "moi" : depasse ? "depasse" : "autre");
+  const el = salle.el;
+  el.classList.remove("choc"); void el.offsetWidth; el.classList.add("choc");
+  const g = document.createElement("div");
+  g.className = "sgerbe";
+  let html = "";
+  for(let k = 0; k < 22; k++){
+    const ang = (k / 22) * Math.PI * 2, d = 90 + Math.random() * 110;
+    html += `<i style="--dx:${(Math.cos(ang) * d).toFixed(0)}px;--dy:${(Math.sin(ang) * d).toFixed(0)}px;--r:${(Math.random()*360).toFixed(0)}deg"></i>`;
+  }
+  g.innerHTML = html;
+  el.querySelector(".sscene").appendChild(g);
+  setTimeout(()=>g.remove(), 1000);
+  try{ if(depasse && navigator.vibrate) navigator.vibrate([90, 50, 90]); }catch(e){}
+  try{ depasse ? sfx.tick() : sfx.coin(); }catch(e){}
+}
+function salleBandeau(titre, sous, genre){
+  if(!salle.el) return;
+  const b = document.createElement("div");
+  b.className = "sbandeau " + (genre || "");
+  b.innerHTML = `<b>${esc(titre)}</b>${sous ? `<span>${esc(sous)}</span>` : ""}`;
+  salle.el.querySelector(".sscene").appendChild(b);
+  setTimeout(()=>b.remove(), 1700);
+}
+
+function salleTemps(){
+  const el = salle.el, e = salle.e; if(!el || !e) return;
+  const ms = Date.parse(e.fin) - Date.now();
+  const t = el.querySelector(".stemps");
+  if(ms <= 0){ t.textContent = "00:00"; t.className = "stemps fini"; return; }
+  const s = Math.floor(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  t.textContent = (h ? h + ":" + String(m).padStart(2, "0") : String(m).padStart(2, "0")) + ":" + String(sec).padStart(2, "0");
+  t.className = "stemps" + (ms < 60000 ? " urgent" : ms < 300000 ? " bientot" : "");
+}
+
+function ouvrirSalle(id){
+  const e0 = marche.ventes.find(x => x.id === id) || marche.encheresOffres.find(x => x.id === id) || marche.miennes.find(x => x.id === id);
+  if(!e0) return;
+  fermerSalle();
+  salle.id = id; salle.e = null; salle.finVue = Date.parse(e0.fin) <= Date.now() ? id : null;
+  const c = e0.carte || {};
+  const el = document.createElement("div");
+  el.className = "salle";
+  el.innerHTML = `
+    <div class="sfond"></div>
+    <div class="sscene">
+      <div class="shaut">
+        <button class="btn small ghost" id="sfermer">← Marché</button>
+        <span class="slive"><i></i>EN DIRECT</span>
+      </div>
+      <div class="stemps">--:--</div>
+      <div class="scarte">${cardHTML(c)}</div>
+      <div class="sprix"><span>Offre en tête</span><b>—</b><em>◆</em></div>
+      <div class="sinfos"><span class="snb"></span> · vendue par <button class="lien" data-joueur="${esc(e0.vendeur)}">${esc(e0.vendeur === moiId() ? "vous" : nomJoueur(e0.vendeur))}</button></div>
+      <div class="stete"></div>
+      <div class="sactions"></div>
+      <h3 class="shtitre">Offres</h3>
+      <ol class="shisto"></ol>
+    </div>`;
+  document.body.appendChild(el);
+  document.body.classList.add("cardopen");
+  salle.el = el;
+  el.querySelector("#sfermer").onclick = fermerSalle;
+  salleMaj(e0, []);
+  salle.e = null;                     // la première lecture ne doit pas jouer d'animation
+  salleLire().then(()=>{ if(!salle.e) salle.e = e0; });
+  salle.minuteur = setInterval(()=>{ if(!document.hidden) salleLire(); }, 1500);
+  salle.horloge = setInterval(salleTemps, 250);
+  salleTemps();
 }
 
 /* ---------- page « Couleurs » ---------- */
@@ -8198,39 +8526,43 @@ function playBoosterCountdown(kind, total){
 
 async function runBoosterCountdown(kind, total, expose){
   if(reducedMotion()) return;
+  /* Façon Pokémon TCG Pocket : les sachets attendent en rangs serrés, la
+     caméra avance doucement vers eux, et ils éclatent un par un — POP —
+     au rythme du chargement. Un sachet éclaté n'est plus dessiné du tout :
+     rien ne reste à flotter au loin. */
   const tint = B3D_TINT[kind] || B3D_TINT.normal;
   const wrap = document.createElement("div");
-  wrap.className = "b3d cd";
+  wrap.className = "b3d cd arcade";
   wrap.style.setProperty("--b3dglow", tint.glow);
+  const N = Math.max(2, Math.min(10, total));
+  const parSachet = total / N;
   wrap.innerHTML = `<div class="b3dbg"></div><canvas class="b3dcanvas"></canvas>
-    <div class="b3dtext">Ouverture de ${total} paquets<span class="cdn">0 / ${total}</span></div>
+    <div class="cdhud">
+      <div class="cdgros"><b class="cdx">×${total}</b><span>paquets</span></div>
+      <div class="cdn">0 / ${total}</div>
+    </div>
+    <div class="cdpops"></div>
     <div class="cdbar"><i></i></div>
     <div class="b3dflash"></div>`;
   document.body.appendChild(wrap);
-  const cv = wrap.querySelector("canvas"), lbl = wrap.querySelector(".cdn");
+  const cv = wrap.querySelector("canvas"), lbl = wrap.querySelector(".cdn"), pops = wrap.querySelector(".cdpops");
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const W = window.innerWidth, H = window.innerHeight;
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  const asp = W / H, portrait = asp < 0.8;
 
-  const portrait = W/H < 0.8;
-  /* La caméra recule selon le nombre de sachets : dix tiennent dans le
-     cadre sans se chevaucher, trois restent lisibles. */
-  const N0 = Math.max(2, Math.min(10, total));
-  const rangs = Math.ceil(N0 / (portrait ? 3 : 5));
-  const recul = (portrait ? 21 : 15) + rangs * (portrait ? 8.2 : 4.2);
+  /* la pile : les sachets sont serrés les uns derrière les autres, chacun un
+     peu plus haut que celui de devant, comme chez Pokémon TCG Pocket. On ne
+     voit que le premier en entier et le liseré des suivants. */
+  const PAS_Z = 0.62, PAS_Y = 0.22, TAN = Math.tan(35 * Math.PI / 360);
+  const recul = Math.max(3.3 / 2 / (0.8 * TAN * asp), (6.7 / 2 + N * PAS_Y * 0.5) / (0.6 * TAN));
   const view3d = await makeBoosterGL(cv, kind, recul);
   if(!view3d){ wrap.remove(); return; }
 
-  const N = N0, COLS = portrait ? 3 : 5;
-  const ROWS = Math.ceil(N/COLS);
-  const SX = portrait ? 4.0 : 4.4, SY = portrait ? 5.5 : 7.6;
-  const sachets = Array.from({length:N}, (_,i)=>({
-    x:(i % COLS - (COLS-1)/2) * SX,
-    y:((ROWS-1)/2 - Math.floor(i/COLS)) * SY,
-    phase:i * 0.7, partis:0            // 0 = en place, 1 = envolé
-  }));
+  const sachets = Array.from({length:N}, (_, i)=>({rang:i, pop:-1}));
+  let avancee = 0;                               // la caméra glisse d'un sachet à l'autre
 
-  let fait = 0, stop = false;
+  let fait = 0, stop = false, eclates = 0, dernierPop = 0;
   const barre = wrap.querySelector(".cdbar i");
   expose(n=>{
     fait = n;
@@ -8238,33 +8570,70 @@ async function runBoosterCountdown(kind, total, expose){
     if(barre) barre.style.width = Math.round(100 * n / total) + "%";
   }, ()=>{ stop = true; });
 
+  /* position à l'écran d'un point de la scène, pour y lancer les étincelles */
+  const ecran = (x, y, z)=>{
+    const zc = z - recul, f = 1 / TAN;
+    return [(x * f / asp / -zc + 1) / 2 * W, (1 - y * f / -zc) / 2 * H];
+  };
+  const MOTS = ["POP !", "PAF !", "ZAP !", "BAM !", "WOW !", "BOUM !", "TCHAK !", "VLAN !"];
+  function eclater(p){
+    const [sx, sy] = ecran(0, p.rang * PAS_Y - avancee * PAS_Y, -(p.rang - avancee) * PAS_Z);
+    const g = document.createElement("div");
+    g.className = "cdpop";
+    g.style.left = sx + "px"; g.style.top = sy + "px";
+    let html = `<b>${MOTS[Math.floor(Math.random() * MOTS.length)]}</b>`;
+    for(let k = 0; k < 14; k++){
+      const ang = (k / 14) * Math.PI * 2 + Math.random() * 0.4, d = 50 + Math.random() * 70;
+      html += `<i style="--dx:${(Math.cos(ang) * d).toFixed(0)}px;--dy:${(Math.sin(ang) * d).toFixed(0)}px;--r:${(Math.random() * 360).toFixed(0)}deg"></i>`;
+    }
+    g.innerHTML = html;
+    pops.appendChild(g);
+    setTimeout(()=>g.remove(), 900);
+    wrap.classList.remove("secoue"); void wrap.offsetWidth; wrap.classList.add("secoue");
+    try{ sfx.tick(); }catch(e){}
+  }
+
   requestAnimationFrame(()=>wrap.classList.add("on"));
   const T0 = performance.now();
 
   await new Promise(resolve=>{
     function frame(){
       const now = performance.now(), t = (now - T0) / 1000;
-      const entree = Math.min(1, t / 0.9);
+      const entree = easeOutCubic(Math.min(1, t / 0.7));
+      const permis = (stop || fait >= total) ? N : Math.floor(fait / parSachet);
+      if(eclates < permis && now - dernierPop > (stop ? 120 : 170)){
+        const p = sachets[eclates];
+        p.pop = now; eclates++; dernierPop = now;
+        eclater(p);
+      }
+      /* la caméra avance vers le prochain sachet de la pile, en douceur */
+      avancee += (eclates - avancee) * 0.16;
+      const respire = Math.sin(t * 1.4) * 0.12;
+
       view3d.clear();
       let restants = 0;
-      sachets.forEach((p, i)=>{
-        // le sachet s'envole dès que sa tranche de paquets est ouverte
-        const seuil = (i + 1) * total / N;
-        const cible = (stop || fait >= seuil) ? 1 : 0;
-        p.partis += (cible - p.partis) * 0.12;
-        if(p.partis < 0.985) restants++;
-        const k = easeOutCubic(Math.min(1, p.partis));
-        const flott = Math.sin(t * 1.5 + p.phase) * 0.22;
-        const ent = easeOutCubic(Math.min(1, entree + i * 0.0));
-        view3d.draw(
-          [p.x, p.y + flott + k * 7.5, -14 * (1 - ent) - k * 6],
-          [0.12 + k * 0.9, t * 0.6 + p.phase + k * 7, 0.08 + k * 0.5],
-          (0.2 + 0.8 * ent) * (1 - k * 0.92),
-          0, -99, 0, i > 0);
-      });
+      // du fond vers l'avant : le premier sachet couvre ceux de derrière
+      for(let i = N - 1; i >= 0; i--){
+        const p = sachets[i];
+        const rel = p.rang - avancee;               // 0 = le sachet de devant
+        let z = -rel * PAS_Z, y = rel * PAS_Y + respire, x = 0, scl = 0.4 + 0.6 * entree, rx = 0.04, ry = Math.sin(t * 0.8) * 0.08, rz = 0, glow = 0;
+        if(p.pop >= 0){
+          /* le sachet de devant s'arrache vers la caméra et file hors champ */
+          const u = (now - p.pop) / 340;
+          if(u >= 1) continue;                      // parti : plus jamais dessiné
+          const k = easeOutCubic(u);
+          z = k * recul * 0.55; y = k * 5.5; x = (i % 2 ? 1 : -1) * k * 3.5;
+          rz = (i % 2 ? -1 : 1) * k * 0.9; rx = -k * 0.6; glow = 1 - u;
+        }
+        restants++;
+        z -= 10 * (1 - entree);
+        if(p.pop < 0) z += Math.min(1, t / 8) * recul * 0.1;   // lente poussée de la caméra
+        view3d.draw([x, y, z], [rx, ry, rz], scl, glow, -99, 0, true);
+      }
       if(!restants && (stop || fait >= total)){
-        wrap.classList.add("out");
-        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 420);
+        wrap.classList.add("burst");
+        setTimeout(()=>{ wrap.classList.add("out"); }, 180);
+        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 560);
         return;
       }
       requestAnimationFrame(frame);
@@ -12697,7 +13066,7 @@ async function viewCatalog(){
 const CAT_LIMIT = 175;   // emplacements affichés par univers
 
 const CAT_TINT = {"Jeux vidéo":["#4FB3A5","#1C2F2C"], "Films & séries":["#E2754C","#3A1E14"],
-                  "Livres & mangas":["#C77FA8","#33202A"], "Autres":["#B9AC9E","#2E2721"]};
+                  "Livres & mangas":["#C77FA8","#33202A"], "Musique":["#D9B44A","#33290F"], "Autres":["#B9AC9E","#2E2721"]};
 
 /* vignette représentative d'un univers, mise en cache */
 async function univArt(w){
@@ -12850,7 +13219,7 @@ document.addEventListener("keydown", e=>{
 /* ---------- amorçage ---------- */
 const SCRIM = document.getElementById("scrim");
 const MENU = document.getElementById("menupanel");
-const SECONDARY = ["cat","decks","inv","ach","profil","village","shop","market"];
+const SECONDARY = ["cat","decks","inv","ach","profil","shop","market","compte","theme","duel"];
 function setMenu(open){
   MENU.classList.toggle("open", open);
   SCRIM.classList.toggle("open", open);
