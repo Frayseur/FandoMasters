@@ -2767,6 +2767,13 @@ select{background-color:var(--panel)}
   transform:rotate(var(--r));animation:cdetin .9s ease-out forwards}
 .sgerbe i:nth-child(3n){background:#FFD45A;border-radius:50%}
 .sgerbe i:nth-child(4n){background:var(--p4)}
+
+/* ---- communauté ---- */
+.propgrille{display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap}
+.propcarte{flex:none;width:min(52vw,220px);aspect-ratio:63/88;position:relative}
+.propcarte .card{position:absolute;inset:0;width:100%;height:100%}
+.propgrille .minfo{min-width:200px}
+.card .art img{transition:none}
 </style>
 </head>
 <body>
@@ -2801,6 +2808,7 @@ select{background-color:var(--panel)}
       <button data-view="profil"><span class="ic">☻</span><b>Profil</b><small>Vitrine et portrait</small></button>
       <button data-view="theme"><span class="ic">◐</span><b>Couleurs</b><small>Réglez la palette du site</small></button>
       <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Donjons et duels</small></button>
+      <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
       <button data-view="compte"><span class="ic">☁</span><b>Compte</b><small>Sauvegarde en ligne</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
       <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Enchères entre joueurs</small></button>
@@ -2883,7 +2891,8 @@ const UNIVERSES = [
   {label:"The Elder Scrolls",  host:"elderscrolls.fandom.com",  cat:"Jeux vidéo"},
   {label:"The Witcher",        host:"witcher.fandom.com",       cat:"Jeux vidéo"},
   {label:"Zelda",              host:"zelda.fandom.com",         cat:"Jeux vidéo"},
-  {label:"Minecraft",          host:"minecraft.fandom.com",     cat:"Jeux vidéo"},
+  {label:"Minecraft",          host:"minecraft.fandom.com",     cat:"Jeux vidéo",
+   pages:["Character","Block","Item","Mob"]},     // seulement ce que ces pages recensent
   {label:"World of Warcraft",  host:"wowwiki.fandom.com",       cat:"Jeux vidéo"},
   {label:"Red Dead",           host:"reddead.fandom.com",       cat:"Jeux vidéo"},
   {label:"Grand Theft Auto",   host:"gta.fandom.com",           cat:"Jeux vidéo"},
@@ -2985,6 +2994,8 @@ const UNIVERSES = [
   {label:"X-Files",            host:"x-files.fandom.com",       cat:"Films & séries"},
   {label:"Supernatural",       host:"supernatural.fandom.com",  cat:"Films & séries"},
   {label:"Hannibal",           host:"hannibal.fandom.com",      cat:"Films & séries"},
+  {label:"The Amazing Digital Circus", host:"tadp.fandom.com", path:"/fr", cat:"Films & séries"},
+  {label:"Arc Raiders",        host:"arc-raiders.fandom.com",   cat:"Jeux vidéo"},
   {label:"Reborn!",            host:"reborn.fandom.com", path:"/fr", cat:"Livres & mangas"},
   {label:"Fields of Mistria",  host:"fields-of-mistria.fandom.com", cat:"Jeux vidéo"},
   {label:"Ariana Grande",      host:"arianagrande.fandom.com",  cat:"Musique"},
@@ -4301,7 +4312,48 @@ function stripHtml(html){
   return (p[0]||d.textContent||"").replace(/\s+/g," ").trim();
 }
 
+/* Univers restreint (ex. Minecraft) : seuls les articles cités par quelques
+   pages-sommaires comptent — personnages, blocs, objets, créatures — et pas
+   les versions du jeu ni les pages techniques. La liste est gardée 7 jours. */
+const listesBlanches = new Map();
+const HORS_SUJET = /^(java|bedrock|pocket|legacy console|education|xbox|playstation|nintendo|new nintendo|wii ?u|windows|raspberry)\b|edition|^\d+(\.\d+)+|snapshot|pre-?release|update|tutorial|^list of|\(disambiguation\)/i;
+async function titresAutorises(w){
+  if(!w || !Array.isArray(w.pages) || !w.pages.length) return null;
+  const cle = w.host + (w.path || "");
+  if(listesBlanches.has(cle)) return listesBlanches.get(cle);
+  const cache = await sget("fm:liste:" + cle, true);
+  if(cache && cache.t && Date.now() - cache.t < 7 * 864e5 && cache.l && cache.l.length){
+    listesBlanches.set(cle, cache.l); return cache.l;
+  }
+  const vus = new Set();
+  let suite = {};
+  for(let tour = 0; tour < 12; tour++){
+    const d = await api(Object.assign({action:"query", generator:"links", titles:w.pages.join("|"),
+      gplnamespace:"0", gpllimit:"max", prop:"info"}, suite), w);
+    for(const p of ((d.query && d.query.pages) || [])) if(p && p.title && !p.missing && !HORS_SUJET.test(p.title) && w.pages.indexOf(p.title) < 0) vus.add(p.title);
+    if(!d.continue) break;
+    suite = d.continue;
+  }
+  const l = [...vus];
+  if(l.length){ listesBlanches.set(cle, l); await sset("fm:liste:" + cle, {t:Date.now(), l}, true); }
+  return l;
+}
+
 async function drawPages(n, w){
+  const permis = await titresAutorises(w).catch(()=>null);
+  if(permis && permis.length){
+    const choix = shuffled(permis).slice(0, Math.min(n, 20));
+    const data = await api({
+      action:"query", titles:choix.join("|"),
+      prop:"info|categories|images|pageimages|linkshere|extracts",
+      inprop:"url", cllimit:"20", imlimit:"20",
+      piprop:"thumbnail", pithumbsize:"900",
+      lhnamespace:"0", lhlimit:"500",
+      exintro:"1", explaintext:"1"
+    }, w);
+    const pages = (data.query && data.query.pages) || [];
+    return pages.filter(p=>!p.missing && !isRelic(p.title) && (p.length||0) > 400);
+  }
   const data = await api({
     action:"query",
     generator:"random", grnnamespace:"0", grnlimit:String(n),
@@ -4858,8 +4910,9 @@ poserTeintes(teintesCourantes());
 
 function cardHTML(c, opts={}){
   const src = c.img && !artRefusee(c.img) ? c.img : null;
+  const cadre = styleCadrage(cadrageDe(c));
   const art = src
-    ? `<img src="${esc(src)}" alt="" loading="lazy"
+    ? `<img src="${esc(src)}" alt="" loading="lazy" ${cadre ? `style="${cadre}"` : ""}
          onload="artVerif(this)"
          onerror="this.closest('.art').insertAdjacentHTML('beforeend','&lt;div class=&quot;noart&quot;&gt;&lt;/div&gt;');this.remove()">`
     : `<div class="noart"></div>`;
@@ -5031,7 +5084,7 @@ function render(){
   if(!state.profile.pseudo) return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
-     village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur,
+     village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur, communaute:viewCommu,
      shop:viewSoon, market:viewMarche}[state.view]||viewHub)();
   poserSurtitre();
   majJauges();
@@ -5056,6 +5109,7 @@ const SURTITRES = {
   compte: "Réglages · sauvegarde",
   amis:   "Communauté",
   joueur: "Joueur",
+  communaute: "Corrections",
   shop:   "Boutique",
   market: "Échanges"
 };
@@ -6865,6 +6919,280 @@ function ouvrirSalle(id){
   salleTemps();
 }
 
+/* ======================================================================
+   Communauté — propositions de corrections
+   ----------------------------------------------------------------------
+   Un joueur choisit une de ses cartes, recadre l'illustration, propose une
+   autre rareté. La proposition part dans la table « propositions ». Seul le
+   compte du développeur (contrôlé par le serveur, pas seulement ici) voit
+   la liste complète, accepte ou refuse, puis exporte les corrections
+   acceptées en un bloc de texte à transmettre pour intégration.
+   Les corrections intégrées vivent dans CORRECTIONS, plus bas : elles
+   s'appliquent à toutes les copies de la carte, chez tous les joueurs.
+   ====================================================================== */
+const COMMU_SQL = `-- FandoMasters · propositions de la communauté (à lancer une fois)
+create or replace function est_admin() returns boolean
+language sql stable as $$
+  select auth.uid() = '81eb751c-1f87-411e-928b-02145f4c70f5'::uuid
+$$;
+
+create table if not exists propositions (
+  id bigint generated always as identity primary key,
+  joueur uuid not null references auth.users on delete cascade,
+  carte_id text not null,
+  carte jsonb not null,
+  rarete text,
+  cadrage jsonb,
+  note text,
+  statut text not null default 'attente' check (statut in ('attente','acceptee','refusee')),
+  exporte boolean not null default false,
+  cree timestamptz not null default now(),
+  traite timestamptz
+);
+alter table propositions enable row level security;
+drop policy if exists "voir propositions" on propositions;
+create policy "voir propositions" on propositions for select to authenticated
+  using (joueur = auth.uid() or est_admin());
+drop policy if exists "proposer" on propositions;
+create policy "proposer" on propositions for insert to authenticated
+  with check (joueur = auth.uid() and statut = 'attente' and not exporte);
+drop policy if exists "decider" on propositions;
+create policy "decider" on propositions for update to authenticated
+  using (est_admin()) with check (est_admin());`;
+
+/* Corrections intégrées au jeu : id de carte → {rarete, cadrage:{x,y,z}}. */
+const CORRECTIONS = {};
+
+function cadrageDe(c){
+  return (c && c.cadrage) || (CORRECTIONS[c && c.id] || {}).cadrage || null;
+}
+function styleCadrage(cd){
+  if(!cd) return "";
+  const x = Math.max(0, Math.min(100, +cd.x || 50)), y = Math.max(0, Math.min(100, +cd.y || 50)), z = Math.max(1, Math.min(3, +cd.z || 1));
+  return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
+}
+/* les raretés corrigées s'appliquent aux cartes déjà possédées */
+function appliquerCorrections(col){
+  let n = 0;
+  for(const c of col || []){
+    const k = CORRECTIONS[c.id];
+    if(k && k.rarete && RARITIES.indexOf(k.rarete) >= 0 && c.rarity !== k.rarete){ c.rarity = k.rarete; n++; }
+  }
+  return n;
+}
+
+const commu = {onglet:"proposer", carte:null, cadrage:{x:50, y:50, z:1}, rarete:"", note:"",
+               miennes:[], toutes:[], charge:false, erreur:""};
+
+async function commuCharger(){
+  const moi = moiId(); if(!moi) return;
+  try{
+    commu.miennes = (await nuageRest("propositions?select=*&joueur=eq." + moi + "&order=cree.desc&limit=50")) || [];
+    if(estAdmin()){
+      commu.toutes = (await nuageRest("propositions?select=*&order=cree.desc&limit=300")) || [];
+      const ids = [...new Set(commu.toutes.map(p => p.joueur))].filter(id => !amis.profils.has(id));
+      if(ids.length){
+        const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + ids.join(",") + ")").catch(()=>[]);
+        for(const x of (pr || [])) amis.profils.set(x.joueur, x);
+      }
+    }
+    commu.erreur = ""; commu.charge = true;
+  }catch(e){ commu.erreur = String(e.message || e); commu.charge = true; }
+}
+
+function exportCorrections(liste){
+  const o = {};
+  for(const p of liste){
+    o[p.carte_id] = Object.assign(o[p.carte_id] || {}, {
+      titre:(p.carte || {}).title, univers:(p.carte || {}).univ,
+      ...(p.rarete ? {rarete:p.rarete} : {}),
+      ...(p.cadrage ? {cadrage:p.cadrage} : {})
+    });
+  }
+  return "FandoMasters — corrections acceptées (" + Object.keys(o).length + ")\n" + JSON.stringify(o, null, 1);
+}
+
+function blocProposition(p, admin){
+  const c = Object.assign({}, p.carte || {}, {cadrage:p.cadrage || null});
+  const avant = p.carte || {};
+  const etat = {attente:"en attente", acceptee:"acceptée", refusee:"refusée"}[p.statut];
+  return `<div class="mvente prop" style="cursor:default">
+    <div class="mcarte">${cardHTML(c, {compact:true})}</div>
+    <div class="minfo">
+      <b>${esc(avant.title || p.carte_id)}</b>
+      <span class="sub">${esc(avant.univ || "")}</span>
+      ${p.rarete && p.rarete !== avant.rarity ? `<span class="sub">Rareté : ${esc(avant.rarity || "?")} → <b style="color:var(--p5)">${esc(p.rarete)}</b></span>` : ""}
+      ${p.cadrage ? `<span class="sub">Image recadrée</span>` : ""}
+      ${p.note ? `<span class="sub">« ${esc(p.note)} »</span>` : ""}
+      ${admin ? `<span class="sub">par ${esc(nomJoueur(p.joueur))} · ${ago(Date.parse(p.cree))}</span>` : ""}
+      <div class="row" style="gap:.4rem;margin-top:.35rem;align-items:center">
+        <span class="mtag ${p.statut === "acceptee" ? "ok" : p.statut === "refusee" ? "ko" : ""}">${etat}${p.exporte ? " · exportée" : ""}</span>
+        ${admin && p.statut === "attente" ? `<button class="btn small" data-pok="${p.id}">Accepter</button>
+          <button class="btn small ghost" data-pno="${p.id}">Refuser</button>` : ""}
+        ${admin && p.statut !== "attente" && !p.exporte ? `<button class="btn small ghost" data-prevoir="${p.id}">Remettre en attente</button>` : ""}
+      </div>
+    </div>
+  </div>`;
+}
+
+function viewCommu(){
+  const admin = estAdmin();
+  const ong = commu.onglet;
+  const tab = (id, nom, n) => `<button class="chip" data-cong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
+  const attente = commu.toutes.filter(p => p.statut === "attente");
+  const aExporter = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte);
+  let corps = "";
+  if(!commu.charge){
+    corps = `<div class="panel"><span class="spinner"></span></div>`;
+  }else if(commu.erreur){
+    const manque = /404|PGRST|relation|does not exist|schema cache/i.test(commu.erreur);
+    corps = `<div class="panel"><p class="sub" style="margin:0 0 .6rem">${manque
+        ? "La table des propositions n'existe pas encore. Copiez ce script dans Supabase → SQL Editor → Run."
+        : "Le serveur n'a pas répondu : " + esc(commu.erreur)}</p>
+      ${manque ? `<pre class="sql">${esc(COMMU_SQL)}</pre><button class="btn small ghost" id="ccopie">Copier le script</button>` : ""}
+      <button class="btn small ghost" id="creessai" style="margin-left:.4rem">Réessayer</button></div>`;
+  }else if(ong === "proposer"){
+    const c = commu.carte ? state.collection.find(x => x.id === commu.carte) : null;
+    const apercu = c ? Object.assign({}, c, {cadrage:commu.cadrage, rarity:commu.rarete || c.rarity}) : null;
+    corps = `<div class="panel">
+      <div class="propgrille">
+        <div class="propcarte">${apercu ? cardHTML(apercu) : `<div class="slot" id="pchoix" style="cursor:pointer;height:100%;display:grid;place-items:center;font-size:2rem">+</div>`}</div>
+        <div class="minfo">
+          <button class="btn small ghost" id="pchoisir">${c ? "Changer de carte" : "Choisir une carte"}</button>
+          ${c ? `
+          <span class="sub" style="margin-top:.6rem">Recadrer : faites glisser l'image sur la carte</span>
+          <label class="echmontant"><span>Zoom</span>
+            <input type="range" id="pzoom" min="1" max="3" step="0.05" value="${commu.cadrage.z}"></label>
+          <button class="btn small ghost" id="preset" style="margin-top:.3rem">Recentrer</button>
+          <label class="sub" for="prar" style="margin-top:.7rem">Rareté proposée</label>
+          <select id="prar" style="margin:0">
+            <option value="">Inchangée (${esc(c.rarity)})</option>
+            ${RARITIES.filter(r => r !== "Relique").map(r => `<option ${commu.rarete === r ? "selected" : ""}>${esc(r)}</option>`).join("")}
+          </select>
+          <label class="sub" for="pnote" style="margin-top:.7rem">Pourquoi ? (facultatif)</label>
+          <input id="pnote" maxlength="200" value="${esc(commu.note)}" placeholder="ex. personnage principal, devrait être Légendaire" style="margin:0">
+          <button class="btn" id="penvoyer" style="margin-top:.9rem">Envoyer la proposition</button>` : ""}
+        </div>
+      </div></div>`;
+  }else if(ong === "miennes"){
+    corps = commu.miennes.length ? `<div class="mliste">${commu.miennes.map(p => blocProposition(p, false)).join("")}</div>`
+      : `<div class="panel"><p class="sub" style="margin:0">Aucune proposition envoyée.</p></div>`;
+  }else if(ong === "valider" && admin){
+    corps = attente.length ? `<div class="mliste">${attente.map(p => blocProposition(p, true)).join("")}</div>`
+      : `<div class="panel"><p class="sub" style="margin:0">Rien à valider.</p></div>`;
+  }else if(ong === "export" && admin){
+    corps = `<div class="panel">
+      <p class="sub" style="margin:0 0 .6rem">${aExporter.length} correction${aExporter.length > 1 ? "s" : ""} acceptée${aExporter.length > 1 ? "s" : ""} à intégrer.</p>
+      ${aExporter.length ? `<pre class="sql" id="pexport" style="white-space:pre-wrap;max-height:40vh;overflow:auto">${esc(exportCorrections(aExporter))}</pre>
+      <div class="row" style="gap:.4rem;margin-top:.6rem">
+        <button class="btn small" id="pcopier">Copier</button>
+        <button class="btn small ghost" id="pmarquer">Marquer comme envoyées</button>
+      </div>` : ""}
+    </div>
+    ${commu.toutes.filter(p => p.statut !== "attente").length ? `<h3 class="amih" style="margin-top:1rem">Historique</h3>
+      <div class="mliste">${commu.toutes.filter(p => p.statut !== "attente").slice(0, 40).map(p => blocProposition(p, true)).join("")}</div>` : ""}`;
+  }
+
+  view.innerHTML = `
+    <h2 class="vuetitre">Communauté</h2>
+    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
+      ${tab("proposer", "Proposer", 0)}
+      ${tab("miennes", "Mes propositions", commu.miennes.filter(p => p.statut === "attente").length)}
+      ${admin ? tab("valider", "À valider", attente.length) + tab("export", "Export", aExporter.length) : ""}
+    </div>
+    ${corps}`;
+
+  view.querySelectorAll("[data-cong]").forEach(b => b.onclick = ()=>{ commu.onglet = b.dataset.cong; viewCommu(); });
+  const cr = view.querySelector("#creessai");
+  if(cr) cr.onclick = async ()=>{ commu.charge = false; viewCommu(); await commuCharger(); viewCommu(); };
+  const cc = view.querySelector("#ccopie");
+  if(cc) cc.onclick = ()=>{ try{ navigator.clipboard.writeText(COMMU_SQL); toast("Script copié", "", "info"); }catch(e){} };
+
+  const choisir = async ()=>{
+    const r = await choisirCartes({titre:"Carte à corriger", liste:state.collection.filter(c => c.img), max:1, deja:commu.carte ? [commu.carte] : []});
+    if(r && r[0]){
+      commu.carte = r[0];
+      const c = state.collection.find(x => x.id === r[0]);
+      commu.cadrage = Object.assign({x:50, y:50, z:1}, cadrageDe(c) || {});
+      commu.rarete = ""; commu.note = "";
+    }
+    viewCommu();
+  };
+  const pc = view.querySelector("#pchoisir"); if(pc) pc.onclick = choisir;
+  const pc2 = view.querySelector("#pchoix"); if(pc2) pc2.onclick = choisir;
+
+  /* recadrage au doigt : on fait glisser l'image dans la carte */
+  const zone = view.querySelector(".propcarte .art");
+  const appliquer = ()=>{ const im = view.querySelector(".propcarte .art img"); if(im) im.setAttribute("style", styleCadrage(commu.cadrage)); };
+  if(zone){
+    zone.style.touchAction = "none"; zone.style.cursor = "grab";
+    let depart = null;
+    zone.addEventListener("pointerdown", ev => { depart = {x:ev.clientX, y:ev.clientY, cx:commu.cadrage.x, cy:commu.cadrage.y}; zone.setPointerCapture(ev.pointerId); });
+    zone.addEventListener("pointermove", ev => {
+      if(!depart) return;
+      const r = zone.getBoundingClientRect();
+      const k = 100 / Math.max(1, commu.cadrage.z);
+      commu.cadrage.x = Math.max(0, Math.min(100, depart.cx - (ev.clientX - depart.x) / r.width * k * 1.6));
+      commu.cadrage.y = Math.max(0, Math.min(100, depart.cy - (ev.clientY - depart.y) / r.height * k * 1.6));
+      appliquer();
+    });
+    const fin = ()=>{ depart = null; };
+    zone.addEventListener("pointerup", fin); zone.addEventListener("pointercancel", fin);
+  }
+  const pz = view.querySelector("#pzoom"); if(pz) pz.oninput = ()=>{ commu.cadrage.z = +pz.value; appliquer(); };
+  const pr = view.querySelector("#preset"); if(pr) pr.onclick = ()=>{ commu.cadrage = {x:50, y:50, z:1}; viewCommu(); };
+  const ps = view.querySelector("#prar"); if(ps) ps.onchange = ()=>{ commu.rarete = ps.value; viewCommu(); };
+  const pn = view.querySelector("#pnote"); if(pn) pn.oninput = ()=>{ commu.note = pn.value; };
+  const pe = view.querySelector("#penvoyer");
+  if(pe) pe.onclick = async ()=>{
+    const c = state.collection.find(x => x.id === commu.carte);
+    if(!c) return;
+    const cd = commu.cadrage;
+    const recadre = Math.abs(cd.x - 50) > 0.5 || Math.abs(cd.y - 50) > 0.5 || cd.z > 1.01;
+    if(!recadre && !commu.rarete){ toast("Rien à proposer", "recadrez l'image ou choisissez une rareté", "lose"); return; }
+    pe.disabled = true;
+    const carte = {id:c.id, title:c.title, univ:c.univ, rarity:c.rarity, img:c.img, atk:c.atk, def:c.def, role:c.role, variant:c.variant || null};
+    try{
+      await nuageRest("propositions", {method:"POST", body:JSON.stringify([{
+        joueur:moiId(), carte_id:c.id, carte,
+        rarete:commu.rarete || null,
+        cadrage:recadre ? {x:Math.round(cd.x), y:Math.round(cd.y), z:Math.round(cd.z * 100) / 100} : null,
+        note:(commu.note || "").trim().slice(0, 200) || null
+      }])});
+      toast("Proposition envoyée", "merci ! elle sera examinée", "info");
+      commu.carte = null; commu.onglet = "miennes";
+      await commuCharger();
+    }catch(e){ toast("Envoi impossible", String(e.message || e), "lose"); pe.disabled = false; }
+    viewCommu();
+  };
+
+  // développeur
+  const decider = async (id, statut)=>{
+    try{
+      await nuageRest("propositions?id=eq." + id, {method:"PATCH", body:JSON.stringify({statut, traite:new Date().toISOString()})});
+      await commuCharger();
+    }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
+    viewCommu();
+  };
+  view.querySelectorAll("[data-pok]").forEach(b => b.onclick = ()=>{ b.disabled = true; decider(+b.dataset.pok, "acceptee"); });
+  view.querySelectorAll("[data-pno]").forEach(b => b.onclick = ()=>{ b.disabled = true; decider(+b.dataset.pno, "refusee"); });
+  view.querySelectorAll("[data-prevoir]").forEach(b => b.onclick = ()=>{ b.disabled = true; decider(+b.dataset.prevoir, "attente"); });
+  const pcop = view.querySelector("#pcopier");
+  if(pcop) pcop.onclick = ()=>{ try{ navigator.clipboard.writeText(view.querySelector("#pexport").textContent); toast("Corrections copiées", "collez-les dans la conversation", "info"); }catch(e){} };
+  const pm = view.querySelector("#pmarquer");
+  if(pm) pm.onclick = async ()=>{
+    pm.disabled = true;
+    try{
+      const ids = aExporter.map(p => p.id);
+      await nuageRest("propositions?id=in.(" + ids.join(",") + ")", {method:"PATCH", body:JSON.stringify({exporte:true})});
+      await commuCharger();
+    }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
+    viewCommu();
+  };
+
+  if(!commu.charge) commuCharger().then(()=>{ if(state.view === "communaute") viewCommu(); });
+}
+
 /* ---------- page « Couleurs » ---------- */
 function viewTheme(){
   const c = teintesCourantes();
@@ -7410,7 +7738,9 @@ function shuffled(arr){ return [...arr].sort(()=>Math.random()-0.5); }
 async function mostLinked(w){
   const key = "fm:ml2:"+w.host+(w.path||"");
   const c = await sget(key, true);
-  if(c && c.list && c.list.length && (Date.now()-c.t) < 7*864e5) return c.list;
+  const permis = await titresAutorises(w).catch(()=>null);
+  const filtre = l => permis && permis.length ? l.filter(x => permis.indexOf(x.t) >= 0) : l;
+  if(c && c.list && c.list.length && (Date.now()-c.t) < 7*864e5) return filtre(c.list);
   let list = [];
   for(const page of ["Mostlinked","Mostrevisions"]){
     try{
@@ -7426,7 +7756,7 @@ async function mostLinked(w){
     list = list.slice(0, 300);   // le haut du palmarès suffit, et le navigateur est petit
     await sset(key, {t:Date.now(), list}, true);
   }
-  return list;
+  return filtre(list);
 }
 
 /* Rareté d'un article : son poids réel dans l'univers, mesuré en part des liens
@@ -7917,6 +8247,7 @@ function flipCard(i){
 }
 
 function addCard(c){
+  { const k = CORRECTIONS[c.id]; if(k && k.rarete && RARITIES.indexOf(k.rarete) >= 0) c.rarity = k.rarete; }
   const i = RARITIES.indexOf(c.rarity);
   if(i >= 2) state.profile.rarePulls = (state.profile.rarePulls||0) + 1;
   const d = state.profile.daily;
@@ -11407,12 +11738,6 @@ const ACHIEVEMENTS = [
   {id:"leg1",    name:"Une légende",           desc:"Obtenir une carte Légendaire.",              goal:1,   val:()=>nRar("Légendaire"),    reward:8},
   {id:"leg5",    name:"Chasseur de légendes",  desc:"Posséder 5 cartes Légendaires.",             goal:5,   val:()=>nRar("Légendaire"),    reward:20},
   {id:"dupe3",   name:"Triple emploi",         desc:"Avoir une même carte en 3 exemplaires.",     goal:3,   val:maxDupe,                   reward:1},
-  {id:"duel1",   name:"Premier donjon",        desc:"Explorer un premier donjon.",                          goal:1,   val:()=>state.profile.duels,   reward:1},
-  {id:"duel10",  name:"Rat de donjon",    desc:"Explorer 10 donjons.",                         goal:10,  val:()=>state.profile.duels,   reward:3},
-  {id:"win1",    name:"Première victoire",     desc:"Sortir vivant d'un donjon.",                            goal:1,   val:()=>state.profile.wins,    reward:2},
-  {id:"win10",   name:"Duelliste",             desc:"Sortir vivant de 10 donjons.",                           goal:10,  val:()=>state.profile.wins,    reward:6},
-  {id:"streak3", name:"Série noire",           desc:"Enchaîner 3 sorties réussies.",                     goal:3,   val:()=>state.profile.bestStreak, reward:4},
-  {id:"perfect", name:"Sans faute",            desc:"Sortir d'un donjon sans perdre un seul combat.",      goal:1,   val:()=>state.profile.perfect, reward:3},
   {id:"mana1",   name:"Première coulée",      desc:"Convertir du Mana en Fandominus.",           goal:1,   val:()=>state.profile.cast||0, reward:1},
   {id:"mana10",  name:"Fondeur",             desc:"Couler 10 Fandominus à la machine.",         goal:10,  val:()=>state.profile.cast||0, reward:4},
   {id:"myth1",   name:"Forge mythique",      desc:"Forger un booster mythique.",                goal:1,   val:()=>state.profile.forged||0, reward:6},
@@ -11433,7 +11758,6 @@ const ACHIEVEMENTS = [
   {id:"tens1",   name:"Par dix",                desc:"Ouvrir dix paquets d'un coup.",               goal:1,   val:()=>state.profile.tens||0, reward:3},
   {id:"camp1",   name:"Première conquête",      desc:"Remporter une campagne.",                     goal:1,   val:()=>state.profile.campWins||0, reward:6},
   {id:"camp10",  name:"Stratège",               desc:"Remporter 10 campagnes.",                     goal:10,  val:()=>state.profile.campWins||0, reward:25},
-  {id:"streak5", name:"Invaincu",               desc:"Enchaîner 5 sorties réussies.",              goal:5,   val:()=>state.profile.bestStreak||0, reward:8},
   {id:"deck1",   name:"Stratège en herbe",    desc:"Composer un premier deck complet.",           goal:1,   val:()=>(state.profile.decks||[]).filter(deckFull).length, reward:4},
   {id:"deck5",   name:"Général",             desc:"Tenir cinq decks complets.",                  goal:5,   val:()=>(state.profile.decks||[]).filter(deckFull).length, reward:16},
   {id:"item1",   name:"Sac à malices",       desc:"Trouver un premier objet.",                   goal:1,   val:()=>state.profile.items||0, reward:2},
@@ -11841,8 +12165,6 @@ const TITLES = [
   {id:"leg5",    name:"Chasseur de légendaires"},
   {id:"relic",   name:"Porteur de l'Anneau"},
   {id:"relic3",  name:"Gardien des artefacts"},
-  {id:"win10",   name:"Duelliste"},
-  {id:"streak5", name:"Invaincu"},
   {id:"camp10",  name:"Stratège"},
   {id:"wall",    name:"Voyageur du multivers"},
   {id:"upall",   name:"Maître de l'atelier"},
@@ -13219,7 +13541,7 @@ document.addEventListener("keydown", e=>{
 /* ---------- amorçage ---------- */
 const SCRIM = document.getElementById("scrim");
 const MENU = document.getElementById("menupanel");
-const SECONDARY = ["cat","decks","inv","ach","profil","shop","market","compte","theme","duel"];
+const SECONDARY = ["cat","decks","inv","ach","profil","shop","market","compte","theme","duel","communaute"];
 function setMenu(open){
   MENU.classList.toggle("open", open);
   SCRIM.classList.toggle("open", open);
@@ -13369,7 +13691,7 @@ function openSettings(){
   }
   farmTick();
   state.collection = (await sget("fm:col")) || [];
-  if(state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
+  if(appliquerCorrections(state.collection) || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
   fmPret = true;
   paintSound();
   render();
