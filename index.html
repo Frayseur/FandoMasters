@@ -3049,8 +3049,11 @@ async function nuageRest(chemin, opts={}){
     if(!neuf) throw new Error("session expirée");
     r = await envoyer(neuf);
   }
-  if(!r.ok) throw new Error("base : erreur " + r.status);
   const t = await r.text();
+  if(!r.ok){
+    let d = ""; try{ const j = JSON.parse(t); d = j.message || j.hint || j.error || ""; }catch(e){}
+    throw new Error("base " + r.status + (d ? " : " + d : ""));
+  }
   return t ? JSON.parse(t) : null;
 }
 
@@ -3079,6 +3082,7 @@ async function nuageEcrire(cle, valeur){
    une seule fois. */
 const nuageEnAttente = new Map();
 const nuageMinuteurs = new Map();
+let nuageErreur = "";
 let nuageEtat = "repos";       // repos | envoi | erreur | hors-ligne
 
 function nuagePousse(cle, valeur){
@@ -3102,6 +3106,7 @@ async function nuageVide(cle){
        enregistrement, ou à la fermeture de la page. */
     if(!nuageEnAttente.has(cle)) nuageEnAttente.set(cle, v);
     nuageEtat = navigator.onLine === false ? "hors-ligne" : "erreur";
+    nuageErreur = String(e && e.message || e);
   }
   majEtatNuage();
 }
@@ -3122,7 +3127,7 @@ function majEtatNuage(){
   const t = {repos:"à jour", "envoi":"envoi en cours…",
              erreur:"envoi impossible, nouvel essai au prochain enregistrement",
              "hors-ligne":"hors ligne, les parties sont gardées sur l'appareil"};
-  el.textContent = t[nuageEtat] || "";
+  el.textContent = (t[nuageEtat] || "") + (nuageEtat === "erreur" && nuageErreur ? " — " + nuageErreur : "");
   el.className = "sub nuetat " + (nuageEtat === "repos" ? "ok" : nuageEtat === "envoi" ? "wip" : "ko");
 }
 
@@ -3168,12 +3173,15 @@ async function nuageMonter(source){
   const s = nuageSession();
   const moi = s && s.user ? s.user.id : null;
   const depuis = source || moi || "invite";
+  let n = 0;
   for(const cle of NUAGE_CLES){
     const v = lireEspace(depuis, cle);
     if(v == null) continue;
     await nuageEcrire(cle, v);
+    n++;
     if(moi && depuis !== moi) ecrireEspace(moi, cle, v);
   }
+  return n;
 }
 
 /* À la première connexion sur un appareil, il peut y avoir une partie des
@@ -4383,8 +4391,9 @@ create policy "chacun les siennes"
       const b = e.currentTarget;
       b.disabled = true; b.textContent = "Envoi…";
       try{
-        await nuageMonter(acct());
-        toast("Partie envoyée", "la sauvegarde en ligne est à jour", "info");
+        const n = await nuageMonter(acct());
+        if(n) toast("Partie envoyée", n + " sauvegarde" + (n>1?"s":"") + " en ligne, à jour", "info");
+        else toast("Rien à envoyer", "aucune partie sur cet appareil : créez un pseudo et jouez d'abord", "lose");
       }catch(err){
         toast("Envoi impossible", String(err.message || err), "lose");
       }
