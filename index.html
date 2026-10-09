@@ -2596,6 +2596,29 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
 
 .lien{background:none;border:none;padding:0;cursor:pointer;font:inherit;
   color:var(--p4);text-decoration:underline;text-underline-offset:3px}
+
+/* ---- amis ---- */
+.amilist{display:flex;flex-direction:column;gap:.15rem}
+.amirow{display:flex;align-items:center;gap:.7rem;padding:.55rem 0;border-bottom:1px solid var(--line)}
+.amirow:last-child{border-bottom:none}
+.amiav{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;
+  background-color:var(--p6);color:var(--sur-prof);font-family:var(--f-titre);font-size:1.1rem;
+  border:2px solid var(--line);overflow:hidden}
+.amiinfo{min-width:0;flex:1;display:flex;flex-direction:column}
+.amiinfo b{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.03em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amiinfo .sub{font-size:.8rem;margin:0}
+.amiact{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end}
+.amih{font-size:1rem;margin:.9rem 0 .4rem}
+.amih:first-child{margin-top:0}
+.echcols{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:.5rem}
+.echcols .sub{display:block;margin-bottom:.35rem}
+.echgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:.4rem;margin-top:.35rem}
+.echbloc{margin-bottom:.7rem}
+@media (max-width:560px){
+  .echcols{grid-template-columns:1fr}
+  .amirow{flex-wrap:wrap}
+  .amiact{width:100%;justify-content:flex-start;padding-left:calc(44px + .7rem)}
+}
 </style>
 </head>
 <body>
@@ -2630,6 +2653,7 @@ details.fold.info summary{font-family:var(--f-data);font-size:.74rem;
       <button data-view="profil"><span class="ic">☻</span><b>Profil</b><small>Vitrine et portrait</small></button>
       <button data-view="village"><span class="ic">⌂</span><b>Village</b><small>Marchands, forge et comptoir</small></button>
       <button data-view="theme"><span class="ic">◐</span><b>Couleurs</b><small>Réglez la palette du site</small></button>
+      <button data-view="amis"><span class="ic">♢</span><b>Amis</b><small>Joueurs et échanges</small></button>
       <button data-view="compte"><span class="ic">☁</span><b>Compte</b><small>Sauvegarde en ligne</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
       <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Échanges entre joueurs · bientôt</small></button>
@@ -3186,13 +3210,15 @@ async function nuageLire(cle){
 async function nuageEcrire(cle, valeur){
   const s = nuageSession();
   if(!s || !s.user) return;
-  const corps = JSON.stringify([{joueur:s.user.id, cle, valeur, maj:new Date().toISOString()}]);
+  const maj = new Date().toISOString();
+  const corps = JSON.stringify([{joueur:s.user.id, cle, valeur, maj}]);
   await nuageRest(NUAGE_TABLE, {
     method:"POST",
     headers:{"Prefer":"resolution=merge-duplicates"},
     body:corps,
     keepalive: corps.length < 60000
   });
+  return maj;
 }
 
 /* Le jeu enregistre souvent ; on ne veut pas une requête par clic. Chaque
@@ -3213,18 +3239,22 @@ function nuagePousse(cle, valeur){
   ecrireEspace(acct(), "maj:" + cle, new Date().toISOString());   // sans attendre
   const l = nuageAttente(); if(l.indexOf(cle) < 0){ l.push(cle); nuageAttentePose(l); }
   nuageEnAttente.set(cle, valeur);
-  clearTimeout(nuageMinuteurs.get(cle));
-  nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), 1200));
+  /* Le profil change sans cesse (le mana monte chaque seconde) : on l'envoie
+     au plus toutes les 12 secondes. La collection part vite. Un envoi déjà
+     prévu n'est pas repoussé : il prendra la dernière valeur. */
+  if(!nuageMinuteurs.has(cle))
+    nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), cle === "fm:profile" ? 12000 : 1200));
 }
 
 async function nuageVide(cle){
   if(!nuageEnAttente.has(cle)) return;
-  const v = nuageEnAttente.get(cle);
+  const v = JSON.parse(JSON.stringify(nuageEnAttente.get(cle)));
   nuageEnAttente.delete(cle);
+  clearTimeout(nuageMinuteurs.get(cle));
   nuageMinuteurs.delete(cle);
   nuageEtat = "envoi"; majEtatNuage();
   try{
-    await nuageEcrire(cle, v);
+    await nuageSynchroniser(cle, v, true);
     if(!nuageEnAttente.has(cle)) nuageAttentePose(nuageAttente().filter(c => c !== cle));
     nuageEtat = nuageEnAttente.size ? "envoi" : "repos";
   }catch(e){
@@ -3374,30 +3404,167 @@ const NUAGE_CLES = ["fm:profile", "fm:col"];
 async function nuageDescendre(forcer){
   if(!nuageConfigure() || !nuageConnecte()) return false;
   let eu = false;
-  const attente = nuageAttente();
+  const moi = acct();
   for(const cle of NUAGE_CLES){
     try{
-      const r = await nuageLire(cle);
-      if(!r || r.valeur == null) continue;
-      const moi = acct();
-      const locale = await lireEspace(moi, "maj:" + cle);
-      const plusRecentIci = !forcer && (attente.indexOf(cle) >= 0 ||
-        (locale && Date.parse(locale) > Date.parse(r.maj)));
-      if(plusRecentIci){
-        /* l'appareil a du neuf que le serveur n'a pas : on l'envoie */
-        const v = await lireEspace(moi, cle);
-        if(v != null){ await nuageEcrire(cle, v); }
+      if(forcer){
+        const r = await nuageLire(cle);
+        if(!r || r.valeur == null) continue;
+        if(!(await ecrireEspace(moi, cle, r.valeur))) throw new Error("place insuffisante dans le navigateur");
+        await ecrireEspace(moi, "base:" + cle, r.valeur);
+        await ecrireEspace(moi, "srvmaj:" + cle, r.maj);
+        eu = true;
         continue;
       }
-      if(!(await ecrireEspace(moi, cle, r.valeur))) throw new Error("place insuffisante dans le navigateur");
-      await ecrireEspace(moi, "maj:" + cle, r.maj);
-      eu = true;
-    }catch(e){ return false; }
+      const locale = await lireEspace(moi, cle);
+      const f = await nuageSynchroniser(cle, locale, false);
+      if(f != null) eu = true;
+    }catch(e){ diagLog("descente " + cle + " : " + (e && e.message)); return false; }
   }
   nuageAttentePose([]);
-  if(forcer && eu && acct() !== "invite") await viderEspace("invite");
+  if(forcer && eu && moi !== "invite") await viderEspace("invite");
   return eu;
 }
+
+/* ======================================================================
+   Fusion à trois voies
+   ----------------------------------------------------------------------
+   Deux appareils peuvent modifier la même partie. Plutôt que de laisser le
+   dernier qui parle écraser l'autre, on garde la dernière version commune
+   (« base ») et on combine : ce qu'un seul côté a changé est repris tel
+   quel ; si les deux ont changé un compteur, les deux variations s'ajoutent ;
+   pour les cartes, les exemplaires gagnés et perdus de chaque côté sont
+   comptés ensemble.
+   ====================================================================== */
+const egalJ = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const estObjet = x => !!x && typeof x === "object" && !Array.isArray(x);
+const CLES_MAX = /At$|^since$|^v$|^day$|^t$/;
+function memeMaj(a, b){ return !!a && !!b && Date.parse(a) === Date.parse(b); }
+
+function fusionObjet(b, l, s, prof = 0){
+  b = estObjet(b) ? b : {}; l = estObjet(l) ? l : {}; s = estObjet(s) ? s : {};
+  const out = {};
+  for(const k of new Set([...Object.keys(l), ...Object.keys(s)])){
+    const L = l[k], S = s[k], B = b[k];
+    if(egalJ(L, B)){ if(S !== undefined) out[k] = S; continue; }
+    if(egalJ(S, B)){ if(L !== undefined) out[k] = L; continue; }
+    if(typeof L === "number" && typeof S === "number"){
+      out[k] = CLES_MAX.test(k) ? Math.max(L, S) : (typeof B === "number" ? L + S - B : Math.max(L, S));
+    }else if(estObjet(L) && estObjet(S) && prof < 3){
+      out[k] = fusionObjet(B, L, S, prof + 1);
+    }else out[k] = L !== undefined ? L : S;
+  }
+  return out;
+}
+function fusionCol(b, l, s){
+  const M = a => new Map((Array.isArray(a) ? a : []).filter(c => c && c.id).map(c => [c.id, c]));
+  const B = M(b), L = M(l), S = M(s);
+  const n = c => c ? (c.count || 1) : 0;
+  const sans = c => { if(!c) return ""; const o = Object.assign({}, c); delete o.count; delete o.text; return JSON.stringify(o); };
+  const out = [];
+  for(const id of new Set([...L.keys(), ...S.keys()])){
+    const cb = B.get(id), cl = L.get(id), cs = S.get(id);
+    const k = n(cl) + n(cs) - n(cb);
+    if(k <= 0) continue;
+    const pick = (cl && sans(cl) !== sans(cb)) ? cl : (cs && sans(cs) !== sans(cb)) ? cs : (cl || cs);
+    out.push(Object.assign({}, pick, {count:k}));
+  }
+  return out;
+}
+/* Sans ancêtre commun (première synchro avec cette version) : pour chaque
+   carte on garde le plus grand nombre d'exemplaires des deux côtés. */
+function fusionColMax(l, s){
+  const out = new Map();
+  for(const c of (s || [])) if(c && c.id) out.set(c.id, c);
+  for(const c of (l || [])) if(c && c.id){
+    const o = out.get(c.id);
+    out.set(c.id, o && (o.count || 1) > (c.count || 1) ? Object.assign({}, c, {count:o.count}) : c);
+  }
+  return [...out.values()];
+}
+function fusionner(cle, b, l, s){
+  return cle === "fm:col" ? fusionCol(b, l, s) : fusionObjet(b, l, s);
+}
+
+/* Rapproche une clé de l'appareil et du serveur, écrit le résultat des
+   deux côtés, et le retient comme nouvelle base. */
+async function nuageSynchroniser(cle, locale, appliquer){
+  const moi = acct();
+  const srv = await nuageLire(cle);
+  let fusion = locale;
+  if(srv && srv.valeur != null){
+    const vue = await lireEspace(moi, "srvmaj:" + cle);
+    if(locale == null) fusion = srv.valeur;
+    else if(!memeMaj(srv.maj, vue)){
+      /* quelqu'un d'autre a écrit depuis notre dernier passage */
+      const base = await lireEspace(moi, "base:" + cle);
+      if(base != null) fusion = fusionner(cle, base, locale, srv.valeur);
+      else if(cle === "fm:col") fusion = fusionColMax(locale, srv.valeur);
+      else{
+        const lm = await lireEspace(moi, "maj:" + cle);
+        fusion = (lm && Date.parse(lm) > Date.parse(srv.maj)) ? fusionObjet(srv.valeur, locale, srv.valeur) : fusionObjet(locale, locale, srv.valeur);
+      }
+      diagLog("fusion " + cle + " avec une autre session");
+    }
+  }
+  if(fusion == null) return null;
+  let maj = srv ? srv.maj : null;
+  if(!(srv && egalJ(fusion, srv.valeur))) maj = await nuageEcrire(cle, fusion);
+  await ecrireEspace(moi, "base:" + cle, fusion);
+  if(maj) await ecrireEspace(moi, "srvmaj:" + cle, maj);
+  if(locale == null || !egalJ(fusion, locale)){
+    await ecrireEspace(moi, cle, fusion);
+    if(appliquer) appliquerFusion(cle, fusion, locale);
+  }
+  if(cle === "fm:profile" && typeof publierProfil === "function") publierProfil();
+  return fusion;
+}
+
+/* Le jeu tourne pendant la synchro : ce qui a bougé entre-temps est
+   recombiné avec le résultat avant d'être appliqué. */
+function appliquerFusion(cle, fusion, instantane){
+  if(!state || !state.profile) return;
+  let fin;
+  if(cle === "fm:profile"){
+    const cour = JSON.parse(JSON.stringify(state.profile));
+    fin = instantane ? fusionObjet(instantane, cour, fusion) : fusion;
+    for(const k of Object.keys(state.profile)) if(!(k in fin)) delete state.profile[k];
+    Object.assign(state.profile, fin);
+  }else if(cle === "fm:col"){
+    fin = instantane ? fusionCol(instantane, state.collection, fusion) : fusion;
+    state.collection.length = 0;
+    for(const c of fin) state.collection.push(c);
+  }else return;
+  if(!egalJ(fin, fusion)) sset(cle, cle === "fm:col" ? state.collection : state.profile);
+  else ecrireEspace(acct(), cle, fin);
+  rafraichirApresSynchro();
+}
+function rafraichirApresSynchro(){
+  try{
+    if(typeof majJauges === "function") majJauges();
+    if(document.body.classList.contains("overlay") || document.body.classList.contains("cardopen")) return;
+    if(["hub","album","profil","inv","compte","amis","deck","cat"].indexOf(state.view) >= 0) render();
+  }catch(e){}
+}
+
+/* Toutes les 40 secondes, et au retour sur l'onglet : une autre session
+   a-t-elle écrit ? Une seule petite requête qui ne lit que les dates. */
+async function nuageVerifier(){
+  if(!nuageConfigure() || !nuageConnecte() || document.hidden || !state.profile || !state.profile.pseudo) return;
+  try{
+    const s = nuageSession();
+    const d = await nuageRest(NUAGE_TABLE + "?joueur=eq." + encodeURIComponent(s.user.id) + "&select=cle,maj");
+    for(const r of (d || [])){
+      if(NUAGE_CLES.indexOf(r.cle) < 0 || nuageEnAttente.has(r.cle)) continue;
+      const vue = await lireEspace(acct(), "srvmaj:" + r.cle);
+      if(memeMaj(vue, r.maj)) continue;
+      const locale = JSON.parse(JSON.stringify(r.cle === "fm:col" ? state.collection : state.profile));
+      await nuageSynchroniser(r.cle, locale, true);
+    }
+  }catch(e){}
+}
+setInterval(nuageVerifier, 40000);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) nuageVerifier(); });
 
 /* Renvoie ce qui n'est pas encore parti (réseau coupé, page fermée trop tôt). */
 let nuageEssais = 0;
@@ -3407,7 +3574,7 @@ async function nuageRepousser(){
     const v = await lireEspace(acct(), cle);
     if(v == null) continue;
     try{
-      await nuageEcrire(cle, v);
+      await nuageSynchroniser(cle, v, true);
       nuageAttentePose(nuageAttente().filter(c => c !== cle));
     }catch(e){
       if(++nuageEssais < 6) setTimeout(nuageRepousser, 4000);
@@ -3430,9 +3597,10 @@ async function nuageMonter(source){
   for(const cle of NUAGE_CLES){
     const v = await lireEspace(depuis, cle);
     if(v == null) continue;
-    await nuageEcrire(cle, v);
+    const maj = await nuageEcrire(cle, v);
     n++;
     if(moi && depuis !== moi) await ecrireEspace(moi, cle, v);
+    if(moi){ await ecrireEspace(moi, "base:" + cle, v); if(maj) await ecrireEspace(moi, "srvmaj:" + cle, maj); }
   }
   /* La partie est maintenant en ligne et dans l'espace du compte : on retire
      la copie invitée, qui doublerait la place prise dans le navigateur. */
@@ -4561,7 +4729,7 @@ function render(){
   if(!state.profile.pseudo && state.view !== "compte") return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
-     village:viewVillage, theme:viewTheme, compte:viewCompte,
+     village:viewVillage, theme:viewTheme, compte:viewCompte, amis:viewAmis,
      shop:viewSoon, market:viewSoon}[state.view]||viewHub)();
   poserSurtitre();
   majJauges();
@@ -4584,6 +4752,7 @@ const SURTITRES = {
   village:"Comptoir",
   theme:  "Réglages · habillage",
   compte: "Réglages · sauvegarde",
+  amis:   "Communauté",
   shop:   "Boutique",
   market: "Échanges"
 };
@@ -4830,6 +4999,630 @@ async function apresConnexion(){
   view.querySelector("#p-local").onclick = async ()=>{
     await nuageMonter("invite"); location.reload();
   };
+}
+
+/* ======================================================================
+   Amis — profils publics, demandes, échanges
+   ----------------------------------------------------------------------
+   Trois tables côté Supabase (voir AMIS_SQL) : « profils » (la vitrine
+   publique de chacun), « amities » (demandes et amitiés), « echanges ».
+   Un échange suit un séquestre simple : en proposant, on retire tout de
+   suite ses cartes de sa collection ; si l'autre accepte, il donne les
+   siennes et reçoit les nôtres ; au prochain passage, on reçoit les
+   siennes — ou on récupère les nôtres si c'est refusé ou annulé. Les
+   changements d'état passent par deux fonctions du serveur, qui
+   n'autorisent que les transitions permises.
+   ====================================================================== */
+const AMIS_SQL = `-- FandoMasters · amis et échanges (à lancer une fois)
+create table if not exists profils (
+  joueur uuid primary key references auth.users on delete cascade,
+  pseudo text not null,
+  vitrine jsonb not null default '{}'::jsonb,
+  maj timestamptz not null default now()
+);
+alter table profils enable row level security;
+create policy "profils visibles" on profils for select to authenticated using (true);
+create policy "mon profil" on profils for insert to authenticated with check (auth.uid() = joueur);
+create policy "mon profil maj" on profils for update to authenticated
+  using (auth.uid() = joueur) with check (auth.uid() = joueur);
+create index if not exists profils_pseudo on profils (lower(pseudo));
+
+create table if not exists amities (
+  demandeur uuid not null references auth.users on delete cascade,
+  cible uuid not null references auth.users on delete cascade,
+  statut text not null default 'attente' check (statut in ('attente','acceptee')),
+  cree timestamptz not null default now(),
+  primary key (demandeur, cible),
+  check (demandeur <> cible)
+);
+alter table amities enable row level security;
+create policy "mes amities" on amities for select to authenticated using (auth.uid() in (demandeur, cible));
+create policy "demander" on amities for insert to authenticated with check (auth.uid() = demandeur and statut = 'attente');
+create policy "accepter" on amities for update to authenticated
+  using (auth.uid() = cible) with check (auth.uid() = cible and statut = 'acceptee');
+create policy "retirer" on amities for delete to authenticated using (auth.uid() in (demandeur, cible));
+
+create or replace function sont_amis(x uuid, y uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists(select 1 from amities where statut = 'acceptee'
+    and ((demandeur = x and cible = y) or (demandeur = y and cible = x)));
+$$;
+
+create policy "amis voient la collection" on sauvegardes for select to authenticated
+  using (cle = 'fm:col' and sont_amis(auth.uid(), joueur));
+
+create table if not exists echanges (
+  id bigint generated always as identity primary key,
+  de uuid not null references auth.users on delete cascade,
+  a uuid not null references auth.users on delete cascade,
+  donne jsonb not null default '[]'::jsonb,
+  demande jsonb not null default '[]'::jsonb,
+  statut text not null default 'proposee' check (statut in ('proposee','acceptee','refusee','annulee')),
+  clos boolean not null default false,
+  cree timestamptz not null default now(),
+  maj timestamptz not null default now()
+);
+alter table echanges enable row level security;
+create policy "mes echanges" on echanges for select to authenticated using (auth.uid() in (de, a));
+create policy "proposer" on echanges for insert to authenticated
+  with check (auth.uid() = de and statut = 'proposee' and not clos and sont_amis(de, a));
+
+create or replace function repondre_echange(eid bigint, decision text) returns text
+language plpgsql security definer set search_path = public as $$
+declare e echanges;
+begin
+  select * into e from echanges where id = eid for update;
+  if not found then raise exception 'echange introuvable'; end if;
+  if e.statut <> 'proposee' then return e.statut; end if;
+  if decision in ('acceptee','refusee') and e.a = auth.uid() then
+    update echanges set statut = decision, maj = now() where id = eid;
+  elsif decision = 'annulee' and e.de = auth.uid() then
+    update echanges set statut = 'annulee', maj = now() where id = eid;
+  else
+    raise exception 'action non permise';
+  end if;
+  return decision;
+end $$;
+
+create or replace function clore_echange(eid bigint) returns void
+language sql security definer set search_path = public as $$
+  update echanges set clos = true, maj = now()
+  where id = eid and de = auth.uid() and statut <> 'proposee';
+$$;
+
+create table if not exists evenements (
+  jour date primary key,
+  contenu jsonb not null default '{}'::jsonb
+);
+alter table evenements enable row level security;
+create policy "evenements publics" on evenements for select using (true);`;
+
+const amis = {onglet:"amis", liste:[], recus:[], envoyes:[], echanges:[], profils:new Map(),
+              charge:false, erreur:"", recherche:"", resultats:[], vu:new Set()};
+
+function moiId(){ const s = nuageSession(); return s && s.user ? s.user.id : null; }
+
+/* Copie d'une carte pour un autre joueur : sans le texte, un exemplaire. */
+function carteEchange(c){
+  const o = Object.assign({}, c); delete o.text; o.count = 1; return o;
+}
+function retirerCopies(cartes){
+  const p = state.profile;
+  for(const x of cartes){
+    const c = state.collection.find(y => y.id === x.id);
+    if(!c) continue;
+    c.count = (c.count || 1) - 1;
+    if(c.count <= 0){
+      state.collection.splice(state.collection.indexOf(c), 1);
+      if(p.banner === c.id) p.banner = null;
+      if(p.slots) p.slots = p.slots.filter(id => id !== c.id);
+    }
+  }
+}
+function ajouterCopies(cartes){
+  for(const x of cartes){
+    const c = state.collection.find(y => y.id === x.id);
+    if(c) c.count = (c.count || 1) + 1;
+    else state.collection.push(carteEchange(x));
+  }
+}
+function possede(cartes){
+  const besoin = {};
+  for(const x of cartes) besoin[x.id] = (besoin[x.id] || 0) + 1;
+  return Object.entries(besoin).every(([id, n]) => {
+    const c = state.collection.find(y => y.id === id);
+    return c && (c.count || 1) >= n;
+  });
+}
+
+/* ---- vitrine publique ---- */
+let profilPublie = "", profilPublieA = 0, profilMinuteur = null;
+function vitrinePublique(){
+  const p = state.profile;
+  const lv = levelFromXP(playerXP());
+  const carte = id => { const c = state.collection.find(x => x.id === id); return c ? carteEchange(c) : null; };
+  const av = p.avatarImg && p.avatarImg.length < 160000 ? p.avatarImg : "";
+  return {
+    niveau: lv.lvl, titre: p.title || null, fav: p.fav || null,
+    avatar: av, crop: p.avatarCrop || null,
+    banniere: p.banner ? bannerSrc(p.banner) : "",
+    vitrine: (p.slots || []).map(carte).filter(Boolean).slice(0, 10),
+    stats: {
+      cartes: state.collection.length,
+      exemplaires: state.collection.reduce((n, c) => n + (c.count || 1), 0),
+      univers: new Set(state.collection.map(c => c.univ)).size,
+      victoires: p.wins || 0
+    },
+    depuis: p.since || null
+  };
+}
+function publierProfil(){
+  if(!nuageConfigure() || !nuageConnecte() || !state.profile || !state.profile.pseudo) return;
+  clearTimeout(profilMinuteur);
+  const attente = Math.max(0, 20000 - (Date.now() - profilPublieA));
+  profilMinuteur = setTimeout(async ()=>{
+    const v = vitrinePublique();
+    const corps = JSON.stringify({pseudo:state.profile.pseudo, vitrine:v});
+    if(corps === profilPublie) return;
+    try{
+      await nuageRest("profils", {method:"POST", headers:{"Prefer":"resolution=merge-duplicates"},
+        body:JSON.stringify([{joueur:moiId(), pseudo:state.profile.pseudo, vitrine:v, maj:new Date().toISOString()}])});
+      profilPublie = corps; profilPublieA = Date.now();
+    }catch(e){ diagLog("profil public : " + (e && e.message)); }
+  }, attente);
+}
+
+/* ---- lecture du serveur ---- */
+async function amisCharger(){
+  const moi = moiId();
+  if(!moi) return;
+  try{
+    const [rel, ech] = await Promise.all([
+      nuageRest("amities?select=demandeur,cible,statut,cree&or=(demandeur.eq." + moi + ",cible.eq." + moi + ")"),
+      nuageRest("echanges?select=*&or=(de.eq." + moi + ",a.eq." + moi + ")&order=cree.desc&limit=60")
+    ]);
+    amis.liste   = (rel || []).filter(r => r.statut === "acceptee").map(r => r.demandeur === moi ? r.cible : r.demandeur);
+    amis.recus   = (rel || []).filter(r => r.statut === "attente" && r.cible === moi).map(r => r.demandeur);
+    amis.envoyes = (rel || []).filter(r => r.statut === "attente" && r.demandeur === moi).map(r => r.cible);
+    amis.echanges = ech || [];
+    const ids = [...new Set([...amis.liste, ...amis.recus, ...amis.envoyes,
+                             ...amis.echanges.map(e => e.de === moi ? e.a : e.de)])].filter(id => !amis.profils.has(id));
+    if(ids.length){
+      const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + ids.join(",") + ")");
+      for(const x of (pr || [])) amis.profils.set(x.joueur, x);
+    }
+    amis.erreur = ""; amis.charge = true;
+    await amisRegler();
+  }catch(e){
+    amis.erreur = String(e && e.message || e);
+    amis.charge = true;
+  }
+}
+
+/* Les échanges que j'ai proposés et qui ont reçu une réponse : je reçois
+   les cartes de l'autre, ou je récupère les miennes. Chaque règlement est
+   noté dans le profil avant d'être appliqué, pour ne jamais compter deux
+   fois le même échange. */
+async function amisRegler(){
+  const moi = moiId(); if(!moi) return;
+  const p = state.profile;
+  p.echRegles = p.echRegles || [];
+  let change = false;
+  for(const e of amis.echanges){
+    if(e.de !== moi || e.clos || e.statut === "proposee") continue;
+    const marque = "de:" + e.id;
+    if(p.echRegles.indexOf(marque) < 0){
+      p.echRegles.push(marque);
+      if(e.statut === "acceptee"){
+        ajouterCopies(e.demande || []);
+        const nom = (amis.profils.get(e.a) || {}).pseudo || "Votre ami";
+        toast("Échange accepté", nom + " vous envoie " + (e.demande||[]).length + " carte" + ((e.demande||[]).length > 1 ? "s" : ""), "info");
+        logEvent("Échange conclu avec " + nom, "gold");
+      }else{
+        ajouterCopies(e.donne || []);
+        if(e.statut === "refusee") toast("Échange refusé", "vos cartes vous reviennent", "info");
+      }
+      change = true;
+    }
+    try{ await nuageRest("rpc/clore_echange", {method:"POST", body:JSON.stringify({eid:e.id})}); e.clos = true; }catch(err){}
+  }
+  p.echRegles = p.echRegles.slice(-300);
+  if(change){ await sset("fm:col", state.collection); await sset("fm:profile", p); }
+}
+
+/* Coup d'œil régulier : nouvelles demandes, nouveaux échanges, réponses. */
+async function amisVeille(){
+  if(!nuageConfigure() || !nuageConnecte() || document.hidden || !state.profile || !state.profile.pseudo) return;
+  const avant = new Set([...amis.recus.map(x => "r" + x), ...amis.echanges.filter(e => e.statut === "proposee").map(e => "e" + e.id)]);
+  await amisCharger();
+  if(amis.erreur) return;
+  const moi = moiId();
+  for(const id of amis.recus) if(!avant.has("r" + id) && !amis.vu.has("r" + id)){
+    amis.vu.add("r" + id);
+    toast("Demande d'ami", ((amis.profils.get(id) || {}).pseudo || "Un joueur") + " veut vous ajouter", "info");
+  }
+  for(const e of amis.echanges) if(e.a === moi && e.statut === "proposee" && !avant.has("e" + e.id) && !amis.vu.has("e" + e.id)){
+    amis.vu.add("e" + e.id);
+    toast("Proposition d'échange", ((amis.profils.get(e.de) || {}).pseudo || "Un ami") + " vous propose un échange", "info");
+  }
+  majPastilleAmis();
+  if(state.view === "amis" && !document.body.classList.contains("overlay")) viewAmis();
+}
+setInterval(amisVeille, 45000);
+function majPastilleAmis(){
+  const moi = moiId();
+  const n = amis.recus.length + amis.echanges.filter(e => e.a === moi && e.statut === "proposee").length;
+  document.querySelectorAll('[data-view="amis"] small').forEach(el => {
+    el.textContent = n ? n + " en attente" : "Joueurs et échanges";
+  });
+}
+
+/* ---- petits éléments d'affichage ---- */
+function avatarDe(v, pseudo, taille){
+  const c = (v && v.crop) || {z:1, x:50, y:50};
+  const st = v && v.avatar
+    ? `background-image:url('${cssUrl(v.avatar)}');background-size:${(c.z*100).toFixed(0)}% auto;background-position:${c.x}% ${c.y}%;background-repeat:no-repeat`
+    : "";
+  return `<span class="amiav" style="${taille ? `width:${taille}px;height:${taille}px;` : ""}${st}">${v && v.avatar ? "" : esc((pseudo || "?").slice(0, 1).toUpperCase())}</span>`;
+}
+function ligneJoueur(id, actions){
+  const pr = amis.profils.get(id) || {};
+  const v = pr.vitrine || {};
+  return `<div class="amirow" data-id="${esc(id)}">
+    ${avatarDe(v, pr.pseudo, 44)}
+    <div class="amiinfo">
+      <b>${esc(pr.pseudo || "Joueur")}</b>
+      <span class="sub">${v.niveau ? "Niv. " + v.niveau : ""}${v.titre ? " · " + esc(v.titre) : ""}${v.stats ? " · " + v.stats.cartes + " cartes" : ""}</span>
+    </div>
+    <div class="amiact">${actions}</div>
+  </div>`;
+}
+function cartesMini(cartes){
+  if(!cartes || !cartes.length) return `<span class="sub">rien</span>`;
+  return `<div class="pickgrid echgrid">${cartes.map(c => `<div class="pickwrap" style="cursor:default">${cardHTML(c, {compact:true})}</div>`).join("")}</div>`;
+}
+
+/* ---- la page ---- */
+function viewAmis(){
+  if(!nuageConfigure() || !nuageConnecte()){
+    view.innerHTML = `<h2 class="vuetitre">Amis</h2>
+      <div class="panel"><p class="sub" style="margin:0 0 .8rem">Pour retrouver d'autres joueurs, il faut un compte.</p>
+      <button class="btn" id="vcompte">Créer un compte ou se connecter</button></div>`;
+    view.querySelector("#vcompte").onclick = ()=>go("compte");
+    return;
+  }
+  const moi = moiId();
+  const entrants = amis.echanges.filter(e => e.a === moi && e.statut === "proposee");
+  const sortants = amis.echanges.filter(e => e.de === moi && e.statut === "proposee");
+  const histo    = amis.echanges.filter(e => e.statut !== "proposee").slice(0, 12);
+  const ong = amis.onglet;
+  const tab = (id, nom, n) => `<button class="chip" data-ong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
+
+  let corps = "";
+  if(!amis.charge){
+    corps = `<div class="panel"><span class="spinner"></span> <span class="sub">Chargement…</span></div>`;
+  }else if(amis.erreur){
+    const manque = /404|PGRST|relation|does not exist|schema cache/i.test(amis.erreur);
+    corps = `<div class="panel">
+      <p class="sub" style="margin:0 0 .6rem">${manque
+        ? "Les tables des amis n'existent pas encore sur le serveur. Copiez ce script dans Supabase → SQL Editor → Run, puis revenez ici."
+        : "Le serveur n'a pas répondu : " + esc(amis.erreur)}</p>
+      ${manque ? `<pre class="sql">${esc(AMIS_SQL)}</pre>
+      <button class="btn small ghost" id="copiesql">Copier le script</button>` : ""}
+      <button class="btn small ghost" id="reessai" style="margin-left:.4rem">Réessayer</button>
+    </div>`;
+  }else if(ong === "amis"){
+    corps = amis.liste.length
+      ? `<div class="panel amilist">${amis.liste.map(id => ligneJoueur(id,
+          `<button class="btn small ghost" data-voir="${esc(id)}">Profil</button>
+           <button class="btn small" data-echanger="${esc(id)}">Échanger</button>`)).join("")}</div>`
+      : `<div class="panel"><p class="sub" style="margin:0">Pas encore d'amis. Cherchez un pseudo dans l'onglet « Rechercher ».</p></div>`;
+  }else if(ong === "demandes"){
+    corps = `<div class="panel amilist">
+      <h3 class="amih">Reçues</h3>
+      ${amis.recus.length ? amis.recus.map(id => ligneJoueur(id,
+        `<button class="btn small" data-accepter="${esc(id)}">Accepter</button>
+         <button class="btn small ghost" data-refuser="${esc(id)}">Refuser</button>`)).join("") : `<p class="sub">Aucune.</p>`}
+      <h3 class="amih">Envoyées</h3>
+      ${amis.envoyes.length ? amis.envoyes.map(id => ligneJoueur(id,
+        `<button class="btn small ghost" data-annuler="${esc(id)}">Annuler</button>`)).join("") : `<p class="sub">Aucune.</p>`}
+    </div>`;
+  }else if(ong === "chercher"){
+    const statut = id => amis.liste.includes(id) ? `<span class="sub">ami</span>`
+      : amis.envoyes.includes(id) ? `<span class="sub">demande envoyée</span>`
+      : amis.recus.includes(id) ? `<button class="btn small" data-accepter="${esc(id)}">Accepter</button>`
+      : `<button class="btn small" data-ajouter="${esc(id)}">Ajouter</button>`;
+    corps = `<div class="panel">
+      <div class="row" style="gap:.4rem;margin-bottom:.6rem">
+        <input id="amiq" placeholder="Pseudo d'un joueur…" value="${esc(amis.recherche)}" style="flex:1 1 200px;margin:0" autocomplete="off">
+        <button class="btn small" id="amigo">Chercher</button>
+      </div>
+      <div class="amilist">${amis.resultats.length
+        ? amis.resultats.filter(x => x.joueur !== moi).map(x => ligneJoueur(x.joueur,
+            `<button class="btn small ghost" data-voir="${esc(x.joueur)}">Profil</button>${statut(x.joueur)}`)).join("")
+        : `<p class="sub" style="margin:0">${amis.recherche ? "Aucun joueur trouvé." : "Tapez au moins deux lettres."}</p>`}</div>
+    </div>`;
+  }else if(ong === "echanges"){
+    const bloc = (e, actions) => {
+      const autre = e.de === moi ? e.a : e.de;
+      const nom = esc((amis.profils.get(autre) || {}).pseudo || "Joueur");
+      const jeDonne = e.de === moi ? e.donne : e.demande;
+      const jeRecois = e.de === moi ? e.demande : e.donne;
+      const etat = {proposee:"en attente", acceptee:"conclu", refusee:"refusé", annulee:"annulé"}[e.statut];
+      return `<div class="panel echbloc">
+        <div class="row" style="justify-content:space-between;align-items:baseline">
+          <b>${e.de === moi ? "Vous → " + nom : nom + " → vous"}</b><span class="sub">${etat}</span>
+        </div>
+        <div class="echcols">
+          <div><span class="sub">Vous donnez</span>${cartesMini(jeDonne)}</div>
+          <div><span class="sub">Vous recevez</span>${cartesMini(jeRecois)}</div>
+        </div>
+        ${actions ? `<div class="row" style="margin-top:.6rem;gap:.4rem">${actions}</div>` : ""}
+      </div>`;
+    };
+    corps = `
+      <h3 class="amih">À répondre</h3>
+      ${entrants.length ? entrants.map(e => bloc(e, `<button class="btn small" data-eok="${e.id}">Accepter</button>
+         <button class="btn small ghost" data-eno="${e.id}">Refuser</button>`)).join("") : `<p class="sub">Aucune proposition.</p>`}
+      <h3 class="amih">Vos propositions</h3>
+      ${sortants.length ? sortants.map(e => bloc(e, `<button class="btn small ghost" data-eannule="${e.id}">Annuler</button>`)).join("") : `<p class="sub">Aucune en cours.</p>`}
+      ${histo.length ? `<h3 class="amih">Historique</h3>${histo.map(e => bloc(e, "")).join("")}` : ""}`;
+  }
+
+  view.innerHTML = `
+    <h2 class="vuetitre">Amis</h2>
+    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
+      ${tab("amis", "Amis", amis.liste.length)}
+      ${tab("demandes", "Demandes", amis.recus.length)}
+      ${tab("chercher", "Rechercher", 0)}
+      ${tab("echanges", "Échanges", entrants.length)}
+    </div>
+    ${corps}`;
+
+  view.querySelectorAll("[data-ong]").forEach(b => b.onclick = ()=>{ amis.onglet = b.dataset.ong; viewAmis(); });
+  const on = (sel, f) => view.querySelectorAll(sel).forEach(b => b.onclick = ()=>f(b));
+  const occupe = async (b, f) => {
+    b.disabled = true;
+    try{ await f(); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); }
+    await amisCharger(); majPastilleAmis(); if(state.view === "amis") viewAmis();
+  };
+  const rs = view.querySelector("#reessai");
+  if(rs) rs.onclick = async ()=>{ amis.charge = false; viewAmis(); await amisCharger(); viewAmis(); };
+  const cs = view.querySelector("#copiesql");
+  if(cs) cs.onclick = ()=>{ try{ navigator.clipboard.writeText(AMIS_SQL); toast("Script copié", "collez-le dans Supabase → SQL Editor", "info"); }catch(e){} };
+
+  on("[data-voir]", b => voirJoueur(b.dataset.voir));
+  on("[data-echanger]", b => composerEchange(b.dataset.echanger));
+  on("[data-ajouter]", b => occupe(b, ()=>nuageRest("amities", {method:"POST",
+     body:JSON.stringify([{demandeur:moi, cible:b.dataset.ajouter}])})));
+  on("[data-accepter]", b => occupe(b, ()=>nuageRest("amities?demandeur=eq." + b.dataset.accepter + "&cible=eq." + moi,
+     {method:"PATCH", body:JSON.stringify({statut:"acceptee"})})));
+  on("[data-refuser]", b => occupe(b, ()=>nuageRest("amities?demandeur=eq." + b.dataset.refuser + "&cible=eq." + moi, {method:"DELETE"})));
+  on("[data-annuler]", b => occupe(b, ()=>nuageRest("amities?demandeur=eq." + moi + "&cible=eq." + b.dataset.annuler, {method:"DELETE"})));
+  on("[data-eok]", b => occupe(b, ()=>accepterEchange(+b.dataset.eok)));
+  on("[data-eno]", b => occupe(b, ()=>nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid:+b.dataset.eno, decision:"refusee"})})));
+  on("[data-eannule]", b => occupe(b, ()=>nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid:+b.dataset.eannule, decision:"annulee"})})));
+
+  const q = view.querySelector("#amiq");
+  if(q){
+    const lancer = async ()=>{
+      const t = q.value.trim();
+      amis.recherche = t;
+      if(t.length < 2){ amis.resultats = []; viewAmis(); return; }
+      try{
+        const motif = "*" + t.replace(/[*,()]/g, " ") + "*";
+        const r = await nuageRest("profils?select=joueur,pseudo,vitrine&pseudo=ilike." + encodeURIComponent(motif) + "&limit=25");
+        amis.resultats = r || [];
+        for(const x of amis.resultats) amis.profils.set(x.joueur, x);
+      }catch(e){ amis.resultats = []; toast("Recherche impossible", String(e.message || e), "lose"); }
+      viewAmis();
+      const q2 = view.querySelector("#amiq"); if(q2){ q2.focus(); q2.setSelectionRange(q2.value.length, q2.value.length); }
+    };
+    view.querySelector("#amigo").onclick = lancer;
+    q.addEventListener("keydown", e => { if(e.key === "Enter") lancer(); });
+  }
+
+  if(!amis.charge){ amisCharger().then(()=>{ majPastilleAmis(); if(state.view === "amis") viewAmis(); }); }
+}
+
+async function accepterEchange(eid){
+  const e = amis.echanges.find(x => x.id === eid);
+  if(!e) throw new Error("échange introuvable");
+  if(!possede(e.demande || [])) throw new Error("vous n'avez plus toutes les cartes demandées");
+  const r = await nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid, decision:"acceptee"})});
+  if(r !== "acceptee") throw new Error("cet échange n'est plus disponible (" + r + ")");
+  const p = state.profile;
+  p.echRegles = p.echRegles || [];
+  if(p.echRegles.indexOf("a:" + eid) < 0){
+    p.echRegles.push("a:" + eid);
+    retirerCopies(e.demande || []);
+    ajouterCopies(e.donne || []);
+    await sset("fm:col", state.collection);
+    await sset("fm:profile", p);
+  }
+  toast("Échange conclu", (e.donne || []).length + " carte" + ((e.donne||[]).length > 1 ? "s" : "") + " ajoutée" + ((e.donne||[]).length > 1 ? "s" : "") + " à votre album", "info");
+  logEvent("Échange conclu avec " + ((amis.profils.get(e.de) || {}).pseudo || "un ami"), "gold");
+}
+
+/* ---- profil d'un autre joueur ---- */
+async function voirJoueur(id){
+  let pr = amis.profils.get(id);
+  try{
+    const r = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=eq." + id);
+    if(r && r[0]){ pr = r[0]; amis.profils.set(id, pr); }
+  }catch(e){}
+  if(!pr){ toast("Profil introuvable", "", "lose"); return; }
+  const v = pr.vitrine || {};
+  const moi = moiId();
+  const ami = amis.liste.includes(id);
+  const st = v.stats || {};
+  const depuis = v.depuis ? new Date(v.depuis).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `<div class="inner" style="max-width:720px">
+    <div class="row" style="justify-content:space-between;margin-bottom:.6rem">
+      <h3 style="font-size:1.15rem">Profil</h3>
+      <button class="btn small ghost" id="close">Fermer</button>
+    </div>
+    <div class="panel profilehead ${v.banniere ? "hasbanner" : ""}" style="margin:0 0 1rem">
+      ${v.banniere ? `<div class="pstage">
+        <span class="pb l" style="background-image:url('${cssUrl(v.banniere)}')"></span>
+        <span class="pb r" style="background-image:url('${cssUrl(v.banniere)}')"></span>
+        <span class="pveil"></span></div>` : ""}
+      <div class="row" style="gap:1rem;flex-wrap:nowrap;align-items:center;position:relative;z-index:2">
+        ${avatarDe(v, pr.pseudo, 86)}
+        <div style="min-width:0;flex:1">
+          <h3 style="font-size:1.4rem">${esc(pr.pseudo)}</h3>
+          <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
+            ${v.niveau ? `<span class="lvlbadge">Niv. ${v.niveau}</span>` : ""}
+            ${v.titre ? `<span class="titletag">${esc(v.titre)}</span>` : ""}
+          </div>
+          ${v.fav ? `<p class="sub" style="margin:.4rem 0 0">Univers préféré : <b>${esc(v.fav)}</b></p>` : ""}
+          ${depuis ? `<p class="sub" style="margin:.2rem 0 0">Inscrit le ${depuis}</p>` : ""}
+        </div>
+      </div>
+      <div class="statgrid" style="position:relative;z-index:2">
+        <div class="st"><b>${st.cartes || 0}</b><span>cartes distinctes</span></div>
+        <div class="st"><b>${st.exemplaires || 0}</b><span>exemplaires</span></div>
+        <div class="st"><b>${st.univers || 0}</b><span>univers</span></div>
+        <div class="st"><b>${st.victoires || 0}</b><span>combats gagnés</span></div>
+      </div>
+      <div class="row" style="margin-top:.9rem;gap:.4rem;position:relative;z-index:2">
+        ${id === moi ? `<span class="sub">C'est vous.</span>`
+          : ami ? `<button class="btn small" id="pech">Proposer un échange</button>`
+          : amis.envoyes.includes(id) ? `<span class="sub">Demande envoyée</span>`
+          : `<button class="btn small" id="padd">Demander en ami</button>`}
+      </div>
+    </div>
+    <h3 style="font-size:1.05rem;margin-bottom:.5rem">Vitrine</h3>
+    ${(v.vitrine || []).length ? cartesMini(v.vitrine) : `<p class="sub">Vitrine vide.</p>`}
+  </div>`;
+  document.body.appendChild(m);
+  const fermer = ()=>m.remove();
+  m.onclick = e => { if(e.target === m) fermer(); };
+  m.querySelector("#close").onclick = fermer;
+  const pe = m.querySelector("#pech"); if(pe) pe.onclick = ()=>{ fermer(); composerEchange(id); };
+  const pa = m.querySelector("#padd");
+  if(pa) pa.onclick = async ()=>{
+    pa.disabled = true;
+    try{
+      await nuageRest("amities", {method:"POST", body:JSON.stringify([{demandeur:moi, cible:id}])});
+      toast("Demande envoyée", pr.pseudo + " doit l'accepter", "info");
+      fermer(); await amisCharger(); if(state.view === "amis") viewAmis();
+    }catch(e){ pa.disabled = false; toast("Demande impossible", String(e.message || e), "lose"); }
+  };
+}
+
+/* ---- choix de cartes dans une liste ---- */
+function choisirCartes({titre, liste, max, deja}){
+  return new Promise(res => {
+    const pris = (deja || []).slice();
+    const m = document.createElement("div");
+    m.className = "modal";
+    const tri = liste.slice().sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity)||String(a.title).localeCompare(String(b.title)));
+    const univs = [...new Set(tri.map(c=>c.univ))].sort();
+    m.innerHTML = `<div class="inner" style="max-width:680px">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="font-size:1.15rem">${esc(titre)}</h3>
+        <button class="btn small ghost" id="close">Annuler</button>
+      </div>
+      <div class="row" style="margin:.6rem 0 .5rem;gap:.4rem">
+        <input id="pq" placeholder="Rechercher une carte…" style="flex:2 1 180px;margin:0">
+        <select id="pu" style="flex:1 1 140px;margin:0"><option value="">Tous les univers</option>
+          ${univs.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join("")}</select>
+      </div>
+      <div class="row" style="margin-bottom:.5rem"><button class="btn small" id="ok">Valider</button>
+        <span class="sub" id="cpt"></span></div>
+      <div class="pickgrid" id="pg"></div>
+    </div>`;
+    document.body.appendChild(m);
+    const pg = m.querySelector("#pg");
+    const compte = ()=>{ m.querySelector("#cpt").textContent = pris.length + " / " + max + " choisie" + (pris.length > 1 ? "s" : ""); };
+    const peindre = ()=>{
+      const q = (m.querySelector("#pq").value || "").toLowerCase();
+      const u = m.querySelector("#pu").value;
+      pg.innerHTML = tri.filter(c => (!q || (c.title + " " + c.univ).toLowerCase().includes(q)) && (!u || c.univ === u))
+        .slice(0, 150)
+        .map(c => `<div class="pickwrap ${pris.includes(c.id) ? "on" : ""}" data-id="${esc(c.id)}">${cardHTML(c, {compact:true})}</div>`).join("");
+      pg.querySelectorAll(".pickwrap").forEach(el => el.onclick = ()=>{
+        const i = pris.indexOf(el.dataset.id);
+        if(i >= 0) pris.splice(i, 1); else if(pris.length < max) pris.push(el.dataset.id);
+        el.classList.toggle("on", pris.includes(el.dataset.id));
+        compte();
+      });
+      compte();
+    };
+    m.querySelector("#pq").oninput = peindre;
+    m.querySelector("#pu").onchange = peindre;
+    m.querySelector("#close").onclick = ()=>{ m.remove(); res(null); };
+    m.querySelector("#ok").onclick = ()=>{ m.remove(); res(pris); };
+    peindre();
+  });
+}
+
+/* ---- composer un échange ---- */
+async function composerEchange(id){
+  const pr = amis.profils.get(id) || {pseudo:"votre ami"};
+  let leurs = [];
+  try{
+    const r = await nuageRest("sauvegardes?select=valeur&joueur=eq." + id + "&cle=eq.fm:col");
+    leurs = (r && r[0] && Array.isArray(r[0].valeur)) ? r[0].valeur : [];
+  }catch(e){ toast("Collection illisible", String(e.message || e), "lose"); return; }
+  const occupees = engagedIds();
+  const miennes = state.collection.filter(c => !occupees.has(c.id));
+  let donne = [], demande = [];
+  const m = document.createElement("div");
+  m.className = "modal";
+  const dessiner = ()=>{
+    const d = donne.map(i => miennes.find(c => c.id === i)).filter(Boolean);
+    const q = demande.map(i => leurs.find(c => c.id === i)).filter(Boolean);
+    m.innerHTML = `<div class="inner" style="max-width:720px">
+      <div class="row" style="justify-content:space-between;margin-bottom:.4rem">
+        <h3 style="font-size:1.15rem">Échange avec ${esc(pr.pseudo)}</h3>
+        <button class="btn small ghost" id="close">Fermer</button>
+      </div>
+      <p class="sub" style="margin:0 0 .8rem">Jusqu'à 5 cartes de chaque côté, un exemplaire chacune. Les cartes que vous donnez
+        quittent votre album dès l'envoi et vous reviennent si ${esc(pr.pseudo)} refuse.</p>
+      <div class="echcols">
+        <div class="panel"><div class="row" style="justify-content:space-between;align-items:baseline">
+          <b>Vous donnez</b><button class="btn small ghost" id="pdonne">Choisir</button></div>${cartesMini(d)}</div>
+        <div class="panel"><div class="row" style="justify-content:space-between;align-items:baseline">
+          <b>Vous demandez</b><button class="btn small ghost" id="pdemande">Choisir</button></div>
+          ${leurs.length ? cartesMini(q) : `<span class="sub">Sa collection est vide ou pas encore synchronisée.</span>`}</div>
+      </div>
+      <div class="row" style="margin-top:.8rem"><button class="btn" id="envoyer" ${d.length || q.length ? "" : "disabled"}>Proposer l'échange</button></div>
+    </div>`;
+    m.querySelector("#close").onclick = ()=>m.remove();
+    m.querySelector("#pdonne").onclick = async ()=>{
+      const r = await choisirCartes({titre:"Vos cartes à donner", liste:miennes, max:5, deja:donne});
+      if(r) donne = r; dessiner();
+    };
+    m.querySelector("#pdemande").onclick = async ()=>{
+      if(!leurs.length) return;
+      const r = await choisirCartes({titre:"Cartes de " + pr.pseudo, liste:leurs, max:5, deja:demande});
+      if(r) demande = r; dessiner();
+    };
+    m.querySelector("#envoyer").onclick = async (ev)=>{
+      const b = ev.currentTarget; b.disabled = true;
+      const cd = donne.map(i => miennes.find(c => c.id === i)).filter(Boolean).map(carteEchange);
+      const cq = demande.map(i => leurs.find(c => c.id === i)).filter(Boolean).map(carteEchange);
+      if(!possede(cd)){ toast("Cartes manquantes", "vous n'avez plus ces cartes", "lose"); b.disabled = false; return; }
+      try{
+        await nuageRest("echanges", {method:"POST", body:JSON.stringify([{de:moiId(), a:id, donne:cd, demande:cq}])});
+        retirerCopies(cd);
+        await sset("fm:col", state.collection);
+        await sset("fm:profile", state.profile);
+        toast("Échange proposé", pr.pseudo + " doit l'accepter", "info");
+        m.remove();
+        amis.onglet = "echanges";
+        await amisCharger();
+        if(state.view === "amis") viewAmis();
+      }catch(e){ b.disabled = false; toast("Échange impossible", String(e.message || e), "lose"); }
+    };
+  };
+  document.body.appendChild(m);
+  m.onclick = e => { if(e.target === m) m.remove(); };
+  dessiner();
 }
 
 /* ---------- page « Couleurs » ---------- */
@@ -6096,7 +6889,8 @@ async function drawPack(pool, kind){
   }
   const legOdds = (kind === "demon" ? ODDS_DEMON : kind === "mythic" ? ODDS_MYTHIC : ODDS)
     .reduce((n,[r,p])=>n + (r === "Légendaire" ? p : 0), 0);
-  const feat = featuredUniverse();
+  const feat0 = featuredUniverse();
+  const feat = feat0 && !feat0.absent ? feat0 : null;
   const weighted = feat ? shuffled(pool.concat([feat, feat])) : shuffled(pool);
   const queue = state.forcedUniv
     ? Array(5).fill(state.pool.find(w=>w.label === state.forcedUniv) || weighted[0])
@@ -7035,10 +7829,65 @@ function showCard(c){
 function today(){ return Math.floor(Date.now()/86400000); }
 function dayRnd(salt){ return mulberry32((today()*2654435761 + salt*97) % 2147483647); }
 
+/* ======================================================================
+   Contenu du jour, le même pour tout le monde
+   ----------------------------------------------------------------------
+   Missions, défi et univers à l'honneur sont tirés d'une graine qui ne
+   dépend que de la date (minuit UTC, 2 h à Paris en été) et de listes
+   fixes, identiques sur tous les appareils. Avant, le tirage se faisait
+   dans les univers que CET appareil avait réussi à joindre, et le mélange
+   dépendait du moteur du navigateur : deux joueurs n'avaient pas le même
+   jour. La table « evenements » du serveur peut en plus imposer un contenu
+   pour une date (événement, correction) : elle prime sur le tirage.
+   ====================================================================== */
+function melangeGraine(arr, rnd){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(rnd() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function jourISO(){ return new Date(today() * 86400000).toISOString().slice(0, 10); }
+const EVT_CLE = "fm-local:evenement";
+let EVENEMENT = (()=>{
+  try{ const e = JSON.parse(localStorage.getItem(EVT_CLE) || "null"); return e && e.jour === jourISO() ? e.contenu || {} : {}; }
+  catch(e){ return {}; }
+})();
+async function chargerEvenement(){
+  if(!nuageConfigure()) return;
+  try{
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), 5000);
+    const r = await fetch(NUAGE.url + "/rest/v1/evenements?jour=eq." + jourISO() + "&select=contenu",
+      {headers:{"apikey":NUAGE.cle, "Authorization":"Bearer " + NUAGE.cle}, signal:ctrl.signal});
+    clearTimeout(t);
+    if(!r.ok) return;
+    const d = await r.json();
+    const contenu = (d && d[0] && d[0].contenu) || {};
+    const avant = JSON.stringify(EVENEMENT);
+    EVENEMENT = contenu;
+    /* missions imposées arrivées après le tirage du jour : on retire, tant
+       qu'aucune récompense n'a été encaissée */
+    const dq = state.profile && state.profile.daily;
+    if(Array.isArray(contenu.missions) && dq && dq.day === today() && !(dq.claimed||[]).length
+       && JSON.stringify(dq.list) !== JSON.stringify(contenu.missions.map(e=>({id:e.id, goal:Math.round(e.goal)})))){
+      delete state.profile.daily;
+    }
+    try{ localStorage.setItem(EVT_CLE, JSON.stringify({jour:jourISO(), contenu})); }catch(e){}
+    if(JSON.stringify(contenu) !== avant && state.view === "hub" && !document.body.classList.contains("overlay")) render();
+  }catch(e){}
+}
+function labelDuJour(salt, impose){
+  if(impose && UNIVERSES.some(u => u.label === impose)) return impose;
+  const liste = UNIVERSES.map(u => u.label);
+  return liste[Math.floor(dayRnd(salt)() * liste.length)];
+}
+/* Renvoie l'univers tel que cet appareil le connaît (pour tirer ses
+   cartes), ou une simple étiquette s'il ne l'a pas joint. */
 function featuredUniverse(){
-  if(!state.pool.length) return null;
-  const r = dayRnd(7)();
-  return state.pool[Math.floor(r*state.pool.length)];
+  const label = labelDuJour(7, EVENEMENT.honneur);
+  return state.pool.find(w => w.label === label) || {label, absent:true};
 }
 
 const MISSIONS = [
@@ -7056,10 +7905,13 @@ function dailyState(){
   const d = today();
   if(!p.daily || p.daily.day !== d){
     const rnd = dayRnd(3);
-    const pool = MISSIONS.slice().sort(()=>rnd()-0.5).slice(0,4);
+    const imposees = Array.isArray(EVENEMENT.missions)
+      ? EVENEMENT.missions.filter(e => e && MISSIONS.some(m => m.id === e.id) && e.goal > 0) : [];
+    const pool = melangeGraine(MISSIONS, rnd).slice(0,4);
     p.daily = {
       day:d,
-      list: pool.map(m=>({id:m.id, goal:m.goals[Math.floor(rnd()*m.goals.length)]})),
+      list: imposees.length ? imposees.map(e=>({id:e.id, goal:Math.round(e.goal)}))
+                            : pool.map(m=>({id:m.id, goal:m.goals[Math.floor(rnd()*m.goals.length)]})),
       base: Object.fromEntries(MISSIONS.map(m=>[m.id, m.stat(p)])),
       claimed: [],
       chUniv: null, chDone:false, chClaimed:false
@@ -7075,9 +7927,9 @@ function missionProgress(entry){
 }
 function challengeUniverse(){
   const d = dailyState();
-  if(!d.chUniv && state.pool.length){
-    const r = dayRnd(11)();
-    d.chUniv = state.pool[Math.floor(r*state.pool.length)].label;
+  const attendu = labelDuJour(11, EVENEMENT.defi);
+  if(d.chUniv !== attendu && !d.chDone){
+    d.chUniv = attendu;
     sset("fm:profile", state.profile);
   }
   return d.chUniv;
@@ -10410,7 +11262,7 @@ function currentCampaigns(){
     const s = pool.splice(i,1)[0];
     if(!sites.some(x=>x.univ===s.univ)) sites.push(s);     // cinq univers différents
   }
-  const mins = CAMP_MINS.slice().sort(()=>rnd()-0.5);
+  const mins = melangeGraine(CAMP_MINS, rnd);
   const out = sites.map((s,i)=>({
     id: seed+"-"+i,
     univ: s.univ, lieu: s.lieu, vilain: s.vilain,
@@ -11162,6 +12014,8 @@ function openSettings(){
     if(tot > 1500000) libererStockage();
   }catch(e){}
   diagLog("démarrage · session " + (nuageConnecte() ? "oui" : "non"));
+  chargerEvenement();
+  setTimeout(()=>{ publierProfil(); amisVeille(); }, 4000);
   if(await idbPret){
     await idbReprise();
     try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().then(p=>{ idbPersistant = p; }); }catch(e){}
