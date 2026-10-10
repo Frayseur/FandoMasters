@@ -369,9 +369,7 @@ code{background:var(--ink-2);padding:.05rem .3rem;border-radius:5px;font-size:.8
 
 /* Holographique — prisme mouvant sur l'illustration et le bandeau */
 .card[data-v="holo"]{--g1:#B8F0E8;--g2:#8E4A6C;box-shadow:0 14px 26px -18px #000, 0 0 26px -8px #8FD8CB}
-.card[data-v="holo"] .art::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;opacity:.3;
-  background:conic-gradient(from 0deg,#7FD0C2,#E8A8C6,#F8B195,#8FD8CB,#7FD0C2);
-  mix-blend-mode:color-dodge;animation:aura 9s linear infinite}
+.card[data-v="holo"] .art::after{content:none}
 .card[data-v="holo"] .band::before{background:linear-gradient(180deg,#2E4A48,#10191C 60%,#1C2B2E)}
 .card[data-v="holo"] .band{color:#FFFFFF}
 .card[data-v="holo"] .gem{background:linear-gradient(150deg,#F6F0D0,#8E4A6C);box-shadow:0 0 12px 2px #E8A8C688}
@@ -2801,6 +2799,22 @@ select{background-color:var(--panel)}
 .menvoi{display:flex;flex-direction:column;gap:.3rem;align-items:center}
 .menvoi .mcarte{width:100%}
 .mvente.prop .mcarte + .mcarte{margin-left:-.4rem}
+
+.b3d.arcade .b3dbg{animation:cdrayons 6s linear infinite}
+.cdhalo{position:absolute;left:50%;top:52%;width:120vmin;height:120vmin;transform:translate(-50%,-50%);z-index:1;pointer-events:none;
+  background:conic-gradient(from 0deg, transparent 0 20deg, color-mix(in srgb, var(--b3dglow) 35%, transparent) 30deg, transparent 40deg 80deg,
+    color-mix(in srgb, var(--p5) 30%, transparent) 90deg, transparent 100deg 160deg, color-mix(in srgb, var(--b3dglow) 35%, transparent) 170deg, transparent 180deg 360deg);
+  border-radius:50%;filter:blur(8px);animation:aura 5s linear infinite;opacity:.8}
+.b3d.arcade.eclat .cdhalo{animation:aura 5s linear infinite, cdhalo .35s ease-out}
+@keyframes cdhalo{0%{opacity:1;filter:blur(2px) brightness(2)}100%{opacity:.8}}
+.b3d.arcade.eclat .b3dflash{animation:b3dflash .35s ease-out}
+.cdgros .cdx.bump{animation:cdbump .35s cubic-bezier(.2,1.8,.4,1)}
+@keyframes cdbump{0%{transform:scale(1)}40%{transform:scale(1.35) rotate(-6deg)}100%{transform:scale(1)}}
+.cdpop b{transform:translate(-50%,-50%) rotate(var(--rot,0deg))}
+.cdpoussiere{position:absolute;bottom:-10px;width:6px;height:6px;border-radius:50%;background:var(--p4);box-shadow:0 0 10px var(--p5);
+  animation:cdmonte var(--d) linear forwards;opacity:.9}
+.cdpoussiere:nth-child(3n){background:#FFD45A;box-shadow:0 0 10px #FFD45A}
+@keyframes cdmonte{to{transform:translate(var(--x), -105vh) scale(.3);opacity:0}}
 </style>
 </head>
 <body>
@@ -6152,7 +6166,12 @@ function choisirCartes({titre, liste, max, deja}){
         .map(c => `<div class="pickwrap ${pris.includes(c.id) ? "on" : ""}" data-id="${esc(c.id)}">${cardHTML(c, {compact:true})}</div>`).join("");
       pg.querySelectorAll(".pickwrap").forEach(el => el.onclick = ()=>{
         const i = pris.indexOf(el.dataset.id);
-        if(i >= 0) pris.splice(i, 1); else if(pris.length < max) pris.push(el.dataset.id);
+        if(i >= 0) pris.splice(i, 1);
+        else if(max === 1){
+          pris.splice(0, pris.length, el.dataset.id);
+          pg.querySelectorAll(".pickwrap.on").forEach(x => x.classList.remove("on"));
+        }
+        else if(pris.length < max) pris.push(el.dataset.id);
         el.classList.toggle("on", pris.includes(el.dataset.id));
         compte();
       });
@@ -7077,7 +7096,7 @@ function cadrageDe(c){
 }
 function styleCadrage(cd){
   if(!cd) return "";
-  const x = Math.max(0, Math.min(100, +cd.x || 50)), y = Math.max(0, Math.min(100, +cd.y || 50)), z = Math.max(1, Math.min(3, +cd.z || 1));
+  const x = Math.max(0, Math.min(100, cd.x == null ? 50 : +cd.x)), y = Math.max(0, Math.min(100, cd.y == null ? 50 : +cd.y)), z = Math.max(0.5, Math.min(3, +cd.z || 1));
   return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
 }
 /* les raretés corrigées s'appliquent aux cartes déjà possédées */
@@ -7272,7 +7291,7 @@ function viewCommu(){
           ${c ? `
           <span class="sub" style="margin-top:.6rem">Faites glisser l'image sur la carte</span>
           <label class="echmontant"><span>Zoom</span>
-            <input type="range" id="pzoom" min="1" max="3" step="0.05" value="${commu.cadrage.z}"></label>
+            <input type="range" id="pzoom" min="0.5" max="3" step="0.05" value="${commu.cadrage.z}"></label>
           <button class="btn small ghost" id="preset" style="margin-top:.3rem">Recentrer</button>
           <label class="sub" for="pnote" style="margin-top:.7rem">Remarque (facultatif)</label>
           <input id="pnote" maxlength="120" value="${esc(commu.note)}" style="margin:0">
@@ -7398,14 +7417,15 @@ function viewCommu(){
       stop(ev);
       if(!depart) return;
       const r = zone.getBoundingClientRect();
-      const k = 100 / Math.max(1, commu.cadrage.z);
-      commu.cadrage.x = Math.max(0, Math.min(100, depart.cx - (ev.clientX - depart.x) / r.width * k * 1.6));
-      commu.cadrage.y = Math.max(0, Math.min(100, depart.cy - (ev.clientY - depart.y) / r.height * k * 1.6));
+      const k = 100 / Math.max(0.5, commu.cadrage.z);
+      commu.cadrage.x = Math.max(0, Math.min(100, depart.cx - (ev.clientX - depart.x) / r.width * k * 1.0));
+      commu.cadrage.y = Math.max(0, Math.min(100, depart.cy - (ev.clientY - depart.y) / r.height * k * 1.0));
       appliquer();
     });
     const fin = ev => { stop(ev); depart = null; };
     zone.addEventListener("pointerup", fin); zone.addEventListener("pointercancel", fin);
-    if(carteEl) ["pointermove","pointerdown","mousemove","touchmove"].forEach(t => carteEl.addEventListener(t, ev => ev.stopPropagation(), true));
+    zone.addEventListener("touchmove", ev => ev.preventDefault(), {passive:false});   // la page ne défile pas pendant le glissé
+    // (pas d'écoute en capture sur la carte : elle empêchait le glissé d'arriver jusqu'à l'image)
   }
   const pz = view.querySelector("#pzoom"); if(pz) pz.oninput = ()=>{ commu.cadrage.z = +pz.value; appliquer(); };
   const pr = view.querySelector("#preset"); if(pr) pr.onclick = ()=>{ commu.cadrage = {x:50, y:50, z:1}; viewCommu(); };
@@ -7415,7 +7435,7 @@ function viewCommu(){
     const c = state.collection.find(x => x.id === commu.carte);
     if(!c) return;
     const cd = commu.cadrage;
-    if(!(Math.abs(cd.x - 50) > 0.5 || Math.abs(cd.y - 50) > 0.5 || cd.z > 1.01)){ toast("Image non déplacée", "faites glisser l'image ou zoomez", "lose"); return; }
+    if(!(Math.abs(cd.x - 50) > 0.5 || Math.abs(cd.y - 50) > 0.5 || Math.abs(cd.z - 1) > 0.01)){ toast("Image non déplacée", "faites glisser l'image ou zoomez", "lose"); return; }
     pe.disabled = true;
     try{
       await nuageRest("propositions", {method:"POST", body:JSON.stringify([{
@@ -9145,17 +9165,17 @@ function playBoosterCountdown(kind, total){
 
 async function runBoosterCountdown(kind, total, expose){
   if(reducedMotion()) return;
-  /* Façon Pokémon TCG Pocket : les sachets attendent en rangs serrés, la
-     caméra avance doucement vers eux, et ils éclatent un par un — POP —
-     au rythme du chargement. Un sachet éclaté n'est plus dessiné du tout :
-     rien ne reste à flotter au loin. */
+  /* Façon Pokémon TCG Pocket, en plus nerveux : la pile tombe du ciel et
+     rebondit, se balance, le sachet de devant tremble de plus en plus fort
+     en attendant son tour, puis s'arrache en tournoyant — POP ! — avec un
+     coup de zoom de la caméra, et la pile avance d'un cran. */
   const tint = B3D_TINT[kind] || B3D_TINT.normal;
   const wrap = document.createElement("div");
   wrap.className = "b3d cd arcade";
   wrap.style.setProperty("--b3dglow", tint.glow);
   const N = Math.max(2, Math.min(10, total));
   const parSachet = total / N;
-  wrap.innerHTML = `<div class="b3dbg"></div><canvas class="b3dcanvas"></canvas>
+  wrap.innerHTML = `<div class="b3dbg"></div><div class="cdhalo"></div><canvas class="b3dcanvas"></canvas>
     <div class="cdhud">
       <div class="cdgros"><b class="cdx">×${total}</b><span>paquets</span></div>
       <div class="cdn">0 / ${total}</div>
@@ -9164,24 +9184,20 @@ async function runBoosterCountdown(kind, total, expose){
     <div class="cdbar"><i></i></div>
     <div class="b3dflash"></div>`;
   document.body.appendChild(wrap);
-  const cv = wrap.querySelector("canvas"), lbl = wrap.querySelector(".cdn"), pops = wrap.querySelector(".cdpops");
+  const cv = wrap.querySelector("canvas"), lbl = wrap.querySelector(".cdn"), pops = wrap.querySelector(".cdpops"), gros = wrap.querySelector(".cdx");
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const W = window.innerWidth, H = window.innerHeight;
   cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
-  const asp = W / H, portrait = asp < 0.8;
+  const asp = W / H;
 
-  /* la pile : les sachets sont serrés les uns derrière les autres, chacun un
-     peu plus haut que celui de devant, comme chez Pokémon TCG Pocket. On ne
-     voit que le premier en entier et le liseré des suivants. */
   const PAS_Z = 0.62, PAS_Y = 0.22, TAN = Math.tan(35 * Math.PI / 360);
   const recul = Math.max(3.3 / 2 / (0.8 * TAN * asp), (6.7 / 2 + N * PAS_Y * 0.5) / (0.6 * TAN));
   const view3d = await makeBoosterGL(cv, kind, recul);
   if(!view3d){ wrap.remove(); return; }
 
-  const sachets = Array.from({length:N}, (_, i)=>({rang:i, pop:-1}));
-  let avancee = 0;                               // la caméra glisse d'un sachet à l'autre
-
-  let fait = 0, stop = false, eclates = 0, dernierPop = 0;
+  const sachets = Array.from({length:N}, (_, i)=>({rang:i, pop:-1, sens:i % 2 ? 1 : -1}));
+  let avancee = 0, punch = 0;
+  let fait = 0, stop = false, eclates = 0, dernierPop = performance.now();
   const barre = wrap.querySelector(".cdbar i");
   expose(n=>{
     fait = n;
@@ -9189,28 +9205,40 @@ async function runBoosterCountdown(kind, total, expose){
     if(barre) barre.style.width = Math.round(100 * n / total) + "%";
   }, ()=>{ stop = true; });
 
-  /* position à l'écran d'un point de la scène, pour y lancer les étincelles */
   const ecran = (x, y, z)=>{
     const zc = z - recul, f = 1 / TAN;
     return [(x * f / asp / -zc + 1) / 2 * W, (1 - y * f / -zc) / 2 * H];
   };
-  const MOTS = ["POP !", "PAF !", "ZAP !", "BAM !", "WOW !", "BOUM !", "TCHAK !", "VLAN !"];
+  const MOTS = ["POP !", "PAF !", "ZAP !", "BAM !", "WOW !", "BOUM !", "TCHAK !", "VLAN !", "SHLAK !", "KABOUM !"];
   function eclater(p){
-    const [sx, sy] = ecran(0, p.rang * PAS_Y - avancee * PAS_Y, -(p.rang - avancee) * PAS_Z);
+    const [sx, sy] = ecran(0, 0, 0);
     const g = document.createElement("div");
     g.className = "cdpop";
-    g.style.left = sx + "px"; g.style.top = sy + "px";
-    let html = `<b>${MOTS[Math.floor(Math.random() * MOTS.length)]}</b>`;
-    for(let k = 0; k < 14; k++){
-      const ang = (k / 14) * Math.PI * 2 + Math.random() * 0.4, d = 50 + Math.random() * 70;
+    g.style.left = sx + "px"; g.style.top = (sy - H * 0.05) + "px";
+    let html = `<b style="--rot:${(Math.random() * 24 - 12).toFixed(0)}deg">${MOTS[Math.floor(Math.random() * MOTS.length)]}</b>`;
+    for(let k = 0; k < 22; k++){
+      const ang = (k / 22) * Math.PI * 2 + Math.random() * 0.3, d = 80 + Math.random() * 130;
       html += `<i style="--dx:${(Math.cos(ang) * d).toFixed(0)}px;--dy:${(Math.sin(ang) * d).toFixed(0)}px;--r:${(Math.random() * 360).toFixed(0)}deg"></i>`;
     }
     g.innerHTML = html;
     pops.appendChild(g);
-    setTimeout(()=>g.remove(), 900);
-    wrap.classList.remove("secoue"); void wrap.offsetWidth; wrap.classList.add("secoue");
+    setTimeout(()=>g.remove(), 950);
+    wrap.classList.remove("secoue", "eclat"); void wrap.offsetWidth; wrap.classList.add("secoue", "eclat");
+    if(gros){ gros.classList.remove("bump"); void gros.offsetWidth; gros.classList.add("bump"); }
+    punch = 1;
     try{ sfx.tick(); }catch(e){}
+    try{ if(navigator.vibrate) navigator.vibrate(18); }catch(e){}
   }
+  /* poussière d'étoiles qui monte en continu autour de la pile */
+  const etincelles = setInterval(()=>{
+    const e = document.createElement("i");
+    e.className = "cdpoussiere";
+    e.style.left = (W * (0.2 + Math.random() * 0.6)) + "px";
+    e.style.setProperty("--d", (1.6 + Math.random() * 1.4).toFixed(2) + "s");
+    e.style.setProperty("--x", ((Math.random() - 0.5) * 80).toFixed(0) + "px");
+    pops.appendChild(e);
+    setTimeout(()=>e.remove(), 3200);
+  }, 90);
 
   requestAnimationFrame(()=>wrap.classList.add("on"));
   const T0 = performance.now();
@@ -9218,41 +9246,54 @@ async function runBoosterCountdown(kind, total, expose){
   await new Promise(resolve=>{
     function frame(){
       const now = performance.now(), t = (now - T0) / 1000;
-      const entree = easeOutCubic(Math.min(1, t / 0.7));
+      /* arrivée : la pile tombe du haut et rebondit */
+      const ue = Math.min(1, t / 0.75);
+      const rebond = 1 + 2.7 * Math.pow(ue - 1, 3) + 1.7 * Math.pow(ue - 1, 2);   // easeOutBack
+      const chute = (1 - rebond) * 14;
+
       const permis = (stop || fait >= total) ? N : Math.floor(fait / parSachet);
-      if(eclates < permis && now - dernierPop > (stop ? 60 : 110)){
+      if(t > 0.55 && eclates < permis && now - dernierPop > (stop ? 70 : 120)){
         const p = sachets[eclates];
         p.pop = now; eclates++; dernierPop = now;
         eclater(p);
       }
-      /* la caméra avance vers le prochain sachet de la pile, en douceur */
-      avancee += (eclates - avancee) * 0.16;
-      const respire = Math.sin(t * 1.4) * 0.12;
+      avancee += (eclates - avancee) * 0.2;
+      punch *= 0.86;
+      /* le sachet de devant s'impatiente : il tremble de plus en plus */
+      const attente = Math.min(1, (now - dernierPop) / 1400);
+      const tremble = (0.25 + attente) * 0.06;
 
+      const balance = Math.sin(t * 1.3) * 0.28, tangage = Math.sin(t * 0.9 + 1) * 0.08, flotte = Math.sin(t * 2.1) * 0.25;
       view3d.clear();
       let restants = 0;
-      // du fond vers l'avant : le premier sachet couvre ceux de derrière
       for(let i = N - 1; i >= 0; i--){
         const p = sachets[i];
-        const rel = p.rang - avancee;               // 0 = le sachet de devant
-        let z = -rel * PAS_Z, y = rel * PAS_Y + respire, x = 0, scl = 0.4 + 0.6 * entree, rx = 0.04, ry = Math.sin(t * 0.8) * 0.08, rz = 0, glow = 0;
+        const rel = p.rang - avancee;
+        let x = 0, y = rel * PAS_Y + flotte - chute, z = -rel * PAS_Z + punch * 1.6;
+        let rx = 0.05 + tangage, ry = balance, rz = 0, scl = 1, glow = 0;
+        const devant = p.pop < 0 && Math.round(avancee) === i;
+        if(devant){
+          rz = Math.sin(t * 38) * tremble; ry += Math.sin(t * 27) * tremble;
+          scl = 1 + Math.sin(t * 9) * 0.02 + attente * 0.04;
+          glow = attente * 0.35;
+        }
         if(p.pop >= 0){
-          /* le sachet de devant s'arrache vers la caméra et file hors champ */
-          const u = (now - p.pop) / 260;
-          if(u >= 1) continue;                      // parti : plus jamais dessiné
+          /* l'arrachement : gonfle, tournoie et file vers le haut, hors champ */
+          const u = (now - p.pop) / 300;
+          if(u >= 1) continue;
           const k = easeOutCubic(u);
-          z = k * recul * 0.55; y = k * 5.5; x = (i % 2 ? 1 : -1) * k * 3.5;
-          rz = (i % 2 ? -1 : 1) * k * 0.9; rx = -k * 0.6; glow = 1 - u;
+          scl = u < 0.25 ? 1 + u * 1.2 : 1.3 * (1 - (u - 0.25) / 0.75 * 0.6);
+          x = p.sens * k * 6; y = rel * PAS_Y + k * 9; z = k * recul * 0.35;
+          ry = balance + p.sens * k * 9; rz = -p.sens * k * 1.4; rx = -k * 0.8; glow = 1 - u * 0.6;
         }
         restants++;
-        z -= 10 * (1 - entree);
-        if(p.pop < 0) z += Math.min(1, t / 8) * recul * 0.1;   // lente poussée de la caméra
         view3d.draw([x, y, z], [rx, ry, rz], scl, glow, -99, 0, true);
       }
       if(!restants && (stop || fait >= total)){
+        clearInterval(etincelles);
         wrap.classList.add("burst");
-        setTimeout(()=>{ wrap.classList.add("out"); }, 180);
-        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 400);
+        setTimeout(()=>{ wrap.classList.add("out"); }, 150);
+        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 380);
         return;
       }
       requestAnimationFrame(frame);
