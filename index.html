@@ -1186,6 +1186,10 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
   color:var(--p4);background:transparent;border:1px solid var(--p4)}
 .lvlbar{height:7px;border-radius:4px;background:var(--ink-2);border:1px solid var(--line);margin-top:.35rem;overflow:hidden;max-width:280px}
 .lvlbar i{display:block;height:100%;background:linear-gradient(90deg,var(--p5),var(--p3))}
+.titletag + .titletag{margin-left:.3rem}
+.titletag.dev,.chip.devchip{background:linear-gradient(90deg,#FF3D6E,#FFB23D,#3DE0C8,#7B6BFF);background-size:300% 100%;color:#120A0A !important;
+  font-weight:800;letter-spacing:.12em;border-color:transparent !important;animation:devglow 4s linear infinite}
+@keyframes devglow{to{background-position:300% 0}}
 .titletag{display:inline-block;margin-top:.25rem;padding:.1rem .6rem;border-radius:999px;font-size:.78rem;
   font-weight:700;color:var(--text);background:var(--a1-voile);border:1px solid var(--p3)}
 .statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.9rem}
@@ -2681,6 +2685,66 @@ body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{di
 .cdhud .cdn{font-family:var(--f-data);font-size:.95rem;letter-spacing:.12em;margin-top:.4rem;opacity:.85}
 @keyframes cdpouls{50%{transform:scale(1.07) rotate(-2deg)}}
 .cdpops{position:absolute;inset:0;z-index:5;pointer-events:none}
+/* finale : jauge de rareté */
+.cdfinale{position:absolute;inset:0;z-index:7;display:grid;place-items:center;opacity:0;transition:opacity .25s ease;--fc:#FFD36A;--fk:.6;cursor:pointer}
+.cdfinale.on{opacity:1}
+.fnrayons{position:absolute;left:50%;top:50%;width:170vmax;height:170vmax;transform:translate(-50%,-50%) scale(var(--fk));border-radius:50%;
+  background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--fc) 55%, transparent) 0 6deg, transparent 6deg 18deg);
+  -webkit-mask:radial-gradient(circle, #000 0 8%, transparent 58%);mask:radial-gradient(circle, #000 0 8%, transparent 58%);
+  animation:fnspin 6s linear infinite;transition:transform .35s cubic-bezier(.2,1.6,.4,1), opacity .3s;opacity:.85;mix-blend-mode:screen}
+.cdfinale.legende .fnrayons{animation-duration:2.2s;opacity:1}
+@keyframes fnspin{to{rotate:360deg}}
+.fnnoyau{position:relative;width:calc(26vmin * var(--fk));height:calc(26vmin * var(--fk));border-radius:50%;transition:width .35s cubic-bezier(.2,1.8,.4,1), height .35s cubic-bezier(.2,1.8,.4,1);
+  background:radial-gradient(circle at 50% 45%, #fff 0 18%, color-mix(in srgb, var(--fc) 85%, #fff) 32%, var(--fc) 55%, transparent 72%);
+  box-shadow:0 0 calc(80px * var(--fk)) calc(20px * var(--fk)) color-mix(in srgb, var(--fc) 70%, transparent), 0 0 220px 60px color-mix(in srgb, var(--fc) 30%, transparent)}
+.fnnoyau i{position:absolute;inset:-14%;border-radius:50%;border:2px solid color-mix(in srgb, var(--fc) 80%, #fff);opacity:.7;animation:fnpulse .9s ease-in-out infinite}
+@keyframes fnpulse{50%{transform:scale(1.12);opacity:.25}}
+.fnnoyau.cogne{animation:fncogne .32s cubic-bezier(.2,1.8,.4,1)}
+@keyframes fncogne{0%{transform:scale(.7)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.fnondes{position:absolute;inset:0;pointer-events:none}
+.fnondes i{position:absolute;left:50%;top:50%;width:30vmin;height:30vmin;margin:-15vmin 0 0 -15vmin;border-radius:50%;
+  border:4px solid var(--c);box-shadow:0 0 30px var(--c), inset 0 0 30px var(--c);animation:fnonde .85s cubic-bezier(.1,.7,.3,1) forwards}
+@keyframes fnonde{from{transform:scale(.3);opacity:1}to{transform:scale(var(--s));opacity:0}}
+.fnmot{position:absolute;top:22%;left:0;right:0;text-align:center;pointer-events:none}
+.fnmot b{display:inline-block;font-family:var(--f-titre);font-size:clamp(2rem, 9vw, 4.4rem);letter-spacing:.04em;text-transform:uppercase;color:#fff;
+  -webkit-text-stroke:2px color-mix(in srgb, var(--c) 70%, #000);text-shadow:0 0 18px var(--c), 0 0 46px var(--c), 0 6px 0 rgba(0,0,0,.45)}
+.fnmot.pop b{animation:fnmot .4s cubic-bezier(.2,1.9,.4,1)}
+.fnmot.final b{font-size:clamp(2.4rem, 11vw, 5.6rem);animation:fnmotfin .7s cubic-bezier(.2,1.6,.4,1)}
+@keyframes fnmot{from{transform:scale(2.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@keyframes fnmotfin{0%{transform:scale(.2);opacity:0;filter:blur(8px)}60%{transform:scale(1.18);filter:blur(0)}100%{transform:scale(1)}}
+.fnetoiles{position:absolute;inset:0;pointer-events:none}
+.fngerbe{position:absolute;left:50%;top:50%}
+.fngerbe i{position:absolute;left:-4px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--c);box-shadow:0 0 10px var(--c), 0 0 2px #fff;
+  transform:scale(var(--z));animation:fngerbe var(--t) cubic-bezier(.1,.8,.3,1) forwards}
+.fngerbe i:nth-child(3n){border-radius:1px;width:4px;height:14px}
+@keyframes fngerbe{to{translate:var(--dx) var(--dy);opacity:0;rotate:200deg}}
+.cdfinale.boum .fnnoyau{animation:fnboum .55s ease-in forwards}
+@keyframes fnboum{0%{transform:scale(1)}35%{transform:scale(.6)}100%{transform:scale(9);opacity:0}}
+.cdfinale.boum::after{content:"";position:absolute;inset:0;background:radial-gradient(circle, #fff 0 10%, var(--fc) 40%, transparent 75%);animation:fnflash .7s ease-out forwards;pointer-events:none}
+@keyframes fnflash{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+/* écran des cartes : meilleure carte + cascade */
+.bulkhero{position:relative;width:100%;display:grid;place-items:center;padding:1.4rem 0 1rem;overflow:hidden;border-radius:18px;
+  background:radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--hc) 35%, transparent), transparent 70%)}
+.bhrayons{position:absolute;left:50%;top:55%;width:160vmax;height:160vmax;transform:translate(-50%,-50%);
+  background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--hc) 30%, transparent) 0 5deg, transparent 5deg 15deg);
+  -webkit-mask:radial-gradient(circle, #000 0 5%, transparent 32%);mask:radial-gradient(circle, #000 0 5%, transparent 32%);animation:fnspin 14s linear infinite;pointer-events:none}
+.bhlabel{position:relative;z-index:2;font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.18em;font-size:.8rem;color:var(--hc);
+  text-shadow:0 0 12px var(--hc);margin-bottom:.6rem}
+.bhcarte{position:relative;z-index:2;width:min(46vw,210px);aspect-ratio:63/88;cursor:pointer;filter:drop-shadow(0 0 22px color-mix(in srgb, var(--hc) 70%, transparent))}
+.bhcarte .card{position:absolute;inset:0;width:100%;height:100%}
+.bulkhero.anime .bhcarte{animation:bhentree 1s cubic-bezier(.2,1.4,.3,1) both}
+.bulkhero.anime .bhlabel{animation:bhlabel .6s .5s ease both}
+@keyframes bhentree{0%{transform:scale(.2) rotateY(540deg);opacity:0;filter:brightness(4) drop-shadow(0 0 60px var(--hc))}70%{transform:scale(1.08) rotateY(0)}100%{transform:scale(1);opacity:1}}
+@keyframes bhlabel{from{opacity:0;letter-spacing:.6em}to{opacity:1}}
+.bulkhero.r5 .bhcarte{animation:bhentree 1s cubic-bezier(.2,1.4,.3,1) both, bhlegende 2.4s 1s ease-in-out infinite}
+@keyframes bhlegende{50%{filter:drop-shadow(0 0 40px var(--hc)) brightness(1.08)}}
+.bulkcase{min-width:0}
+.cascade .bulkcase{animation:bkentree .55s var(--d) cubic-bezier(.2,1.5,.4,1) both}
+@keyframes bkentree{0%{opacity:0;transform:translateY(-40px) scale(.4) rotate(-10deg)}100%{opacity:1;transform:none}}
+.cascade .bulkcase.r3,.cascade .bulkcase.r4,.cascade .bulkcase.r5{animation:bkentree .55s var(--d) cubic-bezier(.2,1.5,.4,1) both, bkrare 1.2s calc(var(--d) + .3s) ease-out both}
+@keyframes bkrare{0%{filter:drop-shadow(0 0 0 var(--hc)) brightness(2.2)}40%{filter:drop-shadow(0 0 24px var(--hc)) brightness(1.2)}100%{filter:drop-shadow(0 0 8px color-mix(in srgb, var(--hc) 60%, transparent))}}
+.bulkcase.r5{filter:drop-shadow(0 0 8px color-mix(in srgb, var(--hc) 60%, transparent))}
+.bulkpill{animation:fnmot .45s var(--d) cubic-bezier(.2,1.9,.4,1) both}
 .cdpop{position:absolute;width:0;height:0}
 .cdpop b{position:absolute;left:0;top:0;transform:translate(-50%,-50%);white-space:nowrap;
   font-family:var(--f-titre);font-size:clamp(1.4rem,6vw,2.4rem);color:var(--p4);
@@ -2857,7 +2921,7 @@ select{background-color:var(--panel)}
       <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Donjons et duels</small></button>
       <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
-      <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Enchères entre joueurs</small></button>
+      <button data-view="camp"><span class="ic">⚑</span><b>Campagnes</b><small>Expéditions et boss d'univers</small></button>
     </div>
   </div>
 </div>
@@ -2868,7 +2932,7 @@ select{background-color:var(--panel)}
     <button data-view="pack"><span class="ic">▣</span><span class="lb">Ouvertures</span></button>
     <button data-view="album"><span class="ic">⿴</span><span class="lb">Album</span></button>
     <button data-view="amis"><span class="ic">♢</span><span class="lb">Amis</span></button>
-    <button data-view="camp"><span class="ic">⚑</span><span class="lb">Campagnes</span></button>
+    <button data-view="market"><span class="ic">⇄</span><span class="lb">Marché</span></button>
     <button data-view="farm"><span class="ic">◉</span><span class="lb">Atelier</span></button>
     <button id="more"><span class="ic">⋯</span><span class="lb">Menu</span></button>
   </div>
@@ -2946,6 +3010,10 @@ const UNIVERSES = [
   {label:"Fallout",            host:"fallout.fandom.com",       cat:"Jeux vidéo"},
   {label:"Mass Effect",        host:"masseffect.fandom.com",    cat:"Jeux vidéo"},
   {label:"Halo",               host:"halo.fandom.com",          cat:"Jeux vidéo"},
+  {label:"God of War",         host:"godofwar.fandom.com",      cat:"Jeux vidéo"},
+  {label:"Uncharted",          host:"uncharted.fandom.com",     cat:"Jeux vidéo"},
+  {label:"FIFA",               host:"fifa.fandom.com",          cat:"Jeux vidéo"},
+  {label:"PES",                host:"pes.fandom.com",           cat:"Jeux vidéo"},
   {label:"Resident Evil",      host:"residentevil.fandom.com",  cat:"Jeux vidéo"},
   {label:"Silent Hill",        host:"silenthill.fandom.com",    cat:"Jeux vidéo"},
   {label:"Metal Gear",         host:"metalgear.fandom.com",     cat:"Jeux vidéo"},
@@ -2956,7 +3024,8 @@ const UNIVERSES = [
   {label:"Baldur's Gate",      host:"baldursgate.fandom.com",   cat:"Jeux vidéo"},
   {label:"Ace Attorney",       host:"aceattorney.fandom.com",   cat:"Jeux vidéo"},
   {label:"Baldur's Gate 3",    host:"baldursgate.fandom.com",   cat:"Jeux vidéo", path:"/fr",
-   pages:["Baldur's Gate 3"]},                     // seulement ce que relie cette page
+   pages:["Baldur's Gate 3"],
+   repli:{path:"", pages:["Baldur's Gate III"]}},   // si la page française relie trop peu d'articles                     // seulement ce que relie cette page
   {label:"Half-Life",          host:"half-life.fandom.com",     cat:"Jeux vidéo"},
   {label:"Final Fantasy",      host:"finalfantasy.fandom.com",  cat:"Jeux vidéo"},
   {label:"Assassin's Creed",   host:"assassinscreed.fandom.com",cat:"Jeux vidéo"},
@@ -3240,7 +3309,7 @@ function libererStockage(){
     for(let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
       if(!k) continue;
-      if(/fm:pool[234]$/.test(k) || /fm:ml[23]:/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
+      if(/fm:pool[234]$/.test(k) || /fm:ml(r|[23]):/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
     }
     sup.forEach(k=>{ n += (localStorage.getItem(k) || "").length; localStorage.removeItem(k); });
   }catch(e){}
@@ -3752,6 +3821,15 @@ async function noterRetraits(col){
   for(const [id, n] of colVue){ const d = n - (neuf.get(id) || 0); if(d > 0) moins[id] = d; }
   colVue = neuf;
   if(!Object.keys(moins).length) return;
+  /* une carte vendue ou échangée jusqu'au dernier exemplaire quitte aussi la vitrine */
+  try{
+    const p = state.profile, partis = Object.keys(moins).filter(id => !neuf.get(id));
+    if(p && partis.length && (p.slots || []).some(id => partis.includes(id))){
+      p.slots = p.slots.filter(id => !partis.includes(id));
+      for(const id of partis) if(p.vitrineCache) delete p.vitrineCache[id];
+      setTimeout(()=>sset("fm:profile", p), 0);
+    }
+  }catch(e){}
   try{
     const moi = acct();
     const r = (await lireEspace(moi, "retraits:fm:col")) || {};
@@ -3801,7 +3879,7 @@ const egalJ = (a, b) => stable(a) === stable(b);
 /* Réglages de profil : chacun porte la date de sa dernière modification
    (persoMaj). Entre deux appareils, le réglage le plus récent gagne, quoi
    qu'il arrive au reste de la partie. */
-const PERSO = ["banner","bannerImg","title","fav","slots","avatar","avatarImg","avatarCrop","pseudo"];
+const PERSO = ["banner","bannerImg","title","titresAff","fav","slots","avatar","avatarImg","avatarCrop","pseudo"];
 let persoVu = null;
 function persoInstantane(p){ persoVu = Object.fromEntries(PERSO.map(k => [k, stable(p[k])])); }
 function tamponnerPerso(p){
@@ -4343,6 +4421,9 @@ async function api(params, w, ms=12000){
    on essaie l'hôte principal puis ses variantes connues, en version française
    d'abord, puis à la racine. */
 const ALT_HOSTS = {
+  "fifa.fandom.com":           ["easportsfc.fandom.com", "fifa-football.fandom.com"],
+  "pes.fandom.com":            ["proevolutionsoccer.fandom.com", "winningeleven.fandom.com", "efootball.fandom.com"],
+  "godofwar.fandom.com":       ["god-of-war.fandom.com"],
   "rock.fandom.com":           ["rockmusic.fandom.com", "classicrock.fandom.com"],
   "bts.fandom.com":            ["btswiki.fandom.com", "bangtan.fandom.com"],
   "beatles.fandom.com":        ["thebeatles.fandom.com"],
@@ -4382,7 +4463,17 @@ async function probe(u){
     if(u.path != null){
       const w = {label:u.label, host, path:u.path, cat:u.cat, pages:u.pages};
       const n = await taille(w);
-      if(n >= MIN_ARTICLES) return Object.assign(w, {articles:n});
+      if(n >= MIN_ARTICLES){
+        if(!u.repli) return Object.assign(w, {articles:n});
+        const l = await titresAutorises(w).catch(()=>null);
+        if(l && l.length >= 15) return Object.assign(w, {articles:n});
+      }
+      if(u.repli){
+        const r = {label:u.label, host, path:u.repli.path, cat:u.cat, pages:u.repli.pages || u.pages};
+        const nr = await taille(r);
+        if(nr >= MIN_ARTICLES) return Object.assign(r, {articles:nr});
+        if(n >= MIN_ARTICLES) return Object.assign(w, {articles:n});
+      }
       continue;
     }
     /* Version française seulement si elle est vraiment fournie : une
@@ -4486,9 +4577,10 @@ function stripHtml(html){
    les versions du jeu ni les pages techniques. La liste est gardée 7 jours. */
 const listesBlanches = new Map();
 const HORS_SUJET = /^(java|bedrock|pocket|legacy console|education|xbox|playstation|nintendo|new nintendo|wii ?u|windows|raspberry|china|minecraft (dungeons|legends|earth|story mode|education|china|live))\b|edition|^\d+(\.\d+)+|^(alpha|beta|infdev|indev|classic|pre-?classic)\b|snapshot|pre-?release|release candidate|update|version|tutorial|launcher|^list of|\(disambiguation\)|\bv?\d+\.\d+/i;
+function cleUnivers(w){ return w.host + (w.path || "") + (w.pages && w.pages.length ? "#" + w.pages.join("|") : ""); }
 async function titresAutorises(w){
   if(!w || !Array.isArray(w.pages) || !w.pages.length) return null;
-  const cle = w.host + (w.path || "");
+  const cle = cleUnivers(w);
   if(listesBlanches.has(cle)) return listesBlanches.get(cle);
   const cache = await sget("fm:liste:" + cle, true);
   if(cache && cache.v === 2 && cache.t && Date.now() - cache.t < 7 * 864e5 && cache.l && cache.l.length){
@@ -5881,11 +5973,19 @@ let profilPublie = "", profilPublieA = 0, profilMinuteur = null;
 function vitrinePublique(){
   const p = state.profile;
   const lv = levelFromXP(playerXP());
-  const carte = id => { const c = state.collection.find(x => x.id === id); return c ? carteEchange(c) : null; };
+  /* la dernière fiche connue de chaque carte exposée est gardée : une vitrine
+     publiée ne se vide plus parce qu'une carte manque un instant à la collection */
+  p.vitrineCache = p.vitrineCache || {};
+  for(const id of Object.keys(p.vitrineCache)) if(!(p.slots || []).includes(id)) delete p.vitrineCache[id];
+  const carte = id => {
+    const c = state.collection.find(x => x.id === id);
+    if(c){ const f = carteEchange(c); delete f.desc; p.vitrineCache[id] = f; return f; }
+    return p.vitrineCache[id] || null;
+  };
   const av = p.avatarImg && p.avatarImg.length < 160000 ? p.avatarImg : "";
   return {
     niveau: lv.lvl, xp: lv.left, xpMax: lv.need,
-    titre: p.title || null, titres: unlockedTitles().map(t => t.name),
+    titre: titresAffiches()[0] || null, titres: titresAffiches(), titresV: 2,
     fav: p.fav || null,
     avatar: av, crop: p.avatarCrop || null,
     banniere: p.banner ? bannerSrc(p.banner) : "",
@@ -6269,7 +6369,7 @@ async function viewJoueur(){
             <h3 style="font-size:1.4rem">${esc(pr.pseudo)}</h3>
             <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
               <span class="lvlbadge">Niv. ${lvl}</span>
-              ${v.titre ? `<span class="titletag">${esc(v.titre)}</span>` : ""}
+              ${(v.titresV ? (v.titres || []) : (v.titre ? [v.titre] : [])).slice(0, 3).map(titreTag).join("")}
             </div>
             ${v.xpMax ? `<div class="lvlbar" title="${v.xp} / ${v.xpMax} points"><i style="width:${Math.round((v.xp || 0) / v.xpMax * 100)}%"></i></div>
             <p class="sub" style="margin:.15rem 0 0;font-size:.78rem">${v.xp} / ${v.xpMax} points vers le niveau ${lvl + 1}</p>` : ""}
@@ -6294,12 +6394,6 @@ async function viewJoueur(){
         </div>
       </div>
 
-      <h3 style="font-size:1.15rem;margin-bottom:.4rem">Titres</h3>
-      <div class="row" style="margin-bottom:1.2rem">
-        ${(v.titres || []).length
-          ? v.titres.map(t => `<span class="chip" aria-pressed="${v.titre === t}">${esc(t)}</span>`).join("")
-          : `<span class="sub">Aucun titre débloqué pour l'instant.</span>`}
-      </div>
 
       <div class="row" style="justify-content:space-between;align-items:baseline">
         <h3 style="font-size:1.15rem">Vitrine</h3>
@@ -7518,7 +7612,7 @@ function recadrable(c){
 const ATK_RARETE = {"Commun":1500, "Peu commun":3200, "Rare":4800, "Super rare":6300, "Ultra rare":7600, "Légendaire":9000};
 const catalogueCartes = new Map();
 async function cartesCatalogue(w){
-  const k = w.host + (w.path || "");
+  const k = cleUnivers(w);
   if(catalogueCartes.has(k)) return catalogueCartes.get(k);
   const liste = avecAjouts(((await mostLinked(w).catch(()=>[])) || []).slice(0, CAT_LIMIT), w);
   if(!liste.length) return [];
@@ -8000,6 +8094,7 @@ function viewCommu(){
     try{
       await nuageRest("bulletins", {method:"POST", body:JSON.stringify([{vote:id, joueur:moi, oui}])});
       commu.mesVoix[id] = oui;
+      state.profile.votesCom = (state.profile.votesCom || 0) + 1; checkAch();
     }catch(e){ toast("Vote impossible", /duplicate|409|23505/i.test(e.message) ? "vous avez déjà voté" : String(e.message || e), "lose"); }
     await recharger();
   });
@@ -8022,6 +8117,7 @@ function viewCommu(){
       const r = await nuageRest("votes_cartes?select=id&type=eq." + type + "&sujet=eq." + encodeURIComponent(sujet) + "&statut=eq.ouvert");
       if(r && r[0]) await nuageRest("bulletins", {method:"POST", body:JSON.stringify([{vote:r[0].id, joueur:moi, oui:true}])}).catch(()=>{});
       toast("Vote lancé", "les autres joueurs peuvent voter", "info");
+      state.profile.propositions = (state.profile.propositions || 0) + 1; checkAch();
     }catch(e){
       toast(/duplicate|409|23505/i.test(e.message) ? "Déjà soumise à un vote" : "Vote impossible",
             /duplicate|409|23505/i.test(e.message) ? "votez dans la liste" : String(e.message || e), "lose");
@@ -8154,6 +8250,7 @@ function viewCommu(){
         note:(commu.note || "").trim().slice(0, 120) || null
       }])});
       toast("Recadrage envoyé", "merci !", "info");
+      state.profile.propositions = (state.profile.propositions || 0) + 1; checkAch();
       commu.carte = null; commu.carteObj = null;
     }catch(e){ toast("Envoi impossible", String(e.message || e), "lose"); pe.disabled = false; }
     await recharger();
@@ -8827,7 +8924,7 @@ let poolPromise = null;
 function ensurePool(){ if(!poolPromise) poolPromise = buildPool(); return poolPromise; }
 /* empreinte d'un univers : si sa définition change (adresse, chemin, pages),
    le cache le sonde à nouveau ; un univers ajouté apparaît sans attendre 7 jours */
-function sigUnivers(u){ return JSON.stringify([u.host, u.path == null ? null : u.path, u.pages || null, ALT_HOSTS[u.host] || null]); }
+function sigUnivers(u){ return JSON.stringify([u.host, u.path == null ? null : u.path, u.pages || null, u.repli || null, ALT_HOSTS[u.host] || null, 2]); }
 async function buildPool(){
   const cached = await sget("fm:pool4", true);
   const frais = cached && cached.pool && (Date.now() - cached.t) < 7 * 864e5;
@@ -8888,7 +8985,39 @@ async function listeParTaille(w){
      (une poignée de Légendaires, puis de plus en plus de cartes à chaque palier) */
   return pages.slice(0, 300).map((x, i) => ({t:x.t, v:Math.max(1, Math.round(500 / Math.pow(1 + i / 2, 0.78)))}));
 }
+/* Univers restreint : le palmarès est la liste blanche elle-même, classée par
+   liens entrants quand le wiki les publie, sinon par taille d'article. Avant,
+   on croisait la liste blanche avec les 300 premiers du wiki entier, et il ne
+   restait presque rien (Baldur's Gate 3). */
+async function palmaresRestreint(w){
+  const key = "fm:mlr:" + cleUnivers(w);
+  const c = await sget(key, true);
+  if(c && c.list && c.list.length && (Date.now() - c.t) < 7 * 864e5) return c.list;
+  const permis = (await titresAutorises(w).catch(()=>null)) || [];
+  const ok = [...new Set(permis)].filter(t => !HORS_SUJET.test(t) && !isRelic(t) && !isFiller(t) && !/\(homonymie\)|disambiguation/i.test(t)).slice(0, 800);
+  if(!ok.length) return [];
+  const vals = new Map();
+  try{
+    const d = await api({action:"query", list:"querypage", qppage:"Mostlinked", qplimit:"500"}, w);
+    for(const r of ((d.query && d.query.querypage && d.query.querypage.results) || [])) if(r && r.title) vals.set(r.title, Number(r.value) || 0);
+  }catch(e){}
+  const tailles = new Map();
+  const lots = [];
+  for(let i = 0; i < ok.length; i += 50) lots.push(ok.slice(i, i + 50));
+  await Promise.all(lots.map(async l => {
+    try{
+      const d = await api({action:"query", titles:l.join("|"), prop:"info"}, w);
+      for(const p of ((d.query && d.query.pages) || [])) if(p && !p.missing && p.title) tailles.set(p.title, p.length || 0);
+    }catch(e){}
+  }));
+  const tri = ok.filter(t => (tailles.get(t) || 0) >= 400)
+    .sort((a, b)=>(vals.get(b) || 0) - (vals.get(a) || 0) || tailles.get(b) - tailles.get(a)).slice(0, 300);
+  const list = tri.map((t, i) => ({t, v:Math.max(1, Math.round(500 / Math.pow(1 + i / 2, 0.78)))}));
+  if(list.length) await sset(key, {t:Date.now(), list}, true);
+  return list;
+}
 async function mostLinked(w){
+  if(w && Array.isArray(w.pages) && w.pages.length) return palmaresRestreint(w);
   const key = "fm:ml3:"+w.host+(w.path||"");
   const c = await sget(key, true);
   const restreint = !!(w && Array.isArray(w.pages) && w.pages.length);
@@ -9322,20 +9451,43 @@ function renderStage(){
   if(r.bulk){
     const byRar = {};
     r.cards.forEach(c=>byRar[c.rarity] = (byRar[c.rarity]||0)+1);
+    const anime = r.anime && !reducedMotion();
+    r.anime = false;                       // la cascade ne se joue qu'une fois
+    const hero = r.cards[0];
+    const rangHero = hero ? RARITIES.indexOf(hero.rarity) : 0;
+    const delai = i => Math.min(2.2, 0.55 + i * (r.cards.length > 60 ? 0.018 : 0.045));
     stage.innerHTML = `
+      ${hero && rangHero >= 2 ? `<div class="bulkhero ${anime ? "anime" : ""} r${rangHero}" style="--hc:${RAR_COLOR[hero.rarity] || RAR_HEX[hero.rarity] || "#FFD36A"}">
+        <div class="bhrayons"></div>
+        <span class="bhlabel">Meilleure carte</span>
+        <div class="bhcarte" data-id="${esc(hero.id)}">${cardHTML(hero)}</div>
+      </div>` : ""}
       <div class="panel" style="width:100%">
         <h3 style="font-size:1.1rem;margin-bottom:.5rem">${r.cards.length} cartes tirées${r.kind==="mythic"?" · mythiques":r.kind==="demon"?" · démoniques":""}</h3>
         <div class="row" style="gap:.35rem">
-          ${RARITIES.slice().reverse().filter(x=>byRar[x]).map(x=>`<span class="pill" style="background:${RAR_HEX[x]||"#B9AC9E"}">${esc(x)} ×${byRar[x]}</span>`).join("")}
+          ${RARITIES.slice().reverse().filter(x=>byRar[x]).map((x,k)=>`<span class="pill ${anime ? "bulkpill" : ""}" style="background:${RAR_HEX[x]||"#B9AC9E"};--d:${(0.25 + k * 0.12).toFixed(2)}s">${esc(x)} ×<b data-compte="${byRar[x]}">${anime ? 0 : byRar[x]}</b></span>`).join("")}
         </div>
       </div>
-      <div class="grid" style="width:100%">${r.cards.map(c=>cardHTML(c,{click:true})).join("")}</div>
+      <div class="grid ${anime ? "cascade" : ""}" style="width:100%">${r.cards.map((c,i)=>`<div class="bulkcase r${RARITIES.indexOf(c.rarity)}" style="--d:${delai(i).toFixed(3)}s;--hc:${RAR_COLOR[c.rarity] || RAR_HEX[c.rarity] || "#B9AC9E"}">${cardHTML(c,{click:true})}</div>`).join("")}</div>`;
+    if(anime){
+      /* les compteurs défilent */
+      stage.querySelectorAll("[data-compte]").forEach(b=>{
+        const fin = +b.dataset.compte, t0 = performance.now() + 350, d = 900;
+        const pas = ()=>{ const u = Math.min(1, Math.max(0, (performance.now() - t0) / d)); b.textContent = Math.round(fin * (1 - Math.pow(1 - u, 3))); if(u < 1) requestAnimationFrame(pas); };
+        requestAnimationFrame(pas);
+      });
+      /* un petit bruit à chaque carte rare qui se pose */
+      r.cards.forEach((c,i)=>{ const k = RARITIES.indexOf(c.rarity); if(k >= 3 && i < 40) setTimeout(()=>{ try{ sfx.tick(); }catch(e){} }, delai(i) * 1000 + 250); });
+    }
+    const bh = stage.querySelector(".bhcarte");
+    if(bh) bh.onclick = ()=>showCard(state.collection.find(c=>c.id===bh.dataset.id));
+    stage.insertAdjacentHTML("beforeend", `
       <div class="row" style="justify-content:center">
         ${againButton(r.kind, r.count||1)}
         <button class="btn ghost" id="back">Retour aux ouvertures</button>
         <button class="btn ghost" id="toalbum">Aller à l'album</button>
-      </div>`;
-    stage.querySelectorAll(".card[data-id]").forEach(el=>{
+      </div>`);
+    stage.querySelectorAll(".grid .card[data-id]").forEach(el=>{
       el.onclick = ()=>showCard(state.collection.find(c=>c.id===el.dataset.id));
     });
     const ag = stage.querySelector("#again");
@@ -10013,10 +10165,10 @@ async function mountIdleBooster(host, kind){
    chacun une tranche. Ils s'envolent au fur et à mesure du chargement. */
 const COUNTDOWN_FROM = 2;
 function playBoosterCountdown(kind, total){
-  let tick = ()=>{}, finish = ()=>{};
+  let tick = ()=>{}, finish = ()=>{}, meilleure = ()=>{};
   const done = runBoosterCountdown(kind, total,
-    (t, f)=>{ tick = t; finish = f; });
-  return {done, tick:n=>tick(n), finish:()=>finish()};
+    (t, f, m)=>{ tick = t; finish = f; meilleure = m || meilleure; });
+  return {done, tick:n=>tick(n), finish:()=>finish(), meilleure:r=>meilleure(r)};
 }
 
 async function runBoosterCountdown(kind, total, expose){
@@ -10055,11 +10207,12 @@ async function runBoosterCountdown(kind, total, expose){
   let avancee = 0, punch = 0;
   let fait = 0, stop = false, eclates = 0, dernierPop = performance.now();
   const barre = wrap.querySelector(".cdbar i");
+  let meilleure = "Commun";
   expose(n=>{
     fait = n;
     if(lbl) lbl.textContent = `${n} / ${total}`;
     if(barre) barre.style.width = Math.round(100 * n / total) + "%";
-  }, ()=>{ stop = true; });
+  }, ()=>{ stop = true; }, r=>{ if(r) meilleure = r; });
 
   const ecran = (x, y, z)=>{
     const zc = z - recul, f = 1 / TAN;
@@ -10147,14 +10300,86 @@ async function runBoosterCountdown(kind, total, expose){
       }
       if(!restants && (stop || fait >= total)){
         clearInterval(etincelles);
-        wrap.classList.add("burst");
-        setTimeout(()=>{ wrap.classList.add("out"); }, 150);
-        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 380);
+        view3d.clear();
+        finaleRarete(wrap, meilleure, total).then(()=>{
+          wrap.classList.add("burst");
+          setTimeout(()=>{ wrap.classList.add("out"); }, 150);
+          setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 420);
+        });
         return;
       }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
+  });
+}
+
+/* Finale des ouvertures multiples : toute la lumière converge en un noyau qui
+   monte de palier en palier — RARE ! SUPER RARE ! … — jusqu'à la meilleure
+   carte du lot, puis explose. Plus elle est rare, plus ça tremble. Un toucher
+   passe directement à l'explosion. */
+function finaleRarete(wrap, meilleure, total){
+  return new Promise(res=>{
+    const top = Math.max(1, RARITIES.indexOf(meilleure));
+    const paliers = RARITIES.slice(1, top + 1).filter(r => r !== "Relique" || meilleure === "Relique");
+    const f = document.createElement("div");
+    f.className = "cdfinale";
+    f.innerHTML = `<div class="fnrayons"></div><div class="fnnoyau"><i></i></div>
+      <div class="fnondes"></div><div class="fnmot"></div><div class="fnetoiles"></div>`;
+    wrap.appendChild(f);
+    const noyau = f.querySelector(".fnnoyau"), mot = f.querySelector(".fnmot"), ondes = f.querySelector(".fnondes"), etoiles = f.querySelector(".fnetoiles");
+    const couleur = r => RAR_COLOR[r] || RAR_HEX[r] || "#FFD36A";
+    let fini = false, i = 0, minuteur = null;
+    const onde = (c, fort)=>{
+      const o = document.createElement("i");
+      o.style.setProperty("--c", c); o.style.setProperty("--s", fort ? 3.2 : 2);
+      ondes.appendChild(o); setTimeout(()=>o.remove(), 900);
+    };
+    const gerbe = (c, n)=>{
+      let h = "";
+      for(let k = 0; k < n; k++){
+        const a = Math.random() * Math.PI * 2, d = 120 + Math.random() * Math.min(window.innerWidth, window.innerHeight) * 0.55;
+        h += `<i style="--c:${c};--dx:${(Math.cos(a) * d).toFixed(0)}px;--dy:${(Math.sin(a) * d).toFixed(0)}px;--t:${(0.6 + Math.random() * 0.7).toFixed(2)}s;--z:${(0.5 + Math.random() * 1.4).toFixed(2)}"></i>`;
+      }
+      const g = document.createElement("div"); g.className = "fngerbe"; g.innerHTML = h;
+      etoiles.appendChild(g); setTimeout(()=>g.remove(), 1500);
+    };
+    const palier = ()=>{
+      if(fini) return;
+      if(i >= paliers.length) return exploser();
+      const r = paliers[i], c = couleur(r), rang = RARITIES.indexOf(r);
+      f.style.setProperty("--fc", c);
+      f.style.setProperty("--fk", (0.55 + i * 0.22).toFixed(2));
+      noyau.classList.remove("cogne"); void noyau.offsetWidth; noyau.classList.add("cogne");
+      mot.innerHTML = `<b style="--c:${c}">${esc(r)} !</b>`;
+      mot.classList.remove("pop"); void mot.offsetWidth; mot.classList.add("pop");
+      wrap.classList.remove("secoue"); void wrap.offsetWidth; wrap.classList.add("secoue");
+      f.classList.toggle("legende", rang >= 5);
+      onde(c, rang >= 4);
+      if(rang >= 3) gerbe(c, 10 + rang * 4);
+      try{ sfx.tick(); if(rang >= 4) sfx.flip(); }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(rang >= 5 ? [30, 40, 60] : 14 + rang * 6); }catch(e){}
+      i++;
+      /* le suspense s'allonge à chaque palier */
+      minuteur = setTimeout(palier, 230 + i * 70 + (i === paliers.length - 1 && rang >= 5 ? 380 : 0));
+    };
+    const exploser = ()=>{
+      if(fini) return; fini = true;
+      clearTimeout(minuteur);
+      const c = couleur(meilleure), rang = RARITIES.indexOf(meilleure);
+      f.style.setProperty("--fc", c);
+      f.classList.add("boum");
+      mot.innerHTML = `<b style="--c:${c}">${rang >= 5 ? "✦ " + esc(meilleure).toUpperCase() + " ✦" : "×" + total}</b>`;
+      mot.classList.remove("pop"); void mot.offsetWidth; mot.classList.add("pop", "final");
+      onde(c, true); setTimeout(()=>onde("#fff", true), 120); setTimeout(()=>onde(c, true), 260);
+      gerbe(c, 40 + Math.max(0, rang) * 10); gerbe("#FFFFFF", 20);
+      try{ if(rang >= 5) sfx.fanfare(); else sfx.flip(); }catch(e){}
+      try{ if(navigator.vibrate) navigator.vibrate(rang >= 5 ? [60, 50, 120] : 40); }catch(e){}
+      setTimeout(res, rang >= 5 ? 1000 : 700);
+    };
+    f.addEventListener("pointerdown", ()=>exploser());
+    requestAnimationFrame(()=>f.classList.add("on"));
+    setTimeout(palier, 260);
   });
 }
 
@@ -10385,10 +10610,8 @@ async function openPack(n, kind){
     } else {
       all.forEach(addCard);
       all.sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity));
-      state.reveal = {loading:false, bulk:true, kind, count:n, cost:paid, cards:all};
-      const best = all[0];
-      if(best) sfxForRarity(best.rarity);
-      if(best && RARITIES.indexOf(best.rarity) >= 2) celebrate(best.rarity);
+      state.reveal = {loading:false, bulk:true, kind, count:n, cost:paid, cards:all, anime:true};
+      if(all[0] && intro.meilleure) intro.meilleure(all[0].rarity);
     }
     await saveAll();
     intro.finish();                      // le paquet se déchire une fois les cartes prêtes
@@ -10398,6 +10621,10 @@ async function openPack(n, kind){
     document.getElementById("coins").textContent = short(state.profile.coins);
     tick();
     renderStage();
+    if(n > 1 && all[0]){
+      sfxForRarity(all[0].rarity);
+      if(RARITIES.indexOf(all[0].rarity) >= 2) celebrate(all[0].rarity);
+    }
     checkAch();
   }catch(e){
     intro.finish();
@@ -12963,7 +13190,24 @@ const ACHIEVEMENTS = [
   {id:"vente1",  name:"Adjugé !",               desc:"Vendre une carte aux enchères.",              goal:1,   val:()=>state.profile.ventes||0, reward:3},
   {id:"vente10", name:"Commissaire-priseur",    desc:"Vendre dix cartes aux enchères.",             goal:10,  val:()=>state.profile.ventes||0, reward:12},
   {id:"achat1",  name:"Coup de marteau",        desc:"Remporter une enchère.",                      goal:1,   val:()=>state.profile.achats||0, reward:3},
-  {id:"achat10", name:"Chineur",                desc:"Remporter dix enchères.",                     goal:10,  val:()=>state.profile.achats||0, reward:12}
+  {id:"achat10", name:"Chineur",                desc:"Remporter dix enchères.",                     goal:10,  val:()=>state.profile.achats||0, reward:12},
+  {id:"pack500", name:"Machine à boosters",     desc:"Ouvrir 500 paquets.",                         goal:500, val:()=>state.profile.packs, reward:20},
+  {id:"col500",  name:"Bibliothécaire",         desc:"Posséder 500 cartes distinctes.",             goal:500, val:()=>state.collection.length, reward:25},
+  {id:"col1000", name:"Encyclopédiste",         desc:"Posséder 1 000 cartes distinctes.",           goal:1000, val:()=>state.collection.length, reward:50},
+  {id:"w25",     name:"Citoyen du multivers",   desc:"Des cartes de 25 univers différents.",        goal:25,  val:nWorlds, reward:10},
+  {id:"w50",     name:"Arpenteur",              desc:"Des cartes de 50 univers différents.",        goal:50,  val:nWorlds, reward:20},
+  {id:"ur10",    name:"Collection d'élite",     desc:"Posséder 10 cartes Ultra rares.",             goal:10,  val:()=>nRar("Ultra rare"), reward:10},
+  {id:"leg20",   name:"Panthéon",               desc:"Posséder 20 cartes Légendaires.",             goal:20,  val:()=>nRar("Légendaire"), reward:40},
+  {id:"dupe10",  name:"Obsession",              desc:"Avoir une même carte en 10 exemplaires.",     goal:10,  val:maxDupe, reward:6},
+  {id:"tens10",  name:"Dix fois dix",           desc:"Ouvrir dix paquets d'un coup, dix fois.",     goal:10,  val:()=>state.profile.tens||0, reward:10},
+  {id:"spec1",   name:"Édition spéciale",       desc:"Posséder une finition spéciale d'un emblème.", goal:1,  val:()=>state.collection.filter(c=>c.variant).length, reward:6},
+  {id:"spec6",   name:"Héraldiste",             desc:"Réunir les six finitions d'un même emblème.", goal:6,   val:()=>{ const m = {}; for(const c of state.collection) if(c.variant) m[c.univ] = (m[c.univ]||new Set()).add(c.variant); return Math.max(0, ...Object.values(m).map(x=>x.size)); }, reward:30},
+  {id:"win10",   name:"Gladiateur",             desc:"Gagner 10 combats.",                          goal:10,  val:()=>state.profile.wins||0, reward:6},
+  {id:"win50",   name:"Champion de l'arène",    desc:"Gagner 50 combats.",                          goal:50,  val:()=>state.profile.wins||0, reward:20},
+  {id:"prop1",   name:"Œil de lynx",            desc:"Proposer une correction à la communauté.",    goal:1,   val:()=>state.profile.propositions||0, reward:2},
+  {id:"prop25",  name:"Correcteur",             desc:"Proposer 25 corrections.",                    goal:25,  val:()=>state.profile.propositions||0, reward:12},
+  {id:"vote1",   name:"Voix du peuple",         desc:"Voter une fois dans la communauté.",          goal:1,   val:()=>state.profile.votesCom||0, reward:1},
+  {id:"vote50",  name:"Pilier de la communauté", desc:"Voter 50 fois.",                             goal:50,  val:()=>state.profile.votesCom||0, reward:15}
 ];
 
 function achGoal(a){ return a.dyn ? a.dyn() : a.goal; }
@@ -13364,7 +13608,17 @@ const TITLES = [
   {id:"ami5",    name:"Rassembleur"},
   {id:"ech10",   name:"Négociant"},
   {id:"vente10", name:"Commissaire-priseur"},
-  {id:"achat10", name:"Chineur"}
+  {id:"achat10", name:"Chineur"},
+  {id:"pack500", name:"Machine à boosters"},
+  {id:"col500",  name:"Bibliothécaire"},
+  {id:"col1000", name:"Encyclopédiste"},
+  {id:"w50",     name:"Arpenteur du multivers"},
+  {id:"leg20",   name:"Gardien du Panthéon"},
+  {id:"spec6",   name:"Héraldiste"},
+  {id:"win50",   name:"Champion de l'arène"},
+  {id:"dupe10",  name:"Obsessionnel"},
+  {id:"prop25",  name:"Correcteur"},
+  {id:"vote50",  name:"Voix du peuple"}
 ];
 function bannerSrc(id){
   const c = state.collection.find(x=>x.id === id);
@@ -13373,15 +13627,26 @@ function bannerSrc(id){
 }
 function unlockedTitles(){
   const owned = new Set(state.profile.ach||[]);
-  return TITLES.filter(t=>owned.has(t.id));
+  const l = TITLES.filter(t=>owned.has(t.id));
+  if(estAdmin()) l.unshift({id:"dev", name:"DEV", dev:true});   // réservé aux développeurs
+  return l;
 }
+/* titres que le joueur montre (trois au plus) : le premier est son titre principal */
+function titresAffiches(){
+  const p = state.profile, dispo = new Set(unlockedTitles().map(t => t.name));
+  let l = Array.isArray(p.titresAff) ? p.titresAff : (p.title ? [p.title] : []);
+  return l.filter(t => dispo.has(t)).slice(0, 3);
+}
+function titreTag(t){ return `<span class="titletag ${t === "DEV" ? "dev" : ""}">${esc(t)}</span>`; }
 
 /* ---------- profil ---------- */
 function viewProfil(){
   const p = state.profile;
   const av = p.avatar ? state.collection.find(c=>c.id===p.avatar) : null;
-  p.slots = (p.slots||[]).filter(id=>state.collection.some(c=>c.id===id));
-  const slots = p.slots.map(id=>state.collection.find(c=>c.id===id));
+  /* Une carte absente de la collection à l'instant (chargement en cours, synchro)
+     ne vide plus son emplacement : on montre la dernière image connue. */
+  p.slots = (p.slots||[]).filter(Boolean).slice(0, 10);
+  const slots = p.slots.map(id=>state.collection.find(c=>c.id===id) || (p.vitrineCache || {})[id] || null);
   const lv0 = levelFromXP(playerXP());
   const since = p.since ? new Date(p.since) : new Date();
   const nice = since.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
@@ -13410,7 +13675,7 @@ function viewProfil(){
           </div>
           <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
             <span class="lvlbadge">Niv. ${lv0.lvl}</span>
-            ${p.title? `<span class="titletag">${esc(p.title)}</span>`:""}
+            ${titresAffiches().map(titreTag).join("")}
           </div>
           <div class="lvlbar" title="${lv0.left} / ${lv0.need} points"><i style="width:${Math.round(lv0.left/lv0.need*100)}%"></i></div>
           <p class="sub" style="margin:.15rem 0 0;font-size:.78rem">${lv0.left} / ${lv0.need} points vers le niveau ${lv0.lvl+1}</p>
@@ -13440,11 +13705,14 @@ function viewProfil(){
       </div>
     </div>
 
-    <h3 style="font-size:1.15rem;margin-bottom:.4rem">Titres</h3>
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <h3 style="font-size:1.15rem;margin-bottom:.4rem">Titres</h3>
+      <span class="sub">${titresAffiches().length} / 3 affichés</span>
+    </div>
+    <p class="sub" style="margin:0 0 .5rem;font-size:.8rem">Touchez jusqu'à trois titres à montrer sur votre profil. Les autres restent privés.</p>
     <div class="row" style="margin-bottom:1.2rem">
       ${unlockedTitles().length
-        ? `<button class="chip" data-title="" aria-pressed="${!p.title}">Aucun</button>` +
-          unlockedTitles().map(t=>`<button class="chip" data-title="${esc(t.name)}" aria-pressed="${p.title===t.name}">${esc(t.name)}</button>`).join("")
+        ? unlockedTitles().map(t=>`<button class="chip ${t.dev ? "devchip" : ""}" data-title="${esc(t.name)}" aria-pressed="${titresAffiches().includes(t.name)}">${esc(t.name)}</button>`).join("")
         : `<span class="sub">Aucun titre débloqué pour l'instant.</span>`}
     </div>
 
@@ -13517,7 +13785,11 @@ function viewProfil(){
     });
   };
   view.querySelectorAll("[data-title]").forEach(b=>b.onclick = async ()=>{
-    p.title = b.dataset.title || null;
+    const l = titresAffiches(), t = b.dataset.title;
+    if(l.includes(t)) l.splice(l.indexOf(t), 1);
+    else{ if(l.length >= 3){ toast("Trois titres au plus", "retirez-en un d'abord", "info"); return; } l.push(t); }
+    p.titresAff = l;
+    p.title = l[0] || null;
     sfx.tick();
     await sset("fm:profile", p);
     viewProfil();
@@ -14788,7 +15060,7 @@ document.addEventListener("keydown", e=>{
 /* ---------- amorçage ---------- */
 const SCRIM = document.getElementById("scrim");
 const MENU = document.getElementById("menupanel");
-const SECONDARY = ["menu","cat","decks","inv","ach","shop","market","duel","communaute"];
+const SECONDARY = ["menu","cat","decks","inv","ach","shop","camp","duel","communaute"];
 function setMenu(open){
   MENU.classList.toggle("open", open);
   SCRIM.classList.toggle("open", open);
