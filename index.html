@@ -7574,21 +7574,41 @@ function ficheCarte(c){
           atk:c.atk || 0, def:c.def || 0, role:c.role || null};
 }
 
+/* lit une table en entier, page par page (le serveur plafonne chaque réponse) */
+async function toutLire(chemin){
+  const out = [];
+  for(let off = 0; off < 50000; off += 1000){
+    const r = (await nuageRest(chemin + "&limit=1000&offset=" + off)) || [];
+    out.push(...r);
+    if(r.length < 1000) break;
+  }
+  return out;
+}
 async function commuCharger(){
   const moi = moiId(); if(!moi) return;
   chargerCorrectionsLive(true);
   try{
-    const [miennes, votes, voix] = await Promise.all([
+    /* tous les votes ouverts et tous les acceptés pas encore intégrés, plus un
+       historique récent : rien ne passe à la trappe, quel qu'en soit le nombre */
+    const [miennes, ouverts, acceptes, recents, voix] = await Promise.all([
       nuageRest("propositions?select=id,carte_id,carte,cadrage,statut,cree&joueur=eq." + moi + "&order=cree.desc&limit=20"),
-      nuageRest("votes_cartes?select=*&order=cree.desc&limit=80"),
+      toutLire("votes_cartes?select=*&statut=eq.ouvert&order=cree.desc"),
+      toutLire("votes_cartes?select=*&statut=eq.acceptee&exporte=eq.false&order=cree.desc"),
+      nuageRest("votes_cartes?select=*&statut=neq.ouvert&order=cree.desc&limit=40"),
       nuageRest("bulletins?select=vote,oui&joueur=eq." + moi)
     ]);
+    const vus = new Map();
+    for(const v of [...ouverts, ...acceptes, ...(recents || [])]) if(v && !vus.has(v.id)) vus.set(v.id, v);
     commu.miennes = miennes || [];
-    commu.votes = votes || [];
+    commu.votes = [...vus.values()].sort((a, b)=>Date.parse(b.cree) - Date.parse(a.cree));
     commu.mesVoix = {};
     for(const b of (voix || [])) commu.mesVoix[b.vote] = b.oui;
     if(estAdmin()){
-      commu.toutes = (await nuageRest("propositions?select=*&order=cree.desc&limit=400")) || [];
+      const [att, acc] = await Promise.all([
+        toutLire("propositions?select=*&statut=eq.attente&order=cree.desc"),
+        toutLire("propositions?select=*&statut=eq.acceptee&exporte=eq.false&order=cree.desc")
+      ]);
+      commu.toutes = [...att, ...acc];
       await marquerDejaIntegres();
     }
     const ids = [...new Set([...commu.toutes.map(p => p.joueur), ...commu.votes.map(v => v.auteur)])].filter(id => id && !amis.profils.has(id));
@@ -7619,9 +7639,17 @@ function voteIntegre(v){
   if(v.type === "embleme") return ICONIC[(v.carte || {}).univ] === ((v.proposition || {}).remplacant || {}).title;
   return false;
 }
+/* une décision acceptée plus tard sur la même carte rend la précédente sans objet */
+function dateDe(x){ return Date.parse(x.traite || x.cree) || 0; }
+function remplacee(x, liste, cle){
+  return liste.some(y => y !== x && y.statut === "acceptee" && cle(y) === cle(x) && (dateDe(y) > dateDe(x) || (dateDe(y) === dateDe(x) && y.id > x.id)));
+}
 async function marquerDejaIntegres(){
-  const p = commu.toutes.filter(x => x.statut === "acceptee" && !x.exporte && dejaIntegre(x)).map(x => x.id);
-  const v = commu.votes.filter(x => x.statut === "acceptee" && !x.exporte && voteIntegre(x)).map(x => x.id);
+  const accP = commu.toutes.filter(x => x.statut === "acceptee" && x.cadrage);
+  const accV = commu.votes.filter(x => x.statut === "acceptee");
+  const cleV = x => x.type + ":" + (x.type === "embleme" ? (x.carte || {}).univ : x.sujet);
+  const p = accP.filter(x => !x.exporte && (dejaIntegre(x) || remplacee(x, accP, y => y.carte_id))).map(x => x.id);
+  const v = accV.filter(x => !x.exporte && (voteIntegre(x) || remplacee(x, accV, cleV))).map(x => x.id);
   try{
     if(p.length){ await nuageRest("propositions?id=in.(" + p.join(",") + ")", {method:"PATCH", body:JSON.stringify({exporte:true})}); commu.toutes.forEach(x => { if(p.includes(x.id)) x.exporte = true; }); }
     if(v.length){ await nuageRest("votes_cartes?id=in.(" + v.join(",") + ")", {method:"PATCH", body:JSON.stringify({exporte:true})}); commu.votes.forEach(x => { if(v.includes(x.id)) x.exporte = true; }); }
@@ -7636,7 +7664,7 @@ function exportCorrections(props, votes){
     if(!p.cadrage) continue;
     o[p.carte_id] = Object.assign(o[p.carte_id] || {}, {titre:(p.carte || {}).title, univers:(p.carte || {}).univ, cadrage:p.cadrage});
   }
-  for(const v of votes){
+  for(const v of votes.slice().sort((a, b)=>Date.parse(a.traite || a.cree) - Date.parse(b.traite || b.cree))){
     if(v.type === "rarete"){
       o[v.sujet] = Object.assign(o[v.sujet] || {}, {titre:(v.carte || {}).title, univers:(v.carte || {}).univ, rarete:v.proposition.rarete,
         votes:v.oui + " oui / " + v.non + " non"});
@@ -7759,6 +7787,7 @@ function viewCommu(){
   const groupes = admin ? groupesRecadrage() : [];
   const exportP = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte && !dejaIntegre(p));
   const exportV = commu.votes.filter(v => v.statut === "acceptee" && !v.exporte && !voteIntegre(v));
+  const nbExport = (exportP.length || exportV.length) ? entreesExport(exportP, exportV).length : 0;
   let corps = "";
 
   if(!commu.charge){
@@ -7805,7 +7834,7 @@ function viewCommu(){
   }else if(ong === "valider" && admin){
     corps = `${groupes.length ? groupes.map(blocGroupe).join("") : `<div class="panel"><p class="sub" style="margin:0">Aucun recadrage en attente.</p></div>`}`;
   }else if(ong === "export" && admin){
-    const n = exportP.length + exportV.length;
+    const n = nbExport;
     corps = `<div class="panel">
       ${n ? `<p class="sub" style="margin:0 0 .6rem">${n} correction${n > 1 ? "s" : ""} acceptée${n > 1 ? "s" : ""}, déjà actives pour tous les joueurs. Le code ci-dessous sert à les intégrer définitivement.</p>
         <div class="mliste">${entreesExport(exportP, exportV).map(blocExport).join("")}</div>
@@ -7824,7 +7853,7 @@ function viewCommu(){
     <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
       ${tab("votes", "Votes", aVoter)}
       ${tab("recadrer", "Recadrer", 0)}
-      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Export", exportP.length + exportV.length) : ""}
+      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Export", nbExport) : ""}
     </div>
     ${corps}`;
 
