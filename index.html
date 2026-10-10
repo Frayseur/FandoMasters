@@ -3210,7 +3210,7 @@ function libererStockage(){
     for(let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
       if(!k) continue;
-      if(/fm:pool2$/.test(k) || /fm:ml2:/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
+      if(/fm:pool2$/.test(k) || /fm:ml[23]:/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
     }
     sup.forEach(k=>{ n += (localStorage.getItem(k) || "").length; localStorage.removeItem(k); });
   }catch(e){}
@@ -5035,6 +5035,10 @@ poserTeintes(teintesCourantes());
 
 
 function cardHTML(c, opts={}){
+  if(c && c.id && !c.variant && c.rarity !== "Relique"){
+    const rc = rareteDe(c.id);
+    if(rc && rc !== c.rarity && RARITIES.indexOf(rc) >= 0) c = Object.assign({}, c, {rarity:rc});
+  }
   const src = c.img && !artRefusee(c.img) ? c.img : null;
   const cadre = styleCadrage(cadrageDe(c));
   const art = src
@@ -7150,9 +7154,10 @@ create table if not exists propositions (
   traite timestamptz
 );
 alter table propositions enable row level security;
+alter table propositions add column if not exists accepte_par text;
 drop policy if exists "voir propositions" on propositions;
 create policy "voir propositions" on propositions for select to authenticated
-  using (joueur = auth.uid() or est_admin());
+  using (joueur = auth.uid() or est_admin() or statut = 'acceptee');
 drop policy if exists "proposer" on propositions;
 create policy "proposer" on propositions for insert to authenticated
   with check (joueur = auth.uid() and statut = 'attente' and not exporte);
@@ -7175,6 +7180,8 @@ create table if not exists votes_cartes (
   exporte boolean not null default false,
   cree timestamptz not null default now()
 );
+alter table votes_cartes add column if not exists traite timestamptz;
+alter table votes_cartes add column if not exists accepte_par text;
 create unique index if not exists un_vote_par_sujet on votes_cartes (type, sujet) where statut = 'ouvert';
 alter table votes_cartes enable row level security;
 drop policy if exists "votes visibles" on votes_cartes;
@@ -7261,6 +7268,38 @@ const CORRECTIONS = {
   "spec:supernatural.fandom.com:238:holo":{cadrage:{x:100, y:1, z:1}}       // Dean Winchester — Holographique
 };
 
+/* corrections acceptées (lot du 10 octobre) : cadrages et raretés, fusionnés dans CORRECTIONS */
+const CORRECTIONS_LOT = {"aliceinborderland.fandom.com:2183":{"t":"Alice in Borderland (Manga)","u":"Alice in Borderland","c":{"x":41,"y":9,"z":1}},"kimetsu-no-yaiba.fandom.com:1958":{"t":"Aoi Kanzaki","u":"Demon Slayer","c":{"x":44,"y":5,"z":1}},"rickandmorty.fandom.com:2915":{"t":"Gwendolyn","u":"Rick et Morty","c":{"x":37,"y":0,"z":1.05}},"silenthill.fandom.com:18912":{"t":"Carol Pendleton","u":"Silent Hill","c":{"x":40,"y":6,"z":1}},"myheroacademia.fandom.com:339":{"t":"Eijiro Kirishima","u":"My Hero Academia","c":{"x":52,"y":7,"z":1}},"silenthill.fandom.com:10010":{"t":"Inola","u":"Silent Hill","c":{"x":19,"y":8,"z":1.1}},"southpark.fandom.com:3413":{"t":"Bartles","u":"South Park","c":{"x":52,"y":14,"z":1}},"aplaguetale.fandom.com:1283":{"t":"Arnaud Malpart","u":"A Plague Tale","c":{"x":53,"y":8,"z":1}},"genshin-impact.fandom.com:34999":{"t":"Manekin","u":"Genshin Impact","c":{"x":51,"y":8,"z":1.55}},"assassinscreed.fandom.com:23118":{"t":"Hattori Masanari","u":"Assassin's Creed","c":{"x":53,"y":0,"z":1}},"reddead.fandom.com:12648":{"t":"Mama Watson","u":"Red Dead","c":{"x":58,"y":4,"z":1}},"witcher.fandom.com:14":{"t":"Nain","u":"The Witcher","c":{"x":36,"y":14,"z":1}},"jojo.fandom.com:2732":{"t":"Narancia Ghirga","u":"JoJo's Bizarre Adventure","c":{"x":57,"y":4,"z":1}},"tadp.fandom.com:364":{"t":"Gangle","u":"The Amazing Digital Circus","c":{"x":57,"y":8,"z":1}},"aplaguetale.fandom.com:116":{"t":"Béatrice de Rune","u":"A Plague Tale","c":{"x":44,"y":0,"z":1}},"aplaguetale.fandom.com:1311":{"t":"Vaudin","u":"A Plague Tale","c":{"x":0,"y":0,"z":1}},"aplaguetale.fandom.com:1312":{"t":"Joseph","u":"A Plague Tale","c":{"x":0,"y":0,"z":1}},"thehungergames.fandom.com:2319":{"t":"Brutus","u":"Hunger Games","c":{"x":34,"y":0,"z":1}},"stardewvalley.fandom.com:4198":{"t":"Kent","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4197":{"t":"Jodi","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4191":{"t":"George","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4208":{"t":"Sandy","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4210":{"t":"Vincent","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4190":{"t":"Evelyn","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4184":{"t":"Caroline","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4207":{"t":"Pierre","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4188":{"t":"Dwarf","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4195":{"t":"Gus","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4006":{"t":"Alex","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4187":{"t":"Demetrius","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4196":{"t":"Jas","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4186":{"t":"Clint","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4203":{"t":"Marnie","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4003":{"t":"Leah","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4002":{"t":"Maru","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4004":{"t":"Penny","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4007":{"t":"Sam","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:3988":{"t":"Elliott","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4212":{"t":"Wizard","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4200":{"t":"Lewis","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4199":{"t":"Krobus","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4201":{"t":"Linus","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4211":{"t":"Willy","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:15293":{"t":"Haley","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4099":{"t":"Robin","u":"Stardew Valley","r":"Ultra rare"},"stardewvalley.fandom.com:4189":{"t":"Emily","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:12859":{"t":"Abigail","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4005":{"t":"Sebastian","u":"Stardew Valley","r":"Légendaire"},"stardewvalley.fandom.com:4209":{"t":"Shane","u":"Stardew Valley","r":"Légendaire"},"arianagrande.fandom.com:20912":{"t":"Childish Gambino","u":"Ariana Grande","r":"Ultra rare"},"arianagrande.fandom.com:28430":{"t":"Troye Sivan","u":"Ariana Grande","r":"Ultra rare"},"arianagrande.fandom.com:9699":{"t":"Justin Bieber","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:43803":{"t":"Mariah Carey","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:45575":{"t":"Wicked","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:9431":{"t":"Zedd","u":"Ariana Grande","r":"Ultra rare"},"arianagrande.fandom.com:5996":{"t":"My Everything","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:43308":{"t":"Doja Cat","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:12717":{"t":"Dangerous Woman","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:43126":{"t":"Positions","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:19902":{"t":"Sweetener","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:5935":{"t":"Demi Lovato","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:8522":{"t":"Mac Miller","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:2292":{"t":"Yours Truly","u":"Ariana Grande","r":"Légendaire"},"arianagrande.fandom.com:13172":{"t":"The Weeknd","u":"Ariana Grande","r":"Légendaire"},"arc-raiders.fandom.com:358":{"t":"Blueprints","u":"Arc Raiders","r":"Légendaire"},"stardewvalley.fandom.com:4008":{"t":"Harvey","u":"Stardew Valley","r":"Légendaire"},"wowwiki.fandom.com:938":{"t":"Gnome","u":"World of Warcraft","r":"Légendaire"},"fields-of-mistria.fandom.com:163":{"t":"Hayden","u":"Fields of Mistria","r":"Légendaire"},"wowwiki.fandom.com:1098":{"t":"Elfe de la nuit","u":"World of Warcraft","r":"Légendaire"},"jojo.fandom.com:2440":{"t":"Yoshikage Kira","u":"JoJo's Bizarre Adventure","r":"Légendaire"},"wowwiki.fandom.com:1297":{"t":"Elfe de sang","u":"World of Warcraft","r":"Légendaire"},"wowwiki.fandom.com:937":{"t":"Nain","u":"World of Warcraft","r":"Légendaire"},"harrypotter.fandom.com:7606":{"t":"Merlin","u":"Harry Potter","r":"Ultra rare"},"akira.fandom.com:403":{"t":"Akira (Anime)","u":"Akira","r":"Légendaire"},"breakingbad.fandom.com:26090":{"t":"Cara Pifko","u":"Breaking Bad","r":"Super rare"},"supernatural.fandom.com:836":{"t":"Crowley","u":"Supernatural","r":"Légendaire"},"narcos.fandom.com:151":{"t":"Cali cartel","u":"Narcos","r":"Ultra rare"},"akira.fandom.com:310":{"t":"Tetsuo Shima","u":"Akira","r":"Légendaire"},"pirates.fandom.com:11":{"t":"Jack Sparrow","u":"Pirates des Caraïbes","r":"Légendaire"},"akira.fandom.com:304":{"t":"Kaneda Shôtarô","u":"Akira","r":"Légendaire"},"witcher.fandom.com:2073":{"t":"Loriot doré","u":"The Witcher","r":"Rare"},"witcher.fandom.com:1051":{"t":"Orin","u":"The Witcher","r":"Ultra rare"},"jojo.fandom.com:3585":{"t":"Josefumi Kujo","u":"JoJo's Bizarre Adventure","r":"Légendaire"},"dcextendeduniverse.fandom.com:2439":{"t":"Jason Momoa","u":"Peacemaker","r":"Légendaire"},"aplaguetale.fandom.com:95":{"t":"A Plague Tale: Innocence","u":"A Plague Tale","r":"Ultra rare"},"sonic.fandom.com:21848":{"t":"Whisper the Wolf","u":"Sonic","r":"Super rare"},"sonic.fandom.com:22188":{"t":"Combattants de la Liberté (Archie Comics)","u":"Sonic","r":"Super rare"},"supernatural.fandom.com:3039":{"t":"Chasseurs","u":"Supernatural","r":"Ultra rare"},"pirates.fandom.com:3771":{"t":"Davy Jones","u":"Pirates des Caraïbes","r":"Légendaire"},"deathnote.fandom.com:310":{"t":"Ryûk","u":"Death Note","r":"Légendaire"},"gta.fandom.com:516":{"t":"Grand Theft Auto: Vice City","u":"Grand Theft Auto","r":"Légendaire"},"luckyluke.fandom.com:2163":{"t":"Miss Betty","u":"Lucky Luke","r":"Super rare"},"mario.fandom.com:506":{"t":"Marteau","u":"Super Mario","r":"Rare"},"luckyluke.fandom.com:2200":{"t":"Jack Dalton","u":"Lucky Luke","r":"Super rare"},"marvelcinematicuniverse.fandom.com:196387":{"t":"Avengers: Endgame","u":"Marvel","r":"Légendaire"}};
+for(const [id,e] of Object.entries(CORRECTIONS_LOT)){
+  const k = CORRECTIONS[id] || (CORRECTIONS[id] = {});
+  if(e.t) k.titre = e.t; if(e.u) k.univers = e.u;
+  if(e.c) k.cadrage = e.c; if(e.r) k.rarete = e.r;
+}
+
+/* ---- corrections en direct ----
+   Ce que le développeur accepte vaut tout de suite pour tous les joueurs : le
+   jeu relit les recadrages et raretés acceptés (quelques octets) et les pose
+   par-dessus CORRECTIONS. Intégrer le code reste possible, mais plus nécessaire. */
+const CORR_LIVE = {cad:{}, rar:{}};
+let RAR_TITRE = null;
+function rareteDe(id){
+  const l = CORR_LIVE.rar[id]; if(l && l.r) return l.r;
+  const k = CORRECTIONS[id]; return (k && k.rarete) || null;
+}
+function cadrageCorr(id){
+  const l = CORR_LIVE.cad[id]; if(l && l.c) return l.c;
+  const k = CORRECTIONS[id]; return (k && k.cadrage) || null;
+}
+/* rareté corrigée d'un article d'après son univers et son titre (pour « Toutes les cartes ») */
+function rarTitre(univ, titre){
+  if(!RAR_TITRE){
+    RAR_TITRE = new Map();
+    for(const k of Object.values(CORRECTIONS)) if(k && k.rarete && k.titre && k.univers) RAR_TITRE.set(k.univers + "\u0001" + k.titre, k.rarete);
+    for(const l of Object.values(CORR_LIVE.rar)) if(l && l.r && l.titre && l.univ) RAR_TITRE.set(l.univ + "\u0001" + l.titre, l.r);
+  }
+  return RAR_TITRE.get(univ + "\u0001" + titre) || null;
+}
+
 function specParts(id){
   const m = /^spec:(.+):([a-z]+)$/.exec(String(id || ""));
   return m ? {base:m[1], variant:m[2]} : null;
@@ -7268,14 +7307,14 @@ function specParts(id){
 function cadrageDe(c){
   if(!c) return null;
   if(c.cadrage) return c.cadrage;
-  const k = CORRECTIONS[c.id];
-  if(k && k.cadrage) return k.cadrage;
+  const k = cadrageCorr(c.id);
+  if(k) return k;
   const sp = specParts(c.id);
   if(sp){
-    const std = CORRECTIONS["spec:" + sp.base + ":std"];
-    if(std && std.cadrage) return std.cadrage;
-    const b = CORRECTIONS[sp.base];
-    if(b && b.cadrage) return b.cadrage;
+    const std = cadrageCorr("spec:" + sp.base + ":std");
+    if(std) return std;
+    const b = cadrageCorr(sp.base);
+    if(b) return b;
   }
   return null;
 }
@@ -7306,11 +7345,69 @@ document.addEventListener("load", ev => { const t = ev.target; if(t && t.tagName
 function appliquerCorrections(col){
   let n = 0;
   for(const c of col || []){
-    const k = CORRECTIONS[c.id];
-    if(k && k.rarete && RARITIES.indexOf(k.rarete) >= 0 && c.rarity !== k.rarete){ c.rarity = k.rarete; n++; }
+    const r = c && !c.variant && c.rarity !== "Relique" ? rareteDe(c.id) : null;
+    if(r && RARITIES.indexOf(r) >= 0 && c.rarity !== r){ c.rarity = r; n++; }
   }
   return n;
 }
+
+let corrLiveEnCours = null, corrLiveVu = 0;
+/* copie gardée sur l'appareil : le jeu n'attend pas le réseau */
+async function corrLiveCache(){
+  try{
+    const sig = String(hashId(JSON.stringify(CORRECTIONS)));
+    const c = await sget("fm:corr-live", true);
+    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; RAR_TITRE = null; }
+  }catch(e){}
+}
+function appliquerLive(){
+  try{
+    if(state && state.collection && appliquerCorrections(state.collection)) sset("fm:col", state.collection);
+    if(typeof rafraichirApresSynchro === "function") rafraichirApresSynchro();
+  }catch(e){}
+}
+async function chargerCorrectionsLive(force){
+  if(!nuageConfigure() || !nuageConnecte()) return false;
+  if(corrLiveEnCours) return corrLiveEnCours;
+  if(!force && Date.now() - corrLiveVu < 5 * 60e3) return false;
+  corrLiveEnCours = (async ()=>{
+    let change = false;
+    try{
+      const sig = String(hashId(JSON.stringify(CORRECTIONS)));
+      let c = await sget("fm:corr-live", true);
+      /* le code a changé (nouvelles corrections intégrées) : on repart de zéro */
+      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", cad:{}, rar:{}};
+      const [ps, vs] = await Promise.all([
+        nuageRest("propositions?statut=eq.acceptee&cadrage=not.is.null" + (c.tp ? "&traite=gt." + encodeURIComponent(c.tp) : "") +
+                  "&select=carte_id,cadrage,traite&order=traite.asc&limit=1000").catch(()=>null),
+        nuageRest("votes_cartes?statut=eq.acceptee&type=eq.rarete" + (c.tv ? "&traite=gt." + encodeURIComponent(c.tv) : "") +
+                  "&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite&order=traite.asc&limit=1000").catch(()=>null)
+      ]);
+      for(const p of (ps || [])){
+        if(!p.carte_id || !p.cadrage) continue;
+        const t = p.traite || "", o = c.cad[p.carte_id];
+        if(!o || t >= o.t) c.cad[p.carte_id] = {c:p.cadrage, t};
+        if(t > c.tp) c.tp = t;
+      }
+      for(const v of (vs || [])){
+        if(!v.sujet || !v.r || RARITIES.indexOf(v.r) < 0) continue;
+        const t = v.traite || "", o = c.rar[v.sujet];
+        if(!o || t >= o.t) c.rar[v.sujet] = {r:v.r, titre:v.titre, univ:v.univ, t};
+        if(t > c.tv) c.tv = t;
+      }
+      if(ps || vs) await sset("fm:corr-live", c, true);
+      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar]);
+      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; RAR_TITRE = null;
+      change = avant !== JSON.stringify([c.cad, c.rar]);
+    }catch(e){}
+    corrLiveVu = Date.now();
+    return change;
+  })().finally(()=>{ corrLiveEnCours = null; });
+  const change = await corrLiveEnCours;
+  if(change) appliquerLive();
+  return change;
+}
+
 /* une carte spéciale ne se recadre qu'en Standard ou Holographique */
 function recadrable(c){
   if(!c || !c.img) return false;
@@ -7326,7 +7423,7 @@ async function cartesCatalogue(w){
   if(catalogueCartes.has(k)) return catalogueCartes.get(k);
   const liste = ((await mostLinked(w).catch(()=>[])) || []).slice(0, CAT_LIMIT);
   if(!liste.length) return [];
-  const tiers = tierMap(liste), rar = {};
+  const tiers = tierMap(liste, w), rar = {};
   for(const r of RARITIES) for(const t of (tiers[r] || [])) rar[t] = r;
   const rang = new Map(liste.map((e, i)=>[e.t, i]));
   const lots = [];
@@ -7417,6 +7514,7 @@ function ficheCarte(c){
 
 async function commuCharger(){
   const moi = moiId(); if(!moi) return;
+  chargerCorrectionsLive(true);
   try{
     const [miennes, votes, voix] = await Promise.all([
       nuageRest("propositions?select=id,carte_id,carte,cadrage,statut,cree&joueur=eq." + moi + "&order=cree.desc&limit=20"),
@@ -7439,6 +7537,13 @@ async function commuCharger(){
     commu.erreur = ""; commu.charge = true;
   }catch(e){ commu.erreur = String(e.message || e); commu.charge = true; }
 }
+
+/* écrit avec la mention « accepté par », ou sans elle si le serveur n'a pas encore les colonnes */
+async function patcherAvecRepli(chemin, plein, simple){
+  try{ return await nuageRest(chemin, {method:"PATCH", body:JSON.stringify(plein)}); }
+  catch(e){ return await nuageRest(chemin, {method:"PATCH", body:JSON.stringify(simple)}); }
+}
+function accepteurNom(){ return (state.profile && state.profile.pseudo) || "Admin"; }
 
 /* ce qui est déjà dans le jeu, ou devenu sans objet, sort de l'export */
 function dejaIntegre(p){
@@ -7464,7 +7569,7 @@ async function marquerDejaIntegres(){
 function exportCorrections(props, votes){
   const o = {};
   // pour chaque carte, le recadrage accepté le plus récent
-  const tri = props.slice().sort((a, b) => Date.parse(a.cree) - Date.parse(b.cree));
+  const tri = props.slice().sort((a, b) => Date.parse(a.traite || a.cree) - Date.parse(b.traite || b.cree));
   for(const p of tri){
     if(!p.cadrage) continue;
     o[p.carte_id] = Object.assign(o[p.carte_id] || {}, {titre:(p.carte || {}).title, univers:(p.carte || {}).univ, cadrage:p.cadrage});
@@ -7479,6 +7584,47 @@ function exportCorrections(props, votes){
     }
   }
   return "FandoMasters — corrections acceptées (" + Object.keys(o).length + ")\n" + JSON.stringify(o, null, 1);
+}
+
+/* ce qui attend d'être intégré, carte par carte, avec son visuel final */
+function entreesExport(props, votes){
+  const m = new Map();
+  const g = id => { if(!m.has(id)) m.set(id, {id, carte:null, cad:null, rar:null, par:"", acc:"", votes:"", emb:null}); return m.get(id); };
+  const date = x => Date.parse(x.traite || x.cree) || 0;
+  for(const p of props.slice().sort((a, b)=>date(a) - date(b))){
+    if(!p.cadrage) continue;
+    const e = g(p.carte_id);
+    e.carte = p.carte; e.cad = p.cadrage; e.par = nomJoueur(p.joueur); e.acc = p.accepte_par || "";
+  }
+  for(const v of votes.slice().sort((a, b)=>date(a) - date(b))){
+    if(v.type === "rarete"){
+      const e = g(v.sujet);
+      e.carte = e.carte || v.carte; e.rar = v.proposition.rarete; e.votes = v.oui + " oui / " + v.non + " non";
+      e.parR = nomJoueur(v.auteur); e.accR = v.accepte_par || "";
+    }else if(v.type === "embleme"){
+      const e = g("emb:" + (v.carte || {}).univ);
+      e.emb = {univ:(v.carte || {}).univ, ancien:(v.carte || {}).title, nouveau:((v.proposition || {}).remplacant || {}).title};
+      e.carte = (v.proposition || {}).remplacant || v.carte; e.votes = v.oui + " oui / " + v.non + " non";
+      e.parR = nomJoueur(v.auteur); e.accR = v.accepte_par || "";
+    }
+  }
+  return [...m.values()];
+}
+function blocExport(e){
+  const extra = {};
+  if(e.cad) extra.cadrage = e.cad;
+  if(e.rar) extra.rarity = e.rar;
+  const mention = (qui, acc) => `proposé par <b>${esc(qui)}</b>${acc ? " · accepté par <b>" + esc(acc) + "</b>" : " · accepté"}`;
+  const lignes = [];
+  if(e.emb) lignes.push(`Emblème de ${esc(e.emb.univ)} : <b style="color:var(--p5)">${esc(e.emb.nouveau)}</b> à la place de ${esc(String(e.emb.ancien || "").replace(/ — .*$/, ""))}`);
+  if(e.cad) lignes.push(`Cadrage x ${Math.round(e.cad.x)} · y ${Math.round(e.cad.y)} · zoom ${e.cad.z} — ${mention(e.par, e.acc)}`);
+  if(e.rar) lignes.push(`Rareté → <b style="color:var(--p5)">${esc(e.rar)}</b> (${esc(e.votes)}) — ${mention(e.parR, e.accR)}`);
+  if(e.emb) lignes[0] += ` (${esc(e.votes)}) — ${mention(e.parR, e.accR)}`;
+  return `<div class="mvente prop" style="cursor:default">
+    ${mini(e.carte, extra)}
+    <div class="minfo"><b>${esc((e.carte || {}).title || e.id)}</b><span class="sub">${esc((e.carte || {}).univ || "")}</span>
+      ${lignes.map(l => `<span class="sub" style="font-size:.8rem">${l}</span>`).join("")}</div>
+  </div>`;
 }
 
 function mini(c, extra){
@@ -7598,10 +7744,12 @@ function viewCommu(){
   }else if(ong === "export" && admin){
     const n = exportP.length + exportV.length;
     corps = `<div class="panel">
-      ${n ? `<pre class="sql" id="pexport" style="white-space:pre-wrap;max-height:45vh;overflow:auto">${esc(exportCorrections(exportP, exportV))}</pre>
-        <div class="row" style="gap:.4rem;margin-top:.6rem">
-          <button class="btn small" id="pcopier">Copier</button>
+      ${n ? `<p class="sub" style="margin:0 0 .6rem">${n} correction${n > 1 ? "s" : ""} acceptée${n > 1 ? "s" : ""}, déjà actives pour tous les joueurs. Le code ci-dessous sert à les intégrer définitivement.</p>
+        <div class="mliste">${entreesExport(exportP, exportV).map(blocExport).join("")}</div>
+        <div class="row" style="gap:.4rem;margin:.8rem 0 .4rem">
+          <button class="btn small" id="pcopier">Copier le code</button>
         </div>
+        <pre class="sql" id="pexport" style="white-space:pre-wrap;max-height:30vh;overflow:auto">${esc(exportCorrections(exportP, exportV))}</pre>
         <p class="sub" style="margin:.6rem 0 0;font-size:.8rem">Une fois intégrées au jeu, ces corrections disparaissent d'ici d'elles-mêmes.</p>`
         : `<p class="sub" style="margin:0">Rien de nouveau à intégrer.</p>`}
       <button class="btn small ghost" id="pnettoyer" style="margin-top:.8rem">Nettoyer l'historique (refusés et intégrés de plus de 7 jours)</button>
@@ -7635,9 +7783,12 @@ function viewCommu(){
     await recharger();
   });
   const trancher = async (id, statut)=>{
-    try{ await nuageRest("votes_cartes?id=eq." + id, {method:"PATCH", body:JSON.stringify({statut})}); }
-    catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
+    try{
+      const now = new Date().toISOString();
+      await patcherAvecRepli("votes_cartes?id=eq." + id, statut === "acceptee" ? {statut, traite:now, accepte_par:accepteurNom()} : {statut, traite:now}, {statut});
+    }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
     await recharger();
+    if(statut === "acceptee") chargerCorrectionsLive(true);
   };
   view.querySelectorAll("[data-vok]").forEach(b => b.onclick = ()=>{ b.disabled = true; trancher(+b.dataset.vok, "acceptee"); });
   view.querySelectorAll("[data-vno]").forEach(b => b.onclick = ()=>{ b.disabled = true; trancher(+b.dataset.vno, "refusee"); });
@@ -7744,10 +7895,11 @@ function viewCommu(){
     const id = +b.dataset.gok, carte = b.dataset.gcarte;
     try{
       const autres = commu.toutes.filter(p => p.carte_id === carte && p.statut === "attente" && p.id !== id).map(p => p.id);
-      await nuageRest("propositions?id=eq." + id, {method:"PATCH", body:JSON.stringify({statut:"acceptee", traite:new Date().toISOString()})});
+      await patcherAvecRepli("propositions?id=eq." + id, {statut:"acceptee", traite:new Date().toISOString(), accepte_par:accepteurNom()}, {statut:"acceptee", traite:new Date().toISOString()});
       if(autres.length) await nuageRest("propositions?id=in.(" + autres.join(",") + ")", {method:"PATCH", body:JSON.stringify({statut:"refusee", traite:new Date().toISOString()})});
     }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
     await recharger();
+    chargerCorrectionsLive(true);
   });
   view.querySelectorAll("[data-gno]").forEach(b => b.onclick = async ()=>{
     b.disabled = true;
@@ -8332,8 +8484,28 @@ function shuffled(arr){ return [...arr].sort(()=>Math.random()-0.5); }
 
 /* Palmarès des articles les plus cités d'un wiki = les piliers de son lore.
    Mis en cache une semaine par univers. */
+async function listeParTaille(w){
+  const pages = [];
+  let suite = {};
+  for(let tour = 0; tour < 8; tour++){
+    const d = await api(Object.assign({action:"query", generator:"allpages", gapnamespace:"0", gapfilterredir:"nonredirects",
+      gaplimit:"500", prop:"info"}, suite), w);
+    for(const p of ((d.query && d.query.pages) || [])){
+      if(!p || !p.title || p.missing || (p.length || 0) < 1500) continue;
+      if(isRelic(p.title) || isFiller(p.title) || /\(homonymie\)|disambiguation/i.test(p.title)) continue;
+      if(w.pages && w.pages.length && HORS_SUJET.test(p.title)) continue;
+      pages.push({t:p.title, len:p.length});
+    }
+    if(!d.continue) break;
+    suite = d.continue;
+  }
+  pages.sort((a, b)=>b.len - a.len);
+  /* le rang remplace le nombre de liens : même allure de pyramide que les vrais palmarès
+     (une poignée de Légendaires, puis de plus en plus de cartes à chaque palier) */
+  return pages.slice(0, 300).map((x, i) => ({t:x.t, v:Math.max(1, Math.round(500 / Math.pow(1 + i / 2, 0.78)))}));
+}
 async function mostLinked(w){
-  const key = "fm:ml2:"+w.host+(w.path||"");
+  const key = "fm:ml3:"+w.host+(w.path||"");
   const c = await sget(key, true);
   const restreint = !!(w && Array.isArray(w.pages) && w.pages.length);
   const permis = await titresAutorises(w).catch(()=>null);
@@ -8349,6 +8521,11 @@ async function mostLinked(w){
                  .map(r=>({t:r.title, v:Number(r.value)||0}));
       if(list.length >= 20) break;
     }catch(e){}
+  }
+  /* Beaucoup de wikis Fandom n'ont pas de palmarès (pages spéciales vides ou
+     quasi) : on classe alors leurs articles par taille, qui suit de près leur importance. */
+  if(list.length < 20){
+    try{ const alt = await listeParTaille(w); if(alt.length > list.length) list = alt; }catch(e){}
   }
   if(list.length){
     list = list.slice(0, 300);   // le haut du palmarès suffit, et le navigateur est petit
@@ -8378,11 +8555,14 @@ function tierOf(v, top){
   for(const [rar,cut] of TIER_CUTS) if(f >= cut && v >= TIER_MIN[rar]*k) return rar;
   return "Commun";
 }
-function tierMap(list){
+function tierMap(list, w){
   const top = list.length ? list[0].v : 0;
   const m = {};
   RARITIES.forEach(r=>m[r] = []);
-  list.forEach(e=>m[tierOf(e.v, top)].push(e.t));
+  list.forEach(e=>{
+    const o = w ? rarTitre(w.label, e.t) : null;
+    m[o && m[o] ? o : tierOf(e.v, top)].push(e.t);
+  });
   return m;
 }
 
@@ -8498,7 +8678,7 @@ function maybeSpecial(card, w, list){
 
 async function drawForRarity(w, rarity){
   const list = await mostLinked(w).catch(()=>[]);
-  const tiers = list.length >= 20 ? tierMap(list) : null;
+  const tiers = list.length >= 20 ? tierMap(list, w) : null;
 
   if(RARITIES.indexOf(rarity) >= 2){          // Rare et au-dessus : on vise le palier
     if(tiers){
@@ -8845,7 +9025,7 @@ function flipCard(i){
 }
 
 function addCard(c){
-  { const k = CORRECTIONS[c.id]; if(k && k.rarete && RARITIES.indexOf(k.rarete) >= 0) c.rarity = k.rarete; }
+  { const r = rareteDe(c.id); if(r && RARITIES.indexOf(r) >= 0 && !c.variant && c.rarity !== "Relique") c.rarity = r; }
   const i = RARITIES.indexOf(c.rarity);
   if(i >= 2) state.profile.rarePulls = (state.profile.rarePulls||0) + 1;
   const d = state.profile.daily;
@@ -14085,7 +14265,7 @@ function renderCatList(){
   if(input) state.catQ = input.value;
   const full = state.catList || [];
   const list = full.slice(0, CAT_LIMIT);
-  const tiers = list.length ? tierMap(list) : null;
+  const tiers = list.length ? tierMap(list, state.catW) : null;
   const q = (state.catQ||"").trim().toLowerCase();
 
   const mine = state.collection.filter(c=>c.univ===state.catW.label);
@@ -14335,6 +14515,7 @@ function openSettings(){
   farmTick();
   state.collection = (await sget("fm:col")) || [];
   colVueDepuis(state.collection);
+  await corrLiveCache();
   if(appliquerCorrections(state.collection) || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
   fmPret = true;
   paintSound();
@@ -14345,6 +14526,8 @@ function openSettings(){
   setInterval(tick, 1000);
   setInterval(()=>sset("fm:profile", state.profile), 8000);
   if(state.profile.pseudo) ensurePool();
+  chargerCorrectionsLive(true);
+  document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) chargerCorrectionsLive(); });
 })();
 </script>
 </body>
