@@ -2929,8 +2929,8 @@ const UNIVERSES = [
   {label:"The Elder Scrolls",  host:"elderscrolls.fandom.com",  cat:"Jeux vidéo"},
   {label:"The Witcher",        host:"witcher.fandom.com",       cat:"Jeux vidéo"},
   {label:"Zelda",              host:"zelda.fandom.com",         cat:"Jeux vidéo"},
-  {label:"Minecraft",          host:"minecraft.fandom.com",     cat:"Jeux vidéo",
-   pages:["Character","Block","Item","Mob"]},     // seulement ce que ces pages recensent
+  {label:"Minecraft",          host:"minecraft.fandom.com",     cat:"Jeux vidéo", path:"",
+   pages:["Character","Block","Item","Mob"]},     // seulement ce que ces pages recensent, en anglais
   {label:"World of Warcraft",  host:"wowwiki.fandom.com",       cat:"Jeux vidéo"},
   {label:"Red Dead",           host:"reddead.fandom.com",       cat:"Jeux vidéo"},
   {label:"Grand Theft Auto",   host:"gta.fandom.com",           cat:"Jeux vidéo"},
@@ -2946,6 +2946,8 @@ const UNIVERSES = [
   {label:"Hollow Knight",      host:"hollowknight.fandom.com",  cat:"Jeux vidéo"},
   {label:"Cyberpunk 2077",     host:"cyberpunk.fandom.com",     cat:"Jeux vidéo"},
   {label:"Baldur's Gate",      host:"baldursgate.fandom.com",   cat:"Jeux vidéo"},
+  {label:"Baldur's Gate 3",    host:"baldursgate.fandom.com",   cat:"Jeux vidéo", path:"/fr",
+   pages:["Baldur's Gate 3"]},                     // seulement ce que relie cette page
   {label:"Half-Life",          host:"half-life.fandom.com",     cat:"Jeux vidéo"},
   {label:"Final Fantasy",      host:"finalfantasy.fandom.com",  cat:"Jeux vidéo"},
   {label:"Assassin's Creed",   host:"assassinscreed.fandom.com",cat:"Jeux vidéo"},
@@ -3021,7 +3023,8 @@ const UNIVERSES = [
   {label:"Mad Max",            host:"madmax.fandom.com",        cat:"Films & séries"},
   {label:"Blade Runner",       host:"bladerunner.fandom.com",   cat:"Films & séries"},
   {label:"The Walking Dead",   host:"walkingdead.fandom.com",   cat:"Films & séries"},
-  {label:"Arcane",             host:"arcane.fandom.com",        cat:"Films & séries"},
+  {label:"Arcane",             host:"leagueoflegends.fandom.com", cat:"Films & séries", path:"",
+   pages:["Arcane (TV Series)"]},     // seulement ce que relie cette page
   {label:"Rick et Morty",      host:"rickandmorty.fandom.com",  cat:"Films & séries"},
   {label:"Les Simpson",        host:"simpsons.fandom.com",      cat:"Films & séries"},
   {label:"South Park",         host:"southpark.fandom.com",     cat:"Films & séries"},
@@ -7363,6 +7366,26 @@ function appliquerCorrections(col){
   return n;
 }
 
+/* ---- cartes hors sujet déjà en collection (ex. Minecraft tiré avant le filtre par pages) ----
+   Un univers restreint ne doit tirer que ce que recensent ses pages de référence ; les éditions,
+   versions et pages techniques qui s'étaient glissées en collection avant ce filtre en sortent. */
+let _hotesRestreints = null;
+function hotesRestreints(){
+  if(!_hotesRestreints) _hotesRestreints = new Set(UNIVERSES.filter(u => u.pages && u.pages.length).map(u => u.host));
+  return _hotesRestreints;
+}
+function purgerCartesHorsSujet(col){
+  const hotes = hotesRestreints();
+  let n = 0;
+  const out = (col || []).filter(c => {
+    if(!c || !c.id || c.variant) return true;
+    const host = String(c.id).split(":")[0];
+    if(!hotes.has(host) || !HORS_SUJET.test(c.title || "")) return true;
+    n++; return false;
+  });
+  return {col:out, n};
+}
+
 let corrLiveEnCours = null, corrLiveVu = 0;
 /* copie gardée sur l'appareil : le jeu n'attend pas le réseau */
 async function corrLiveCache(){
@@ -7374,6 +7397,7 @@ async function corrLiveCache(){
 }
 function appliquerLive(){
   try{
+    if(typeof catalogueCartes !== "undefined") catalogueCartes.clear();   // raretés à relire, « Toutes les cartes » et le sélecteur se re-trient au prochain rendu
     if(state && state.collection && appliquerCorrections(state.collection)) sset("fm:col", state.collection);
     if(typeof rafraichirApresSynchro === "function") rafraichirApresSynchro();
   }catch(e){}
@@ -7453,13 +7477,13 @@ async function cartesCatalogue(w){
 }
 /* Fenêtre de choix sur l'ensemble du catalogue. Renvoie la carte choisie (la
    vôtre si vous la possédez), ou null. */
-function choisirDansCatalogue({titre, univ, filtre}){
+function choisirDansCatalogue({titre, univ, filtre, multi, max}){
   return new Promise(async res => {
     try{ if(!state.pool.length) await ensurePool(); }catch(e){}
     const mesU = {};
     for(const c of state.collection) mesU[c.univ] = (mesU[c.univ] || 0) + 1;
     const univs = state.pool.slice().sort((a, b)=>a.label.localeCompare(b.label));
-    if(!univs.length){ toast("Catalogue indisponible", "réessayez dans un instant", "lose"); res(null); return; }
+    if(!univs.length){ toast("Catalogue indisponible", "réessayez dans un instant", "lose"); res(multi ? [] : null); return; }
     const fixe = univ ? univs.find(u => u.label === univ) : null;
     let courant = fixe || univs.find(u => u.label === (commu.carteObj && commu.carteObj.univ)) ||
                   univs.slice().sort((a, b)=>(mesU[b.label] || 0) - (mesU[a.label] || 0))[0];
@@ -7475,28 +7499,49 @@ function choisirDansCatalogue({titre, univ, filtre}){
         <input id="pq" placeholder="Rechercher une carte…" style="flex:2 1 160px;margin:0">
       </div>
       <div class="row" style="margin-bottom:.5rem"><button class="btn small" id="ok" disabled>Valider</button>
-        <span class="sub" id="cpt">Toutes les cartes de l'univers, même celles que vous n'avez pas encore.</span></div>
+        <span class="sub" id="cpt">${multi ? "Touchez plusieurs cartes, dans un ou plusieurs univers." : "Toutes les cartes de l'univers, même celles que vous n'avez pas encore."}</span></div>
       <div class="pickgrid" id="pg"></div>
     </div>`;
     document.body.appendChild(m);
     const pg = m.querySelector("#pg");
     let cartes = new Map(), choix = null, jeton = 0;
+    const elus = new Map();   // sélection multiple : id → carte, conservée en changeant d'univers
+    const majCompte = ()=>{
+      if(!multi) return;
+      m.querySelector("#cpt").textContent = elus.size + (max ? " / " + max : "") + " sélectionnée" + (elus.size > 1 ? "s" : "");
+      m.querySelector("#ok").disabled = !elus.size;
+    };
     const peindre = ()=>{
       const q = (m.querySelector("#pq").value || "").toLowerCase();
-      const l = [...cartes.values()].filter(c => !q || c.title.toLowerCase().includes(q));
-      pg.innerHTML = l.length ? l.slice(0, 150).map(c => `<div class="pickwrap ${choix === c.id ? "on" : ""}" data-id="${esc(c.id)}">${cardHTML(c, {compact:true, count:0})}</div>`).join("")
+      /* triées par rareté d'abord : les cartes qu'on vient de retoucher se
+         regroupent avec les autres de leur rang, plutôt que de rester
+         mélangées à l'ancien classement. */
+      const l = [...cartes.values()].filter(c => !q || c.title.toLowerCase().includes(q))
+        .sort((a, b)=>RARITIES.indexOf(b.rarity) - RARITIES.indexOf(a.rarity) || a.title.localeCompare(b.title));
+      pg.innerHTML = l.length ? l.slice(0, 150).map(c => `<div class="pickwrap ${(multi ? elus.has(c.id) : choix === c.id) ? "on" : ""}" data-id="${esc(c.id)}">${cardHTML(c, {compact:true, count:0})}</div>`).join("")
                               : `<p class="sub" style="grid-column:1/-1">Aucune carte.</p>`;
       pg.querySelectorAll(".pickwrap").forEach(el => el.onclick = ()=>{
-        choix = el.dataset.id;
+        const c = cartes.get(el.dataset.id);
+        if(multi){
+          if(elus.has(c.id)) elus.delete(c.id);
+          else{
+            if(max && elus.size >= max){ toast("Limite atteinte", max + " cartes au maximum à la fois", "info"); return; }
+            elus.set(c.id, c);
+          }
+          el.classList.toggle("on", elus.has(c.id));
+          majCompte();
+          return;
+        }
+        choix = c.id;
         pg.querySelectorAll(".pickwrap.on").forEach(x => x.classList.remove("on"));
         el.classList.add("on");
         m.querySelector("#ok").disabled = false;
-        m.querySelector("#cpt").textContent = cartes.get(choix).title;
+        m.querySelector("#cpt").textContent = c.title;
       });
     };
     const charger = async ()=>{
       const mon = ++jeton;
-      choix = null; m.querySelector("#ok").disabled = true;
+      if(!multi){ choix = null; m.querySelector("#ok").disabled = true; }
       pg.innerHTML = `<p class="sub" style="grid-column:1/-1"><span class="spinner"></span> lecture du catalogue…</p>`;
       const cat = await cartesCatalogue(courant).catch(()=>[]);
       if(mon !== jeton) return;
@@ -7506,14 +7551,19 @@ function choisirDansCatalogue({titre, univ, filtre}){
       for(const c of mine.values()) if(!tout.has(c.id)) tout.set(c.id, c);
       cartes = new Map([...tout].filter(([, c]) => !filtre || filtre(c)));
       peindre();
+      majCompte();
     };
     m.querySelector("#pu").onchange = ev => { courant = univs.find(u => u.label === ev.target.value) || courant; charger(); };
     m.querySelector("#pq").oninput = peindre;
-    m.querySelector("#close").onclick = ()=>{ m.remove(); res(null); };
-    m.querySelector("#ok").onclick = ()=>{ const c = cartes.get(choix); m.remove(); res(c || null); };
+    m.querySelector("#close").onclick = ()=>{ m.remove(); res(multi ? [] : null); };
+    m.querySelector("#ok").onclick = ()=>{
+      if(multi){ const out = [...elus.values()]; m.remove(); res(out); return; }
+      const c = cartes.get(choix); m.remove(); res(c || null);
+    };
     charger();
   });
 }
+
 
 const commu = {onglet:"votes", carte:null, carteObj:null, cadrage:{x:50, y:50, z:1}, note:"",
                miennes:[], toutes:[], votes:[], mesVoix:{}, charge:false, erreur:""};
@@ -7721,9 +7771,10 @@ function viewCommu(){
       ${manque ? `<pre class="sql">${esc(COMMU_SQL)}</pre><button class="btn small ghost" id="ccopie">Copier le script</button>` : ""}
       <button class="btn small ghost" id="creessai" style="margin-left:.4rem">Réessayer</button></div>`;
   }else if(ong === "votes"){
-    corps = `<div class="row" style="gap:.4rem;margin-bottom:.8rem">
+    corps = `<div class="row" style="gap:.4rem;margin-bottom:.8rem;flex-wrap:wrap">
         <button class="btn small" id="vrarete">Proposer une rareté</button>
         <button class="btn small ghost" id="vembleme">Changer un emblème</button>
+        ${admin ? `<button class="btn small ghost" id="vraretebulk">Modifier plusieurs raretés</button>` : ""}
       </div>
       ${ouverts.length ? `<div class="mliste">${ouverts.map(blocVote).join("")}</div>`
         : `<div class="panel"><p class="sub" style="margin:0">Aucun vote en cours.</p></div>`}
@@ -7827,6 +7878,45 @@ function viewCommu(){
     if(deja){ toast("Déjà soumise à un vote", c.title + " : votez dans la liste", "info"); return; }
     const choix = await choisirRarete(c);
     if(choix) lancerVote("rarete", c.id, ficheCarte(c), {rarete:choix});
+  };
+  /* développeur : plusieurs cartes à la fois, effet immédiat (pas de vote à attendre) */
+  const appliquerRareteAdmin = async (c, rarete)=>{
+    let v = commu.votes.find(x => x.statut === "ouvert" && x.type === "rarete" && x.sujet === c.id);
+    let id = v && v.id;
+    if(!id){
+      try{
+        await nuageRest("votes_cartes", {method:"POST", body:JSON.stringify([{type:"rarete", sujet:c.id, carte:ficheCarte(c), proposition:{rarete}, auteur:moi}])});
+        const r = await nuageRest("votes_cartes?select=id&type=eq.rarete&sujet=eq." + encodeURIComponent(c.id) + "&statut=eq.ouvert");
+        id = r && r[0] && r[0].id;
+      }catch(e){ return false; }
+    }
+    if(!id) return false;
+    try{
+      const now = new Date().toISOString();
+      await patcherAvecRepli("votes_cartes?id=eq." + id,
+        {statut:"acceptee", traite:now, accepte_par:accepteurNom(), proposition:{rarete}}, {statut:"acceptee"});
+      return true;
+    }catch(e){ return false; }
+  };
+  const vb = view.querySelector("#vraretebulk");
+  if(vb) vb.onclick = async ()=>{
+    const cs = await choisirDansCatalogue({titre:"Cartes à retaguer", filtre:x => !specParts(x.id) && x.rarity !== "Relique", multi:true, max:40});
+    if(!cs || !cs.length) return;
+    const rarete = await choisirRareteSimple(cs.length + " carte" + (cs.length > 1 ? "s" : "") + " sélectionnée" + (cs.length > 1 ? "s" : ""));
+    if(!rarete) return;
+    vb.disabled = true;
+    let ok = 0, deja = 0, ko = 0;
+    for(const c of cs){
+      const actuelle = rareteDe(c.id) || c.rarity;
+      if(actuelle === rarete){ deja++; continue; }
+      if(await appliquerRareteAdmin(c, rarete)) ok++; else ko++;
+    }
+    catalogueCartes.clear();
+    await chargerCorrectionsLive(true);
+    toast(ok ? "Raretés modifiées" : "Rien à changer",
+          [ok ? ok + " passée" + (ok > 1 ? "s" : "") + " en " + rarete : null, deja ? deja + " déjà à jour" : null, ko ? ko + " en échec" : null].filter(Boolean).join(" · "),
+          ko ? "lose" : "info");
+    await recharger();
   };
   const ve = view.querySelector("#vembleme");
   if(ve) ve.onclick = async ()=>{
@@ -7946,6 +8036,24 @@ function choisirRarete(c){
       <h3 style="font-size:1.1rem;margin-bottom:.4rem">${esc(c.title)}</h3>
       <p class="sub" style="margin:0 0 .7rem">Actuellement ${esc(c.rarity)}. Elle devrait être…</p>
       <div class="row" style="gap:.35rem">${liste.map(r => `<button class="chip" data-r="${esc(r)}">${RARITIES.indexOf(r) > RARITIES.indexOf(c.rarity) ? "▲" : "▼"} ${esc(r)}</button>`).join("")}</div>
+      <button class="btn small ghost" id="rno" style="margin-top:.8rem">Annuler</button>
+    </div>`;
+    document.body.appendChild(m);
+    m.querySelectorAll("[data-r]").forEach(b => b.onclick = ()=>{ m.remove(); res(b.dataset.r); });
+    m.querySelector("#rno").onclick = ()=>{ m.remove(); res(null); };
+  });
+}
+/* même chose pour plusieurs cartes à la fois : une seule rareté cible,
+   sans « actuellement » puisque chaque carte part d'un rang différent */
+function choisirRareteSimple(titre){
+  return new Promise(res => {
+    const m = document.createElement("div");
+    m.className = "modal";
+    const liste = RARITIES.filter(r => r !== "Relique");
+    m.innerHTML = `<div class="inner" style="max-width:420px">
+      <h3 style="font-size:1.1rem;margin-bottom:.4rem">${esc(titre)}</h3>
+      <p class="sub" style="margin:0 0 .7rem">Nouvelle rareté pour ces cartes :</p>
+      <div class="row" style="gap:.35rem;flex-wrap:wrap">${liste.map(r => `<button class="chip" data-r="${esc(r)}">${esc(r)}</button>`).join("")}</div>
       <button class="btn small ghost" id="rno" style="margin-top:.8rem">Annuler</button>
     </div>`;
     document.body.appendChild(m);
@@ -14528,7 +14636,12 @@ function openSettings(){
   state.collection = (await sget("fm:col")) || [];
   colVueDepuis(state.collection);
   await corrLiveCache();
-  if(appliquerCorrections(state.collection) || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
+  const purge = purgerCartesHorsSujet(state.collection);
+  if(purge.n){
+    state.collection = purge.col;
+    try{ toast("Cartes hors sujet retirées", purge.n + " carte" + (purge.n > 1 ? "s" : "") + " (éditions, versions…) retirées d'un univers restreint", "info"); }catch(e){}
+  }
+  if(appliquerCorrections(state.collection) || purge.n || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
   fmPret = true;
   paintSound();
   render();
