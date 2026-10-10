@@ -3596,7 +3596,15 @@ let IDB_OK = false;
 const idbPret = idbOuvrir().then(()=>{ IDB_OK = true; return true; }).catch(e=>{
   diagLog("IndexedDB indisponible : " + (e && e.message)); return false;
 });
-function idbReq(magasin, mode, faire){
+function idbReq(magasin, mode, faire, essai = 0){
+  return idbReqUne(magasin, mode, faire).catch(e => {
+    /* Safari coupe parfois la base quand l'onglet dort (« connection lost »,
+       « database is closing ») : on rouvre une fois et on réessaie. */
+    if(essai < 1){ idbOuverture = null; return idbReq(magasin, mode, faire, essai + 1); }
+    throw e;
+  });
+}
+function idbReqUne(magasin, mode, faire){
   return idbOuvrir().then(db => new Promise((ok, ko)=>{
     const tx = db.transaction(magasin, mode);
     const st = tx.objectStore(magasin);
@@ -3692,6 +3700,51 @@ async function nuageDescendre(forcer){
   nuageAttentePose([]);
   if(forcer && eu && moi !== "invite") await viderEspace("invite");
   return eu;
+}
+
+/* ======================================================================
+   Garde-fou contre la perte de cartes
+   ----------------------------------------------------------------------
+   Une carte ne peut quitter la collection que par une action du joueur
+   (vente, échange, marché, fusion d'étoiles…). Chaque baisse enregistrée
+   par le jeu est notée ici. Si, au moment de synchroniser, des cartes ont
+   disparu sans avoir été notées — lecture ratée du navigateur, appareil
+   resté sur une vieille copie — c'est un accident : on les remet au lieu
+   de propager la perte au serveur et aux autres appareils.
+   ====================================================================== */
+let colVue = null;                     // id → exemplaires, à la dernière écriture connue
+function comptesCol(col){ const m = new Map(); for(const c of (col || [])) if(c && c.id) m.set(c.id, (m.get(c.id) || 0) + (c.count || 1)); return m; }
+function colVueDepuis(col){ colVue = comptesCol(col); }
+async function noterRetraits(col){
+  if(!colVue) return;
+  const neuf = comptesCol(col);
+  const moins = {};
+  for(const [id, n] of colVue){ const d = n - (neuf.get(id) || 0); if(d > 0) moins[id] = d; }
+  colVue = neuf;
+  if(!Object.keys(moins).length) return;
+  try{
+    const moi = acct();
+    const r = (await lireEspace(moi, "retraits:fm:col")) || {};
+    for(const [id, d] of Object.entries(moins)) r[id] = (r[id] || 0) + d;
+    await ecrireEspace(moi, "retraits:fm:col", r);
+  }catch(e){}
+}
+/* répare une copie locale qui a perdu des cartes sans raison */
+function reparerCol(base, locale, retraits){
+  if(!Array.isArray(base) || !Array.isArray(locale)) return {col:locale, perdues:0};
+  const B = comptesCol(base), L = comptesCol(locale);
+  let perdues = 0, total = 0;
+  for(const [id, n] of B){ total += n; perdues += Math.max(0, n - (L.get(id) || 0) - ((retraits || {})[id] || 0)); }
+  if(perdues < 5 || perdues < total * 0.15) return {col:locale, perdues:0};
+  const parId = new Map(locale.filter(c => c && c.id).map(c => [c.id, c]));
+  for(const c of base){
+    if(!c || !c.id) continue;
+    const voulu = Math.max(L.get(c.id) || 0, (B.get(c.id) || 0) - ((retraits || {})[c.id] || 0));
+    if(voulu <= 0) continue;
+    const x = parId.get(c.id);
+    if(x) x.count = voulu; else parId.set(c.id, Object.assign({}, c, {count:voulu}));
+  }
+  return {col:[...parId.values()], perdues};
 }
 
 /* ======================================================================
@@ -3833,6 +3886,17 @@ async function nuageSynchroInterne(cle, locale, appliquer){
                             "&cle=eq." + encodeURIComponent(cle) + "&select=maj");
   const majSrv = d && d[0] ? d[0].maj : null;
   const inchange = !!majSrv && base != null && memeMaj(majSrv, vue);
+  let retraits0 = null;
+  const instantane = locale;
+  if(cle === "fm:col" && base != null && Array.isArray(locale)){
+    retraits0 = (await lireEspace(moi, "retraits:fm:col")) || {};
+    const rep = reparerCol(base, locale, retraits0);
+    if(rep.perdues){
+      diagLog("garde-fou : " + rep.perdues + " cartes disparues sans raison, remises en place");
+      try{ toast("Collection protégée", rep.perdues + " cartes perdues par le navigateur ont été remises", "info"); }catch(e){}
+      locale = rep.col;
+    }
+  }
   let fusion = locale, valSrv;
   if(majSrv && !inchange){
     const r = await nuageLire(cle);
@@ -3843,7 +3907,9 @@ async function nuageSynchroInterne(cle, locale, appliquer){
       else{
         const lm = await lireEspace(moi, "maj:" + cle);
         const localPlusRecent = !!(lm && Date.parse(lm) > Date.parse(majSrv));
-        fusion = cle === "fm:col" ? (localPlusRecent ? locale : valSrv)
+        /* sans ancêtre commun, la collection ne perd jamais rien : on garde,
+           carte par carte, le plus grand nombre d'exemplaires des deux côtés */
+        fusion = cle === "fm:col" ? fusionColMax(locale, valSrv)
                                   : fusionDemarrage(locale, valSrv, localPlusRecent);
       }
       if(locale != null) diagLog("fusion " + cle + (base != null ? "" : " (première)"));
@@ -3854,9 +3920,16 @@ async function nuageSynchroInterne(cle, locale, appliquer){
   if(valSrv === undefined || !egalJ(fusion, valSrv)) maj = await nuageEcrire(cle, fusion);
   await ecrireEspace(moi, "base:" + cle, fusion);
   if(maj) await ecrireEspace(moi, "srvmaj:" + cle, maj);
-  if(locale == null || !egalJ(fusion, locale)){
+  if(cle === "fm:col"){
+    /* les retraits pris en compte par cette synchro sont soldés */
+    const r = (await lireEspace(moi, "retraits:fm:col")) || {};
+    for(const [id, n] of Object.entries(retraits0 || {})){ r[id] = (r[id] || 0) - n; if(r[id] <= 0) delete r[id]; }
+    await ecrireEspace(moi, "retraits:fm:col", r);
+    if(lectureEchouee["fm:col"] && fusion && fusion.length) lectureEchouee["fm:col"] = false;
+  }
+  if(instantane == null || !egalJ(fusion, instantane)){
     await ecrireEspace(moi, cle, fusion);
-    if(appliquer) appliquerFusion(cle, fusion, locale);
+    if(appliquer) appliquerFusion(cle, fusion, instantane);
   }
   if(cle === "fm:profile" && typeof publierProfil === "function") publierProfil();
   return fusion;
@@ -3877,6 +3950,7 @@ function appliquerFusion(cle, fusion, instantane){
     fin = instantane ? fusionCol(instantane, state.collection, fusion) : fusion;
     state.collection.length = 0;
     for(const c of fin) state.collection.push(c);
+    colVueDepuis(state.collection);
   }else return;
   if(!egalJ(fin, fusion)) sset(cle, cle === "fm:col" ? state.collection : state.profile);
   else ecrireEspace(acct(), cle, fin);
@@ -3977,6 +4051,7 @@ function acct(){
 const HAS_WS = typeof window.storage === "object" && window.storage && typeof window.storage.get === "function";
 const SANDBOX = HAS_WS;            // artefact Claude : réseau externe bloqué
 const memStore = {};
+const lectureEchouee = {};
 let stockagePlein = false;   // une écriture n'a tenu qu'en mémoire
 function lsKey(k,s){ return s ? ("fm-shared:"+k) : ("fm-local:"+acct()+":"+k); }
 function wsKey(k,s){ return s ? k : (acct()+"/"+k); }
@@ -3988,7 +4063,12 @@ async function sget(key, shared=false){
       try{
         const v = await idbGet("kv", k);
         if(v != null) return v;
-      }catch(e){}
+      }catch(e){
+        /* lecture impossible ≠ sauvegarde vide : on le signale, pour qu'une
+           collection mal lue ne soit jamais prise pour une collection vidée */
+        diagLog("lecture " + key + " impossible : " + (e && e.message));
+        if(key === "fm:col" || key === "fm:profile") lectureEchouee[key] = true;
+      }
       if(memStore[k] != null) return memStore[k];
     }
     const v = window.localStorage.getItem(lsKey(key,shared));
@@ -3998,7 +4078,11 @@ async function sget(key, shared=false){
 async function sset(key, val, shared=false){
   try{
     if(HAS_WS){ await window.storage.set(wsKey(key,shared), JSON.stringify(val), shared); return; }
-    if(key === "fm:col" && !shared && Array.isArray(val)) await rangerTextes(val);
+    if(key === "fm:col" && !shared && Array.isArray(val)){
+      if(lectureEchouee["fm:col"] && !val.length){ diagLog("écriture d'une collection vide refusée (lecture échouée)"); return; }
+      await rangerTextes(val);
+      await noterRetraits(val);
+    }
     if(key === "fm:profile" && !shared && val && typeof val === "object") tamponnerPerso(val);
     if(await idbPret){
       try{ await idbSet("kv", lsKey(key,shared), val); }
@@ -4245,7 +4329,7 @@ const ALT_HOSTS = {
   "kimetsu-no-yaiba.fandom.com":["demonslayer.fandom.com"],
   "yakusoku-no-neverland.fandom.com":["thepromisedneverland.fandom.com"]
 };
-const MIN_ARTICLES = 60;        // un wiki modeste reste jouable
+const MIN_ARTICLES = 1;         // même un tout petit wiki est le bienvenu
 
 /* liste des univers qui n'ont pas répondu, pour le panneau de réglages */
 let POOL_MISSES = [];
@@ -4354,13 +4438,13 @@ function stripHtml(html){
    pages-sommaires comptent — personnages, blocs, objets, créatures — et pas
    les versions du jeu ni les pages techniques. La liste est gardée 7 jours. */
 const listesBlanches = new Map();
-const HORS_SUJET = /^(java|bedrock|pocket|legacy console|education|xbox|playstation|nintendo|new nintendo|wii ?u|windows|raspberry)\b|edition|^\d+(\.\d+)+|snapshot|pre-?release|update|tutorial|^list of|\(disambiguation\)/i;
+const HORS_SUJET = /^(java|bedrock|pocket|legacy console|education|xbox|playstation|nintendo|new nintendo|wii ?u|windows|raspberry|china|minecraft (dungeons|legends|earth|story mode|education|china|live))\b|edition|^\d+(\.\d+)+|^(alpha|beta|infdev|indev|classic|pre-?classic)\b|snapshot|pre-?release|release candidate|update|version|tutorial|launcher|^list of|\(disambiguation\)|\bv?\d+\.\d+/i;
 async function titresAutorises(w){
   if(!w || !Array.isArray(w.pages) || !w.pages.length) return null;
   const cle = w.host + (w.path || "");
   if(listesBlanches.has(cle)) return listesBlanches.get(cle);
   const cache = await sget("fm:liste:" + cle, true);
-  if(cache && cache.t && Date.now() - cache.t < 7 * 864e5 && cache.l && cache.l.length){
+  if(cache && cache.v === 2 && cache.t && Date.now() - cache.t < 7 * 864e5 && cache.l && cache.l.length){
     listesBlanches.set(cle, cache.l); return cache.l;
   }
   const vus = new Set();
@@ -4368,17 +4452,21 @@ async function titresAutorises(w){
   for(let tour = 0; tour < 12; tour++){
     const d = await api(Object.assign({action:"query", generator:"links", titles:w.pages.join("|"),
       gplnamespace:"0", gpllimit:"max", prop:"info"}, suite), w);
-    for(const p of ((d.query && d.query.pages) || [])) if(p && p.title && !p.missing && !HORS_SUJET.test(p.title) && w.pages.indexOf(p.title) < 0) vus.add(p.title);
+    for(const p of ((d.query && d.query.pages) || [])) if(p && p.title && !p.missing && !HORS_SUJET.test(p.title) && w.pages.indexOf(p.title) < 0 && !/^(Category|Catégorie|File|Fichier|Template|Modèle):/i.test(p.title)) vus.add(p.title);
     if(!d.continue) break;
     suite = d.continue;
   }
   const l = [...vus];
-  if(l.length){ listesBlanches.set(cle, l); await sset("fm:liste:" + cle, {t:Date.now(), l}, true); }
+  if(l.length){ listesBlanches.set(cle, l); await sset("fm:liste:" + cle, {v:2, t:Date.now(), l}, true); }
   return l;
 }
 
 async function drawPages(n, w){
+  const restreint = !!(w && Array.isArray(w.pages) && w.pages.length);
   const permis = await titresAutorises(w).catch(()=>null);
+  /* univers restreint dont la liste n'a pas pu être lue : aucune carte
+     plutôt qu'une carte prise n'importe où dans le wiki */
+  if(restreint && !(permis && permis.length)) return [];
   if(permis && permis.length){
     const choix = shuffled(permis).slice(0, Math.min(n, 20));
     const data = await api({
@@ -5174,7 +5262,22 @@ function go(v){
 /* ---------- page « Compte » ---------- */
 /* Comptes autorisés à ouvrir la console de débogage et le diagnostic. */
 const ADMINS = ["81eb751c-1f87-411e-928b-02145f4c70f5"];
-function estAdmin(){ const id = moiId(); return !!id && ADMINS.indexOf(id) >= 0; }
+/* Empreintes SHA-256 des courriels administrateurs : le fichier public ne
+   contient pas les adresses elles-mêmes. Le vrai contrôle est côté serveur. */
+const ADMINS_EMPREINTES = ["83fed416146b0493fa348ae39fdaddde77ba41a1a42892582c6c91d975c332fc"];
+let empreinteCourriel = "";
+(async ()=>{
+  try{
+    const m = (nuageCourriel() || "").trim().toLowerCase();
+    if(!m || !crypto.subtle) return;
+    const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(m));
+    empreinteCourriel = [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join("");
+  }catch(e){}
+})();
+function estAdmin(){
+  const id = moiId();
+  return !!id && (ADMINS.indexOf(id) >= 0 || ADMINS_EMPREINTES.indexOf(empreinteCourriel) >= 0);
+}
 
 /* Messages du serveur d'authentification, en français. */
 function traduireErreur(m){
@@ -5261,12 +5364,18 @@ function viewCompte(){
       <button class="btn small" id="m-ok">Changer le mot de passe</button>
     </div>
 
+    <div class="panel" style="margin-top:1rem">
+      <h3>Copies de secours</h3>
+      <div id="secours"><span class="sub">Recherche…</span></div>
+    </div>
+
     ${admin ? `<details class="fold info" style="margin-top:1.2rem">
       <summary>Diagnostic</summary>
       <div class="in"><pre class="sql" id="diag" style="white-space:pre-wrap;margin:0"></pre></div>
     </details>` : ""}`;
 
   const dg = view.querySelector("#diag"); if(dg){ dg.textContent = diagnosticNuage(); idbMesurer(); }
+  afficherSecours();
   view.querySelector("#c-sortir").onclick = async ()=>{
     nuageToutVider();
     await nuageDeconnecter();
@@ -5293,6 +5402,49 @@ function viewCompte(){
     catch(err){ dire(traduireErreur(err.message || err)); e.currentTarget.disabled = false; }
   };
   majEtatNuage();
+}
+
+/* Copies de secours : celles du serveur (une par jour, et une avant toute
+   baisse brutale) et celles que cet appareil garde encore. Restaurer ne
+   retire jamais rien : chaque carte prend le plus grand nombre
+   d'exemplaires entre la collection actuelle et la copie. */
+async function afficherSecours(){
+  const el = document.getElementById("secours"); if(!el) return;
+  const copies = [];
+  try{
+    const r = await nuageRest("sauvegardes_secours?select=id,cartes,cree&joueur=eq." + moiId() + "&order=cree.desc&limit=7");
+    for(const x of (r || [])) copies.push({src:"serveur", id:x.id, cartes:x.cartes, date:x.cree});
+  }catch(e){}
+  try{
+    for(const esp of [acct(), "invite"]) for(const k of ["fm:col", "base:fm:col"]){
+      const v = await lireEspace(esp, k);
+      if(Array.isArray(v) && v.length) copies.push({src:"appareil", esp, k, cartes:v.length, date:null});
+    }
+  }catch(e){}
+  const actuel = state.collection.length;
+  const utiles = copies.filter(c => c.cartes > actuel);
+  if(!utiles.length){ el.innerHTML = `<p class="sub" style="margin:0">Aucune copie plus complète que votre collection actuelle (${actuel} cartes).</p>`; return; }
+  el.innerHTML = utiles.map((c, i) => `<div class="row" style="justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--line)">
+      <span class="sub" style="margin:0">${c.cartes} cartes · ${c.src === "serveur" ? "serveur, " + new Date(c.date).toLocaleString("fr-FR") : "copie gardée sur cet appareil"}</span>
+      <button class="btn small" data-restaurer="${i}">Restaurer</button></div>`).join("");
+  el.querySelectorAll("[data-restaurer]").forEach(b => b.onclick = async ()=>{
+    const c = utiles[+b.dataset.restaurer];
+    b.disabled = true;
+    try{
+      let v = null;
+      if(c.src === "serveur"){ const r = await nuageRest("sauvegardes_secours?select=valeur&id=eq." + c.id); v = r && r[0] && r[0].valeur; }
+      else v = await lireEspace(c.esp, c.k);
+      if(!Array.isArray(v)) throw new Error("copie illisible");
+      const avant = state.collection.length;
+      const fin = fusionColMax(state.collection, v);
+      state.collection.length = 0; for(const x of fin) state.collection.push(x);
+      colVueDepuis(state.collection);
+      await sset("fm:col", state.collection);
+      nuageToutVider();
+      toast("Collection restaurée", (state.collection.length - avant) + " cartes retrouvées", "ach");
+      afficherSecours();
+    }catch(e){ toast("Restauration impossible", String(e.message || e), "lose"); b.disabled = false; }
+  });
 }
 
 /* ---------- accueil : se connecter ou créer un compte ---------- */
@@ -6981,6 +7133,7 @@ const COMMU_SQL = `-- FandoMasters · communauté (relançable sans risque)
 create or replace function est_admin() returns boolean
 language sql stable as $$
   select auth.uid() = '81eb751c-1f87-411e-928b-02145f4c70f5'::uuid
+      or lower(coalesce(auth.jwt() ->> 'email', '')) in ('axelmoinard@gmail.com')
 $$;
 
 create table if not exists propositions (
@@ -7056,7 +7209,39 @@ begin
   return new;
 end $$;
 drop trigger if exists compter_bulletin on bulletins;
-create trigger compter_bulletin after insert on bulletins for each row execute function compter_bulletin();`;
+create trigger compter_bulletin after insert on bulletins for each row execute function compter_bulletin();
+
+-- Copies de secours de la collection : une par jour, et une avant toute
+-- baisse brutale (plus de 30 % de cartes en moins). Les 7 plus récentes sont gardées.
+create table if not exists sauvegardes_secours (
+  id bigint generated always as identity primary key,
+  joueur uuid not null references auth.users on delete cascade,
+  cle text not null,
+  valeur jsonb not null,
+  cartes int not null default 0,
+  cree timestamptz not null default now()
+);
+alter table sauvegardes_secours enable row level security;
+drop policy if exists "mes secours" on sauvegardes_secours;
+create policy "mes secours" on sauvegardes_secours for select to authenticated using (joueur = auth.uid());
+
+create or replace function garder_secours() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare n_old int; n_new int; derniere timestamptz;
+begin
+  if new.cle <> 'fm:col' or jsonb_typeof(old.valeur) <> 'array' then return new; end if;
+  n_old := jsonb_array_length(old.valeur);
+  n_new := case when jsonb_typeof(new.valeur) = 'array' then jsonb_array_length(new.valeur) else 0 end;
+  select max(cree) into derniere from sauvegardes_secours where joueur = old.joueur;
+  if n_old > 0 and (n_new < n_old * 0.7 or derniere is null or derniere < now() - interval '1 day') then
+    insert into sauvegardes_secours (joueur, cle, valeur, cartes) values (old.joueur, old.cle, old.valeur, n_old);
+    delete from sauvegardes_secours where joueur = old.joueur and id not in
+      (select id from sauvegardes_secours where joueur = old.joueur order by cree desc limit 7);
+  end if;
+  return new;
+end $$;
+drop trigger if exists garder_secours on sauvegardes;
+create trigger garder_secours before update on sauvegardes for each row execute function garder_secours();`;
 
 /* Corrections intégrées au jeu : id de carte → {rarete, cadrage:{x,y,z}}.
    Une carte spéciale sans recadrage propre reprend celui de sa version
@@ -8046,8 +8231,9 @@ function shuffled(arr){ return [...arr].sort(()=>Math.random()-0.5); }
 async function mostLinked(w){
   const key = "fm:ml2:"+w.host+(w.path||"");
   const c = await sget(key, true);
+  const restreint = !!(w && Array.isArray(w.pages) && w.pages.length);
   const permis = await titresAutorises(w).catch(()=>null);
-  const filtre = l => permis && permis.length ? l.filter(x => permis.indexOf(x.t) >= 0) : l;
+  const filtre = l => restreint ? ((permis && permis.length) ? l.filter(x => permis.indexOf(x.t) >= 0 && !HORS_SUJET.test(x.t)) : []) : l;
   if(c && c.list && c.list.length && (Date.now()-c.t) < 7*864e5) return filtre(c.list);
   let list = [];
   for(const page of ["Mostlinked","Mostrevisions"]){
@@ -14044,6 +14230,7 @@ function openSettings(){
   }
   farmTick();
   state.collection = (await sget("fm:col")) || [];
+  colVueDepuis(state.collection);
   if(appliquerCorrections(state.collection) || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
   fmPret = true;
   paintSound();
