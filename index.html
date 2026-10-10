@@ -1112,6 +1112,11 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
 .cslot.got{border:none;padding:0;background:none;cursor:pointer;animation:slotin .3s ease both}
 .cslot.got::after{display:none}
 .cslot.got .card{width:100%;height:100%}
+.cslot.fantome{border:none;padding:0;background:none;position:relative;cursor:default}
+.cslot.fantome::after{display:none}
+.cslot.fantome .card{width:100%;height:100%;filter:grayscale(1) brightness(.62) contrast(.92);opacity:.62;pointer-events:none;animation:none}
+.cslot.fantome > .lock{position:absolute;left:50%;bottom:7%;transform:translateX(-50%);z-index:4;white-space:nowrap;
+  background:#000B;color:#F2EDE6;padding:.18rem .55rem;border-radius:99px;font-size:.64rem;letter-spacing:.08em;text-transform:uppercase}
 @keyframes slotin{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.cslot.got{animation:none}}
 .ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:.6rem}
@@ -7223,6 +7228,8 @@ create table if not exists votes_cartes (
   cree timestamptz not null default now()
 );
 alter table votes_cartes add column if not exists traite timestamptz;
+alter table votes_cartes drop constraint if exists votes_cartes_type_check;
+alter table votes_cartes add constraint votes_cartes_type_check check (type in ('rarete','embleme','ajout'));
 alter table votes_cartes add column if not exists accepte_par text;
 create unique index if not exists un_vote_par_sujet on votes_cartes (type, sujet) where statut = 'ouvert';
 alter table votes_cartes enable row level security;
@@ -7316,17 +7323,35 @@ for(const [id,e] of Object.entries(CORRECTIONS_LOT)){
   const k = CORRECTIONS[id] || (CORRECTIONS[id] = {});
   if(e.t) k.titre = e.t; if(e.u) k.univers = e.u;
   if(e.c) k.cadrage = e.c; if(e.r) k.rarete = e.r;
+  if(e.a){ k.ajout = true; if(e.i) k.img = e.i; }
 }
 
 /* ---- corrections en direct ----
    Ce que le développeur accepte vaut tout de suite pour tous les joueurs : le
    jeu relit les recadrages et raretés acceptés (quelques octets) et les pose
    par-dessus CORRECTIONS. Intégrer le code reste possible, mais plus nécessaire. */
-const CORR_LIVE = {cad:{}, rar:{}};
+const CORR_LIVE = {cad:{}, rar:{}, aj:{}};
 let RAR_TITRE = null;
 function rareteDe(id){
   const l = CORR_LIVE.rar[id]; if(l && l.r) return l.r;
-  const k = CORRECTIONS[id]; return (k && k.rarete) || null;
+  const k = CORRECTIONS[id]; if(k && k.rarete) return k.rarete;
+  const a = CORR_LIVE.aj[id]; return (a && a.r) || null;
+}
+/* cartes ajoutées officiellement au catalogue d'un univers (code + acceptées en direct) */
+function ajoutsOfficiels(univ){
+  const out = new Map();
+  for(const [id, k] of Object.entries(CORRECTIONS)) if(k && k.ajout && k.univers === univ && k.titre)
+    out.set(id, {id, title:k.titre, univ, img:k.img || null, rarity:k.rarete || "Commun"});
+  for(const [id, a] of Object.entries(CORR_LIVE.aj || {})) if(a && a.c && a.c.univ === univ && a.c.title)
+    out.set(id, Object.assign({}, a.c, {id, rarity:a.r || a.c.rarity || "Commun"}));
+  return [...out.values()];
+}
+/* le palmarès officiel d'un univers, complété des cartes ajoutées par la communauté */
+function avecAjouts(liste, w){
+  if(!w) return liste;
+  const titres = new Set(liste.map(e => e.t));
+  const plus = ajoutsOfficiels(w.label).filter(a => !titres.has(a.title));
+  return plus.length ? liste.concat(plus.map(a => ({t:a.title, v:1, ajout:true}))) : liste;
 }
 function cadrageCorr(id){
   const l = CORR_LIVE.cad[id]; if(l && l.c) return l.c;
@@ -7337,6 +7362,7 @@ function rarTitre(univ, titre){
   if(!RAR_TITRE){
     RAR_TITRE = new Map();
     for(const k of Object.values(CORRECTIONS)) if(k && k.rarete && k.titre && k.univers) RAR_TITRE.set(k.univers + "\u0001" + k.titre, k.rarete);
+    for(const a of Object.values(CORR_LIVE.aj || {})) if(a && a.r && a.c && a.c.title && a.c.univ) RAR_TITRE.set(a.c.univ + "\u0001" + a.c.title, a.r);
     for(const l of Object.values(CORR_LIVE.rar)) if(l && l.r && l.titre && l.univ) RAR_TITRE.set(l.univ + "\u0001" + l.titre, l.r);
   }
   return RAR_TITRE.get(univ + "\u0001" + titre) || null;
@@ -7419,7 +7445,7 @@ async function corrLiveCache(){
   try{
     const sig = String(hashId(JSON.stringify(CORRECTIONS)));
     const c = await sget("fm:corr-live", true);
-    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; RAR_TITRE = null; }
+    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; RAR_TITRE = null; }
   }catch(e){}
 }
 function appliquerLive(){
@@ -7439,13 +7465,23 @@ async function chargerCorrectionsLive(force){
       const sig = String(hashId(JSON.stringify(CORRECTIONS)));
       let c = await sget("fm:corr-live", true);
       /* le code a changé (nouvelles corrections intégrées) : on repart de zéro */
-      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", cad:{}, rar:{}};
+      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", cad:{}, rar:{}, aj:{}};
+      c.aj = c.aj || {}; c.ta = c.ta || "";
       const [ps, vs] = await Promise.all([
         nuageRest("propositions?statut=eq.acceptee&cadrage=not.is.null" + (c.tp ? "&traite=gt." + encodeURIComponent(c.tp) : "") +
                   "&select=carte_id,cadrage,traite&order=traite.asc&limit=1000").catch(()=>null),
         nuageRest("votes_cartes?statut=eq.acceptee&type=eq.rarete" + (c.tv ? "&traite=gt." + encodeURIComponent(c.tv) : "") +
                   "&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite&order=traite.asc&limit=1000").catch(()=>null)
       ]);
+      const as = await nuageRest("votes_cartes?statut=eq.acceptee&type=eq.ajout" + (c.ta ? "&traite=gt." + encodeURIComponent(c.ta) : "") +
+                  "&select=sujet,carte,r:proposition->>rarete,traite&order=traite.asc&limit=1000").catch(()=>null);
+      for(const a of (as || [])){
+        if(!a.sujet || !a.carte) continue;
+        const t = a.traite || "", o = c.aj[a.sujet];
+        const f = a.carte;
+        if(!o || t >= o.t) c.aj[a.sujet] = {c:{title:f.title, univ:f.univ, img:f.img || null, rarity:f.rarity, atk:f.atk || 0, def:f.def || 0}, r:RARITIES.indexOf(a.r) >= 0 ? a.r : null, t};
+        if(t > c.ta) c.ta = t;
+      }
       for(const p of (ps || [])){
         if(!p.carte_id || !p.cadrage) continue;
         const t = p.traite || "", o = c.cad[p.carte_id];
@@ -7458,10 +7494,10 @@ async function chargerCorrectionsLive(force){
         if(!o || t >= o.t) c.rar[v.sujet] = {r:v.r, titre:v.titre, univ:v.univ, t};
         if(t > c.tv) c.tv = t;
       }
-      if(ps || vs) await sset("fm:corr-live", c, true);
-      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar]);
-      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; RAR_TITRE = null;
-      change = avant !== JSON.stringify([c.cad, c.rar]);
+      if(ps || vs || as) await sset("fm:corr-live", c, true);
+      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj]);
+      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; RAR_TITRE = null;
+      change = avant !== JSON.stringify([c.cad, c.rar, c.aj]);
     }catch(e){}
     corrLiveVu = Date.now();
     return change;
@@ -7484,7 +7520,7 @@ const catalogueCartes = new Map();
 async function cartesCatalogue(w){
   const k = w.host + (w.path || "");
   if(catalogueCartes.has(k)) return catalogueCartes.get(k);
-  const liste = ((await mostLinked(w).catch(()=>[])) || []).slice(0, CAT_LIMIT);
+  const liste = avecAjouts(((await mostLinked(w).catch(()=>[])) || []).slice(0, CAT_LIMIT), w);
   if(!liste.length) return [];
   const tiers = tierMap(liste, w), rar = {};
   for(const r of RARITIES) for(const t of (tiers[r] || [])) rar[t] = r;
@@ -7672,6 +7708,7 @@ function dejaIntegre(p){
   return !!p.cadrage && egalJ(k.cadrage, p.cadrage);
 }
 function voteIntegre(v){
+  if(v.type === "ajout"){ const k = CORRECTIONS[v.sujet]; return !!(k && k.ajout && k.rarete === (v.proposition || {}).rarete); }
   if(v.type === "rarete") return (CORRECTIONS[v.sujet] || {}).rarete === (v.proposition || {}).rarete;
   if(v.type === "embleme") return ICONIC[(v.carte || {}).univ] === ((v.proposition || {}).remplacant || {}).title;
   return false;
@@ -7705,6 +7742,10 @@ function exportCorrections(props, votes){
     if(v.type === "rarete"){
       o[v.sujet] = Object.assign(o[v.sujet] || {}, {titre:(v.carte || {}).title, univers:(v.carte || {}).univ, rarete:v.proposition.rarete,
         votes:v.oui + " oui / " + v.non + " non"});
+    }else if(v.type === "ajout"){
+      const c = v.carte || {};
+      o[v.sujet] = Object.assign(o[v.sujet] || {}, {titre:c.title, univers:c.univ, ajout:true, img:c.img || null,
+        rarete:(v.proposition || {}).rarete, votes:v.oui + " oui / " + v.non + " non"});
     }else if(v.type === "embleme"){
       o["emblème:" + (v.carte || {}).univ] = {univers:(v.carte || {}).univ, ancien:(v.carte || {}).title,
         nouveau:((v.proposition || {}).remplacant || {}).title, votes:v.oui + " oui / " + v.non + " non"};
@@ -7728,6 +7769,10 @@ function entreesExport(props, votes){
       const e = g(v.sujet);
       e.carte = e.carte || v.carte; e.rar = v.proposition.rarete; e.votes = v.oui + " oui / " + v.non + " non";
       e.parR = nomJoueur(v.auteur); e.accR = v.accepte_par || "";
+    }else if(v.type === "ajout"){
+      const e = g(v.sujet);
+      e.carte = e.carte || v.carte; e.ajout = (v.proposition || {}).rarete || "Commun"; e.rar = e.rar || e.ajout;
+      e.votesA = v.oui + " oui / " + v.non + " non"; e.parA = nomJoueur(v.auteur); e.accA = v.accepte_par || "";
     }else if(v.type === "embleme"){
       const e = g("emb:" + (v.carte || {}).univ);
       e.emb = {univ:(v.carte || {}).univ, ancien:(v.carte || {}).title, nouveau:((v.proposition || {}).remplacant || {}).title};
@@ -7745,7 +7790,8 @@ function blocExport(e){
   const lignes = [];
   if(e.emb) lignes.push(`Emblème de ${esc(e.emb.univ)} : <b style="color:var(--p5)">${esc(e.emb.nouveau)}</b> à la place de ${esc(String(e.emb.ancien || "").replace(/ — .*$/, ""))}`);
   if(e.cad) lignes.push(`Cadrage x ${Math.round(e.cad.x)} · y ${Math.round(e.cad.y)} · zoom ${e.cad.z} — ${mention(e.par, e.acc)}`);
-  if(e.rar) lignes.push(`Rareté → <b style="color:var(--p5)">${esc(e.rar)}</b> (${esc(e.votes)}) — ${mention(e.parR, e.accR)}`);
+  if(e.ajout) lignes.push(`Ajout au catalogue en <b style="color:var(--p5)">${esc(e.ajout)}</b> (${esc(e.votesA)}) — ${mention(e.parA, e.accA)}`);
+  if(e.rar && e.parR) lignes.push(`Rareté → <b style="color:var(--p5)">${esc(e.rar)}</b> (${esc(e.votes)}) — ${mention(e.parR, e.accR)}`);
   if(e.emb) lignes[0] += ` (${esc(e.votes)}) — ${mention(e.parR, e.accR)}`;
   return `<div class="mvente prop" style="cursor:default">
     ${mini(e.carte, extra)}
@@ -7767,6 +7813,8 @@ function ligneHistorique(x){
   if(x.genre === "cadrage"){
     const cd = x.cadrage || {};
     quoi = `Recadrage <span class="sub">(x ${Math.round(cd.x)} · y ${Math.round(cd.y)} · zoom ${cd.z})</span>`;
+  }else if(x.genre === "ajout"){
+    quoi = `Ajout au catalogue → <b style="color:var(--p5)">${esc((x.proposition || {}).rarete || "?")}</b>`;
   }else if(x.genre === "rarete"){
     quoi = `Rareté → <b style="color:var(--p5)">${esc((x.proposition || {}).rarete || "?")}</b>`;
   }else{
@@ -7788,7 +7836,9 @@ function blocVote(v){
   const admin = estAdmin();
   const total = v.oui + v.non, pc = total ? Math.round(v.oui / total * 100) : 0;
   const voix = commu.mesVoix[v.id];
-  const sujet = v.type === "rarete"
+  const sujet = v.type === "ajout"
+    ? `Ajout au catalogue de ${esc((v.carte || {}).univ || "")} en <b style="color:var(--p5)">${esc((v.proposition || {}).rarete || "?")}</b>`
+    : v.type === "rarete"
     ? `Rareté : ${esc((v.carte || {}).rarity || "?")} → <b style="color:var(--p5)">${esc(v.proposition.rarete)}</b>`
     : `Emblème de ${esc((v.carte || {}).univ || "")} : <b style="color:var(--p5)">${esc(((v.proposition || {}).remplacant || {}).title || "?")}</b> à la place de ${esc(((v.carte || {}).title || "").replace(/ — .*$/, ""))}`;
   const etat = {ouvert:"vote en cours", acceptee:"acceptée", refusee:"refusée"}[v.statut];
@@ -7845,8 +7895,10 @@ function viewCommu(){
   const moi = moiId();
   const ong = commu.onglet;
   const tab = (id, nom, n) => `<button class="chip" data-cong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
-  const ouverts = commu.votes.filter(v => v.statut === "ouvert");
+  const ouverts = commu.votes.filter(v => v.statut === "ouvert" && v.type !== "ajout");
   const aVoter = ouverts.filter(v => commu.mesVoix[v.id] === undefined).length;
+  const ajoutsOuverts = commu.votes.filter(v => v.statut === "ouvert" && v.type === "ajout");
+  const aVoterAj = ajoutsOuverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const groupes = admin ? groupesRecadrage() : [];
   const exportP = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte && !dejaIntegre(p));
   const exportV = commu.votes.filter(v => v.statut === "acceptee" && !v.exporte && !voteIntegre(v));
@@ -7870,8 +7922,17 @@ function viewCommu(){
       </div>
       ${ouverts.length ? `<div class="mliste">${ouverts.map(blocVote).join("")}</div>`
         : `<div class="panel"><p class="sub" style="margin:0">Aucun vote en cours.</p></div>`}
-      ${commu.votes.filter(v => v.statut !== "ouvert").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
-        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+      ${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
+        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+  }else if(ong === "ajouts"){
+    const clos = commu.votes.filter(v => v.statut !== "ouvert" && v.type === "ajout");
+    corps = `<div class="panel" style="margin-bottom:.8rem">
+        <p class="sub" style="margin:0 0 .6rem">Une carte manque à « Toutes les cartes » ? Proposez-la : une fois acceptée, elle y est listée officiellement pour tout le monde, à la rareté choisie.</p>
+        <button class="btn small" id="vajout">Proposer une carte</button>
+      </div>
+      ${ajoutsOuverts.length ? `<div class="mliste">${ajoutsOuverts.map(blocVote).join("")}</div>`
+        : `<div class="panel"><p class="sub" style="margin:0">Aucune proposition en cours.</p></div>`}
+      ${clos.length ? `<h3 class="amih" style="margin-top:1rem">Décidées</h3><div class="mliste">${clos.slice(0, 20).map(blocVote).join("")}</div>` : ""}`;
   }else if(ong === "recadrer"){
     const c = commu.carteObj || null;
     const apercu = c ? Object.assign({}, c, {cadrage:commu.cadrage}) : null;
@@ -7920,6 +7981,7 @@ function viewCommu(){
     <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
       ${tab("votes", "Votes", aVoter)}
       ${tab("recadrer", "Recadrer", 0)}
+      ${tab("ajouts", "Ajouts", aVoterAj)}
       ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Export", nbExport) : ""}
     </div>
     ${corps}`;
@@ -8013,6 +8075,16 @@ function viewCommu(){
           [ok ? ok + " passée" + (ok > 1 ? "s" : "") + " en " + rarete : null, deja ? deja + " déjà à jour" : null, ko ? ko + " en échec" : null].filter(Boolean).join(" · "),
           ko ? "lose" : "info");
     await recharger();
+  };
+  const vaj = view.querySelector("#vajout");
+  if(vaj) vaj.onclick = async ()=>{
+    const c = await choisirAjout();
+    if(!c) return;
+    if(commu.votes.find(v => v.statut === "ouvert" && v.type === "ajout" && v.sujet === c.id)){ toast("Déjà proposée", c.title + " : votez dans la liste", "info"); return; }
+    const r = await choisirRareteSimple(c.title + " — à quelle rareté ?");
+    if(!r) return;
+    commu.onglet = "ajouts";
+    lancerVote("ajout", c.id, ficheCarte(Object.assign({}, c, {rarity:r})), {rarete:r});
   };
   const ve = view.querySelector("#vembleme");
   if(ve) ve.onclick = async ()=>{
@@ -8138,6 +8210,86 @@ function choisirRarete(c){
     document.body.appendChild(m);
     m.querySelectorAll("[data-r]").forEach(b => b.onclick = ()=>{ m.remove(); res(b.dataset.r); });
     m.querySelector("#rno").onclick = ()=>{ m.remove(); res(null); };
+  });
+}
+/* une carte absente de « Toutes les cartes » : parmi les vôtres, ou cherchée sur le wiki */
+function choisirAjout(){
+  return new Promise(async res => {
+    try{ if(!state.pool.length) await ensurePool(); }catch(e){}
+    const univs = state.pool.slice().sort((a, b)=>a.label.localeCompare(b.label));
+    if(!univs.length){ toast("Catalogue indisponible", "réessayez dans un instant", "lose"); res(null); return; }
+    const mesU = {};
+    for(const c of state.collection) mesU[c.univ] = (mesU[c.univ] || 0) + 1;
+    let courant = univs.slice().sort((a, b)=>(mesU[b.label] || 0) - (mesU[a.label] || 0))[0];
+    const m = document.createElement("div");
+    m.className = "modal";
+    m.innerHTML = `<div class="inner" style="max-width:680px">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="font-size:1.15rem">Carte à ajouter au catalogue</h3>
+        <button class="btn small ghost" id="close">Annuler</button>
+      </div>
+      <div class="row" style="margin:.6rem 0 .5rem;gap:.4rem">
+        <select id="pu" style="flex:1 1 150px;margin:0">${univs.map(u => `<option value="${esc(u.label)}" ${u === courant ? "selected" : ""}>${esc(u.label)}</option>`).join("")}</select>
+        <input id="pq" placeholder="Chercher sur le wiki…" style="flex:2 1 160px;margin:0">
+        <button class="btn small ghost" id="pgo">Chercher</button>
+      </div>
+      <div class="row" style="margin-bottom:.5rem"><button class="btn small" id="ok" disabled>Valider</button>
+        <span class="sub" id="cpt">Vos cartes hors catalogue, ou une recherche sur le wiki.</span></div>
+      <div class="pickgrid" id="pg"></div>
+    </div>`;
+    document.body.appendChild(m);
+    const pg = m.querySelector("#pg");
+    let cartes = new Map(), choix = null, jeton = 0, officiels = new Set();
+    const peindre = (titre)=>{
+      const l = [...cartes.values()];
+      pg.innerHTML = (titre ? `<p class="sub" style="grid-column:1/-1;margin:0">${esc(titre)}</p>` : "") +
+        (l.length ? l.slice(0, 60).map(c => `<div class="pickwrap ${choix === c.id ? "on" : ""}" data-id="${esc(c.id)}">${cardHTML(c, {compact:true, count:0})}</div>`).join("")
+                  : `<p class="sub" style="grid-column:1/-1">Aucune carte hors catalogue.</p>`);
+      pg.querySelectorAll(".pickwrap").forEach(el => el.onclick = ()=>{
+        choix = el.dataset.id;
+        pg.querySelectorAll(".pickwrap.on").forEach(x => x.classList.remove("on"));
+        el.classList.add("on");
+        m.querySelector("#ok").disabled = false;
+        m.querySelector("#cpt").textContent = cartes.get(choix).title;
+      });
+    };
+    const lireOfficiels = async ()=>{
+      const l = avecAjouts(((await mostLinked(courant).catch(()=>[])) || []).slice(0, CAT_LIMIT), courant);
+      officiels = new Set(l.map(e => e.t));
+    };
+    const mesCartes = async ()=>{
+      const mon = ++jeton; choix = null; m.querySelector("#ok").disabled = true;
+      pg.innerHTML = `<p class="sub" style="grid-column:1/-1"><span class="spinner"></span> lecture du catalogue…</p>`;
+      await lireOfficiels();
+      if(mon !== jeton) return;
+      cartes = new Map(state.collection.filter(c => c.univ === courant.label && !c.variant && c.rarity !== "Relique" && !officiels.has(c.title)).map(c => [c.id, c]));
+      peindre("Vos cartes absentes du catalogue");
+    };
+    const chercher = async ()=>{
+      const q = (m.querySelector("#pq").value || "").trim();
+      if(!q) return mesCartes();
+      const mon = ++jeton; choix = null; m.querySelector("#ok").disabled = true;
+      pg.innerHTML = `<p class="sub" style="grid-column:1/-1"><span class="spinner"></span> recherche…</p>`;
+      if(!officiels.size) await lireOfficiels();
+      let pages = [];
+      try{
+        const d = await api({action:"query", generator:"search", gsrsearch:q, gsrnamespace:"0", gsrlimit:"24",
+                             prop:"pageimages", piprop:"thumbnail", pithumbsize:"900"}, courant);
+        pages = ((d.query && d.query.pages) || []).sort((a, b)=>(a.index || 0) - (b.index || 0));
+      }catch(e){}
+      if(mon !== jeton) return;
+      cartes = new Map(pages.filter(p => p && !p.missing && p.thumbnail && !officiels.has(p.title) && !isRelic(p.title) && !artRefusee(p.thumbnail.source))
+        .map(p => { const c = state.collection.find(x => x.id === courant.host + ":" + p.pageid) ||
+          {id:courant.host + ":" + p.pageid, univ:courant.label, title:p.title, rarity:"Commun", img:p.thumbnail.source, atk:1500, def:1500, count:0, role:null};
+          return [c.id, c]; }));
+      peindre("Résultats sur le wiki (hors catalogue)");
+    };
+    m.querySelector("#pu").onchange = ev => { courant = univs.find(u => u.label === ev.target.value) || courant; officiels = new Set(); m.querySelector("#pq").value = ""; mesCartes(); };
+    m.querySelector("#pgo").onclick = chercher;
+    m.querySelector("#pq").onkeydown = ev => { if(ev.key === "Enter") chercher(); };
+    m.querySelector("#close").onclick = ()=>{ m.remove(); res(null); };
+    m.querySelector("#ok").onclick = ()=>{ const c = cartes.get(choix); m.remove(); res(c || null); };
+    mesCartes();
   });
 }
 /* même chose pour plusieurs cartes à la fois : une seule rareté cible,
@@ -8911,7 +9063,7 @@ function maybeSpecial(card, w, list){
 
 async function drawForRarity(w, rarity){
   const list = await mostLinked(w).catch(()=>[]);
-  const tiers = list.length >= 20 ? tierMap(list, w) : null;
+  const tiers = list.length >= 20 ? tierMap(avecAjouts(list, w), w) : null;
 
   if(RARITIES.indexOf(rarity) >= 2){          // Rare et au-dessus : on vise le palier
     if(tiers){
@@ -14497,7 +14649,7 @@ function renderCatList(){
   const input = view.querySelector("#catq");
   if(input) state.catQ = input.value;
   const full = state.catList || [];
-  const list = full.slice(0, CAT_LIMIT);
+  const list = avecAjouts(full.slice(0, CAT_LIMIT), state.catW);
   const tiers = list.length ? tierMap(list, state.catW) : null;
   const q = (state.catQ||"").trim().toLowerCase();
 
@@ -14507,9 +14659,23 @@ function renderCatList(){
 
   const slot = (title, card)=> card
     ? `<div class="cslot got" data-id="${esc(card.id)}">${cardHTML(card)}</div>`
-    : `<div class="cslot"><span class="nm">${esc(title)}</span><span class="lock">à trouver</span></div>`;
+    : `<div class="cslot" data-t="${esc(title)}"><span class="nm">${esc(title)}</span><span class="lock">à trouver</span></div>`;
 
   let html = "";
+  /* reliques de cet univers : rangées ici plutôt que dans « Vos trouvailles » */
+  const reliques = RELICS.filter(r => r.univ === state.catW.label);
+  if(reliques.length){
+    const a = reliques.filter(r => mine.some(c => c.relic === r.key || c.id === "relic:" + r.key)).length;
+    html += `<div class="catsec">
+      <h3><span class="pill" style="background:linear-gradient(90deg,#FFD873,#8C0D06);color:#FFF6E0">Relique</span>
+        <span class="prog">${a} / ${reliques.length} obtenue${reliques.length > 1 ? "s" : ""}</span></h3>
+      <div class="cgrid">${reliques.map(r => {
+        const c = mine.find(x => x.relic === r.key || x.id === "relic:" + r.key);
+        return c ? `<div class="cslot got" data-id="${esc(c.id)}">${cardHTML(c)}</div>`
+                 : `<div class="cslot" data-relique="${esc(r.key)}"><span class="nm">${esc(r.name)}</span><span class="lock">à trouver</span></div>`;
+      }).join("")}</div>
+    </div>`;
+  }
   if(tiers){
     RARITIES.slice().reverse().forEach(rar=>{
       const all = tiers[rar] || [];
@@ -14536,12 +14702,12 @@ function renderCatList(){
       <div class="cgrid">${VARIANTS.map(v=>{
         const c = owned.get(v.key);
         return c ? `<div class="cslot got" data-id="${esc(c.id)}">${cardHTML(c)}</div>`
-                 : `<div class="cslot"><span class="nm">${esc(icon)}<br>${esc(v.name)}</span><span class="lock">à trouver</span></div>`;
+                 : `<div class="cslot" data-t="${esc(icon)}" data-variante="${esc(v.key)}"><span class="nm">${esc(icon)}<br>${esc(v.name)}</span><span class="lock">à trouver</span></div>`;
       }).join("")}</div>
     </div>`;
   }
 
-  const extra = mine.filter(c=>!inList.has(c.title) && !c.variant)
+  const extra = mine.filter(c=>!inList.has(c.title) && !c.variant && c.rarity !== "Relique")
     .filter(c=>!q || c.title.toLowerCase().includes(q))
     .sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity)||a.title.localeCompare(b.title));
   if(extra.length){
@@ -14557,6 +14723,49 @@ function renderCatList(){
   box.querySelectorAll(".cslot.got").forEach(el=>{
     el.onclick = ()=>showCard(state.collection.find(c=>c.id===el.dataset.id));
   });
+  peindreFantomes(box, state.catW);
+}
+
+/* Les cartes pas encore trouvées restent visibles, grisées : on voit ce
+   qu'on cherche sans pouvoir le confondre avec ce qu'on possède. */
+async function peindreFantomes(box, w){
+  const fantome = (el, c)=>{
+    if(!el.isConnected || el.classList.contains("got") || el.classList.contains("fantome")) return;
+    el.classList.add("fantome");
+    el.innerHTML = cardHTML(c, {count:0}) + `<span class="lock">à trouver</span>`;
+  };
+  const vides = [...box.querySelectorAll(".cslot[data-t]:not(.got)")];
+  if(vides.length){
+    const cat = await cartesCatalogue(w).catch(()=>[]);
+    const parTitre = new Map(cat.map(c => [c.title, c]));
+    for(const el of vides){
+      const c = parTitre.get(el.dataset.t);
+      if(!c || !c.img) continue;
+      const v = el.dataset.variante;
+      fantome(el, v ? Object.assign({}, c, {variant:v, title:c.title + " — " + varName(v), rarity:"Légendaire"}) : c);
+    }
+  }
+  for(const el of box.querySelectorAll(".cslot[data-relique]:not(.got)")){
+    const r = RELICS.find(x => x.key === el.dataset.relique);
+    if(!r) continue;
+    const img = await imageRelique(r, w).catch(()=>null);
+    if(!img) continue;
+    fantome(el, {id:"relic:" + r.key, title:r.name, univ:r.univ, rarity:"Relique", atk:9999, def:9999, img,
+                 ra:r.a, rb:r.b, t1:r.t1, t2:r.t2, spark:r.spark, aura:r.aura, glyph:r.glyph, fall:!!r.fall, ink:!!r.ink});
+  }
+}
+async function imageRelique(r, w){
+  const cle = "fm:relimg:" + r.key;
+  const hit = await sget(cle, true);
+  if(hit && hit.t && Date.now() - hit.t < 30 * 864e5) return hit.src || null;
+  let src = null;
+  try{
+    const d = await api({action:"query", titles:r.titles.join("|"), prop:"pageimages", piprop:"thumbnail", pithumbsize:"900", redirects:"1"}, w);
+    const pg = ((d.query && d.query.pages) || []).find(p => p && p.thumbnail);
+    src = pg ? pg.thumbnail.source : null;
+  }catch(e){ return null; }
+  await sset(cle, {t:Date.now(), src}, true);
+  return src;
 }
 
 /* flèches gauche/droite pour feuilleter l'album */
