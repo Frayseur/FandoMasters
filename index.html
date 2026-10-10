@@ -938,6 +938,13 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
 .flip.on .in{transform:rotateY(180deg)}
 .flip .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:13px}
 .flip .front{transform:rotateY(180deg)}
+/* Safari ne respecte pas toujours la face cachée sur un dos décoré : on
+   escamote donc le dos à mi-course du retournement, et on ne montre le
+   recto qu'à ce moment-là. Plus rien ne peut rester par-dessus. */
+.flip .back{visibility:visible;transition:visibility 0s linear .3s}
+.flip.on .back{visibility:hidden}
+.flip .front{visibility:hidden;transition:visibility 0s linear .3s}
+.flip.on .front{visibility:visible}
 .flip .front .card{height:100%;aspect-ratio:auto}
 .flip .front .card .desc{-webkit-line-clamp:2}
 /* ---- Dos de carte -------------------------------------------------
@@ -2774,6 +2781,26 @@ select{background-color:var(--panel)}
 .propcarte .card{position:absolute;inset:0;width:100%;height:100%}
 .propgrille .minfo{min-width:200px}
 .card .art img{transition:none}
+
+/* ---- menu en page, réglages ---- */
+.menupage{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.6rem}
+.menupage button{display:flex;flex-direction:column;align-items:flex-start;gap:.15rem;text-align:left;padding:.9rem;
+  border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+.menupage button .ic{font-size:1.3rem}
+.menupage button b{font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.03em}
+.menupage button small{color:var(--muted);font-size:.78rem}
+.reglages{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.45rem}
+/* ---- votes ---- */
+.vbarre{height:6px;border-radius:3px;background:color-mix(in srgb, var(--red) 55%, transparent);overflow:hidden;margin:.35rem 0 .1rem}
+.vbarre i{display:block;height:100%;background:var(--p5)}
+.pgroupe{margin-bottom:.8rem}
+.pvariantes{display:flex;gap:.6rem;overflow-x:auto;padding:.5rem 0 .2rem}
+.pvar{flex:none;width:110px;display:flex;flex-direction:column;gap:.3rem;align-items:center}
+.pvar .mcarte{width:100%}
+.mesenvois{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:.5rem}
+.menvoi{display:flex;flex-direction:column;gap:.3rem;align-items:center}
+.menvoi .mcarte{width:100%}
+.mvente.prop .mcarte + .mcarte{margin-left:-.4rem}
 </style>
 </head>
 <body>
@@ -2805,11 +2832,8 @@ select{background-color:var(--panel)}
       <button data-view="decks"><span class="ic">▤</span><b>Decks</b><small>Vos escouades toutes prêtes</small></button>
       <button data-view="inv"><span class="ic">▦</span><b>Inventaire</b><small>Potions et armements</small></button>
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
-      <button data-view="profil"><span class="ic">☻</span><b>Profil</b><small>Vitrine et portrait</small></button>
-      <button data-view="theme"><span class="ic">◐</span><b>Couleurs</b><small>Réglez la palette du site</small></button>
       <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Donjons et duels</small></button>
       <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
-      <button data-view="compte"><span class="ic">☁</span><b>Compte</b><small>Sauvegarde en ligne</small></button>
       <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
       <button data-view="market"><span class="ic">⇄</span><b>Marché</b><small>Enchères entre joueurs</small></button>
     </div>
@@ -5084,7 +5108,7 @@ function render(){
   if(!state.profile.pseudo) return viewOnboard();
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
-     village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur, communaute:viewCommu,
+     village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur, communaute:viewCommu, menu:viewMenu,
      shop:viewSoon, market:viewMarche}[state.view]||viewHub)();
   poserSurtitre();
   majJauges();
@@ -6920,17 +6944,21 @@ function ouvrirSalle(id){
 }
 
 /* ======================================================================
-   Communauté — propositions de corrections
+   Communauté — recadrages et votes
    ----------------------------------------------------------------------
-   Un joueur choisit une de ses cartes, recadre l'illustration, propose une
-   autre rareté. La proposition part dans la table « propositions ». Seul le
-   compte du développeur (contrôlé par le serveur, pas seulement ici) voit
-   la liste complète, accepte ou refuse, puis exporte les corrections
-   acceptées en un bloc de texte à transmettre pour intégration.
-   Les corrections intégrées vivent dans CORRECTIONS, plus bas : elles
-   s'appliquent à toutes les copies de la carte, chez tous les joueurs.
+   Deux circuits :
+   · Recadrage : un joueur recadre l'illustration d'une carte et l'envoie.
+     Le développeur voit les envois regroupés par carte (une carte reçue
+     quinze fois n'apparaît qu'une fois) et choisit d'un geste.
+   · Votes : changer la rareté d'une carte, ou remplacer l'emblème d'un
+     univers (sa carte spéciale) par une autre carte. Une seule consultation
+     ouverte par sujet : les joueurs votent oui ou non, puis le développeur
+     tranche. Le serveur interdit les doublons et les votes multiples.
+   Seul le compte du développeur, vérifié par le serveur, valide et exporte.
+   Ce qui est déjà intégré au jeu (CORRECTIONS, ICONIC) disparaît tout seul
+   de l'export.
    ====================================================================== */
-const COMMU_SQL = `-- FandoMasters · propositions de la communauté (à lancer une fois)
+const COMMU_SQL = `-- FandoMasters · communauté (relançable sans risque)
 create or replace function est_admin() returns boolean
 language sql stable as $$
   select auth.uid() = '81eb751c-1f87-411e-928b-02145f4c70f5'::uuid
@@ -6958,13 +6986,94 @@ create policy "proposer" on propositions for insert to authenticated
   with check (joueur = auth.uid() and statut = 'attente' and not exporte);
 drop policy if exists "decider" on propositions;
 create policy "decider" on propositions for update to authenticated
-  using (est_admin()) with check (est_admin());`;
+  using (est_admin()) with check (est_admin());
+drop policy if exists "nettoyer" on propositions;
+create policy "nettoyer" on propositions for delete to authenticated using (est_admin());
 
-/* Corrections intégrées au jeu : id de carte → {rarete, cadrage:{x,y,z}}. */
-const CORRECTIONS = {};
+create table if not exists votes_cartes (
+  id bigint generated always as identity primary key,
+  type text not null check (type in ('rarete','embleme')),
+  sujet text not null,
+  carte jsonb not null,
+  proposition jsonb not null,
+  auteur uuid not null references auth.users on delete cascade,
+  oui int not null default 0,
+  non int not null default 0,
+  statut text not null default 'ouvert' check (statut in ('ouvert','acceptee','refusee')),
+  exporte boolean not null default false,
+  cree timestamptz not null default now()
+);
+create unique index if not exists un_vote_par_sujet on votes_cartes (type, sujet) where statut = 'ouvert';
+alter table votes_cartes enable row level security;
+drop policy if exists "votes visibles" on votes_cartes;
+create policy "votes visibles" on votes_cartes for select to authenticated using (true);
+drop policy if exists "lancer un vote" on votes_cartes;
+create policy "lancer un vote" on votes_cartes for insert to authenticated
+  with check (auteur = auth.uid() and statut = 'ouvert' and oui = 0 and non = 0 and not exporte);
+drop policy if exists "trancher" on votes_cartes;
+create policy "trancher" on votes_cartes for update to authenticated using (est_admin()) with check (est_admin());
+drop policy if exists "nettoyer votes" on votes_cartes;
+create policy "nettoyer votes" on votes_cartes for delete to authenticated using (est_admin());
 
+create table if not exists bulletins (
+  vote bigint not null references votes_cartes on delete cascade,
+  joueur uuid not null references auth.users on delete cascade,
+  oui boolean not null,
+  primary key (vote, joueur)
+);
+alter table bulletins enable row level security;
+drop policy if exists "mes bulletins" on bulletins;
+create policy "mes bulletins" on bulletins for select to authenticated using (joueur = auth.uid());
+drop policy if exists "voter" on bulletins;
+create policy "voter" on bulletins for insert to authenticated
+  with check (joueur = auth.uid() and exists (select 1 from votes_cartes v where v.id = vote and v.statut = 'ouvert'));
+
+create or replace function compter_bulletin() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update votes_cartes set oui = oui + (case when new.oui then 1 else 0 end),
+                          non = non + (case when new.oui then 0 else 1 end)
+   where id = new.vote;
+  return new;
+end $$;
+drop trigger if exists compter_bulletin on bulletins;
+create trigger compter_bulletin after insert on bulletins for each row execute function compter_bulletin();`;
+
+/* Corrections intégrées au jeu : id de carte → {rarete, cadrage:{x,y,z}}.
+   Une carte spéciale sans recadrage propre reprend celui de sa version
+   Standard, puis celui de la carte d'origine : c'est la même illustration. */
+const CORRECTIONS = {
+  "hunterxhunter.fandom.com:2039":        {cadrage:{x:55, y:2,  z:1}},      // Kanzai
+  "wowwiki.fandom.com:48473":             {rarete:"Légendaire", cadrage:{x:53, y:8, z:1}},     // Tauren
+  "wowwiki.fandom.com:941":               {rarete:"Légendaire", cadrage:{x:57, y:6, z:1.35}},  // Troll
+  "dragonball.fandom.com:1255":           {cadrage:{x:51, y:8,  z:1}},      // Raditz
+  "kingdomhearts.fandom.com:8124":        {rarete:"Super rare", cadrage:{x:77, y:2, z:1}},     // Digital-Sora
+  "kingdomhearts.fandom.com:8656":        {cadrage:{x:37, y:7,  z:1}},      // Claude Frollo
+  "aplaguetale.fandom.com:114":           {cadrage:{x:36, y:6,  z:1}},      // Lucas
+  "silenthill.fandom.com:1646":           {cadrage:{x:41, y:5,  z:1}},      // Alessa Gillespie
+  "mortalkombat.fandom.com:1693":         {cadrage:{x:52, y:4,  z:1}},      // Liu Kang
+  "spec:deathnote.fandom.com:431:std":    {cadrage:{x:79, y:14, z:1}},      // Light Yagami — Standard
+  "spec:supernatural.fandom.com:238:std": {cadrage:{x:72, y:4,  z:1}},      // Dean Winchester — Standard
+  "spec:supernatural.fandom.com:238:holo":{cadrage:{x:100, y:1, z:1}}       // Dean Winchester — Holographique
+};
+
+function specParts(id){
+  const m = /^spec:(.+):([a-z]+)$/.exec(String(id || ""));
+  return m ? {base:m[1], variant:m[2]} : null;
+}
 function cadrageDe(c){
-  return (c && c.cadrage) || (CORRECTIONS[c && c.id] || {}).cadrage || null;
+  if(!c) return null;
+  if(c.cadrage) return c.cadrage;
+  const k = CORRECTIONS[c.id];
+  if(k && k.cadrage) return k.cadrage;
+  const sp = specParts(c.id);
+  if(sp){
+    const std = CORRECTIONS["spec:" + sp.base + ":std"];
+    if(std && std.cadrage) return std.cadrage;
+    const b = CORRECTIONS[sp.base];
+    if(b && b.cadrage) return b.cadrage;
+  }
+  return null;
 }
 function styleCadrage(cd){
   if(!cd) return "";
@@ -6980,155 +7089,313 @@ function appliquerCorrections(col){
   }
   return n;
 }
+/* une carte spéciale ne se recadre qu'en Standard ou Holographique */
+function recadrable(c){
+  if(!c || !c.img) return false;
+  const sp = specParts(c.id);
+  return !sp || sp.variant === "std" || sp.variant === "holo";
+}
 
-const commu = {onglet:"proposer", carte:null, cadrage:{x:50, y:50, z:1}, rarete:"", note:"",
-               miennes:[], toutes:[], charge:false, erreur:""};
+const commu = {onglet:"votes", carte:null, cadrage:{x:50, y:50, z:1}, note:"",
+               miennes:[], toutes:[], votes:[], mesVoix:{}, charge:false, erreur:""};
+
+/* fiche minimale envoyée au serveur : de quoi afficher la carte, rien de plus */
+function ficheCarte(c){
+  return {id:c.id, title:c.title, univ:c.univ, rarity:c.rarity, img:c.img || null, variant:c.variant || null,
+          atk:c.atk || 0, def:c.def || 0, role:c.role || null};
+}
 
 async function commuCharger(){
   const moi = moiId(); if(!moi) return;
   try{
-    commu.miennes = (await nuageRest("propositions?select=*&joueur=eq." + moi + "&order=cree.desc&limit=50")) || [];
+    const [miennes, votes, voix] = await Promise.all([
+      nuageRest("propositions?select=id,carte_id,carte,cadrage,statut,cree&joueur=eq." + moi + "&order=cree.desc&limit=20"),
+      nuageRest("votes_cartes?select=*&order=cree.desc&limit=80"),
+      nuageRest("bulletins?select=vote,oui&joueur=eq." + moi)
+    ]);
+    commu.miennes = miennes || [];
+    commu.votes = votes || [];
+    commu.mesVoix = {};
+    for(const b of (voix || [])) commu.mesVoix[b.vote] = b.oui;
     if(estAdmin()){
-      commu.toutes = (await nuageRest("propositions?select=*&order=cree.desc&limit=300")) || [];
-      const ids = [...new Set(commu.toutes.map(p => p.joueur))].filter(id => !amis.profils.has(id));
-      if(ids.length){
-        const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + ids.join(",") + ")").catch(()=>[]);
-        for(const x of (pr || [])) amis.profils.set(x.joueur, x);
-      }
+      commu.toutes = (await nuageRest("propositions?select=*&order=cree.desc&limit=400")) || [];
+      await marquerDejaIntegres();
+    }
+    const ids = [...new Set([...commu.toutes.map(p => p.joueur), ...commu.votes.map(v => v.auteur)])].filter(id => id && !amis.profils.has(id));
+    if(ids.length){
+      const pr = await nuageRest("profils?select=joueur,pseudo,vitrine&joueur=in.(" + ids.join(",") + ")").catch(()=>[]);
+      for(const x of (pr || [])) amis.profils.set(x.joueur, x);
     }
     commu.erreur = ""; commu.charge = true;
   }catch(e){ commu.erreur = String(e.message || e); commu.charge = true; }
 }
 
-function exportCorrections(liste){
+/* ce qui est déjà dans le jeu, ou devenu sans objet, sort de l'export */
+function dejaIntegre(p){
+  const k = CORRECTIONS[p.carte_id] || {};
+  const sp = specParts(p.carte_id);
+  if(sp && sp.variant !== "std" && sp.variant !== "holo") return true;   // hérite du Standard
+  return !!p.cadrage && egalJ(k.cadrage, p.cadrage);
+}
+function voteIntegre(v){
+  if(v.type === "rarete") return (CORRECTIONS[v.sujet] || {}).rarete === (v.proposition || {}).rarete;
+  if(v.type === "embleme") return ICONIC[(v.carte || {}).univ] === ((v.proposition || {}).remplacant || {}).title;
+  return false;
+}
+async function marquerDejaIntegres(){
+  const p = commu.toutes.filter(x => x.statut === "acceptee" && !x.exporte && dejaIntegre(x)).map(x => x.id);
+  const v = commu.votes.filter(x => x.statut === "acceptee" && !x.exporte && voteIntegre(x)).map(x => x.id);
+  try{
+    if(p.length){ await nuageRest("propositions?id=in.(" + p.join(",") + ")", {method:"PATCH", body:JSON.stringify({exporte:true})}); commu.toutes.forEach(x => { if(p.includes(x.id)) x.exporte = true; }); }
+    if(v.length){ await nuageRest("votes_cartes?id=in.(" + v.join(",") + ")", {method:"PATCH", body:JSON.stringify({exporte:true})}); commu.votes.forEach(x => { if(v.includes(x.id)) x.exporte = true; }); }
+  }catch(e){}
+}
+
+function exportCorrections(props, votes){
   const o = {};
-  for(const p of liste){
-    o[p.carte_id] = Object.assign(o[p.carte_id] || {}, {
-      titre:(p.carte || {}).title, univers:(p.carte || {}).univ,
-      ...(p.rarete ? {rarete:p.rarete} : {}),
-      ...(p.cadrage ? {cadrage:p.cadrage} : {})
-    });
+  // pour chaque carte, le recadrage accepté le plus récent
+  const tri = props.slice().sort((a, b) => Date.parse(a.cree) - Date.parse(b.cree));
+  for(const p of tri){
+    if(!p.cadrage) continue;
+    o[p.carte_id] = Object.assign(o[p.carte_id] || {}, {titre:(p.carte || {}).title, univers:(p.carte || {}).univ, cadrage:p.cadrage});
+  }
+  for(const v of votes){
+    if(v.type === "rarete"){
+      o[v.sujet] = Object.assign(o[v.sujet] || {}, {titre:(v.carte || {}).title, univers:(v.carte || {}).univ, rarete:v.proposition.rarete,
+        votes:v.oui + " oui / " + v.non + " non"});
+    }else if(v.type === "embleme"){
+      o["emblème:" + (v.carte || {}).univ] = {univers:(v.carte || {}).univ, ancien:(v.carte || {}).title,
+        nouveau:((v.proposition || {}).remplacant || {}).title, votes:v.oui + " oui / " + v.non + " non"};
+    }
   }
   return "FandoMasters — corrections acceptées (" + Object.keys(o).length + ")\n" + JSON.stringify(o, null, 1);
 }
 
-function blocProposition(p, admin){
-  const c = Object.assign({}, p.carte || {}, {cadrage:p.cadrage || null});
-  const avant = p.carte || {};
-  const etat = {attente:"en attente", acceptee:"acceptée", refusee:"refusée"}[p.statut];
+function mini(c, extra){
+  return `<div class="mcarte">${cardHTML(Object.assign({atk:0, def:0, rarity:"Commun", title:""}, c || {}, extra || {}), {compact:true})}</div>`;
+}
+function blocVote(v){
+  const moi = moiId();
+  const admin = estAdmin();
+  const total = v.oui + v.non, pc = total ? Math.round(v.oui / total * 100) : 0;
+  const voix = commu.mesVoix[v.id];
+  const sujet = v.type === "rarete"
+    ? `Rareté : ${esc((v.carte || {}).rarity || "?")} → <b style="color:var(--p5)">${esc(v.proposition.rarete)}</b>`
+    : `Emblème de ${esc((v.carte || {}).univ || "")} : <b style="color:var(--p5)">${esc(((v.proposition || {}).remplacant || {}).title || "?")}</b> à la place de ${esc(((v.carte || {}).title || "").replace(/ — .*$/, ""))}`;
+  const etat = {ouvert:"vote en cours", acceptee:"acceptée", refusee:"refusée"}[v.statut];
   return `<div class="mvente prop" style="cursor:default">
-    <div class="mcarte">${cardHTML(c, {compact:true})}</div>
+    ${mini(v.carte)}
+    ${v.type === "embleme" ? mini((v.proposition || {}).remplacant) : ""}
     <div class="minfo">
-      <b>${esc(avant.title || p.carte_id)}</b>
-      <span class="sub">${esc(avant.univ || "")}</span>
-      ${p.rarete && p.rarete !== avant.rarity ? `<span class="sub">Rareté : ${esc(avant.rarity || "?")} → <b style="color:var(--p5)">${esc(p.rarete)}</b></span>` : ""}
-      ${p.cadrage ? `<span class="sub">Image recadrée</span>` : ""}
-      ${p.note ? `<span class="sub">« ${esc(p.note)} »</span>` : ""}
-      ${admin ? `<span class="sub">par ${esc(nomJoueur(p.joueur))} · ${ago(Date.parse(p.cree))}</span>` : ""}
+      <b>${esc(((v.carte || {}).title || ""))}</b>
+      <span class="sub">${sujet}</span>
+      <div class="vbarre" title="${v.oui} oui, ${v.non} non"><i style="width:${pc}%"></i></div>
+      <span class="sub">${v.oui} oui · ${v.non} non · lancé par ${esc(v.auteur === moi ? "vous" : nomJoueur(v.auteur))}</span>
       <div class="row" style="gap:.4rem;margin-top:.35rem;align-items:center">
-        <span class="mtag ${p.statut === "acceptee" ? "ok" : p.statut === "refusee" ? "ko" : ""}">${etat}${p.exporte ? " · exportée" : ""}</span>
-        ${admin && p.statut === "attente" ? `<button class="btn small" data-pok="${p.id}">Accepter</button>
-          <button class="btn small ghost" data-pno="${p.id}">Refuser</button>` : ""}
-        ${admin && p.statut !== "attente" && !p.exporte ? `<button class="btn small ghost" data-prevoir="${p.id}">Remettre en attente</button>` : ""}
+        <span class="mtag ${v.statut === "acceptee" ? "ok" : v.statut === "refusee" ? "ko" : ""}">${etat}</span>
+        ${v.statut === "ouvert" && voix === undefined ? `<button class="btn small" data-voui="${v.id}">Oui</button>
+          <button class="btn small ghost" data-vnon="${v.id}">Non</button>` : ""}
+        ${voix !== undefined ? `<span class="sub">vous avez voté ${voix ? "oui" : "non"}</span>` : ""}
+        ${admin && v.statut === "ouvert" ? `<button class="btn small" data-vok="${v.id}">Accepter</button>
+          <button class="btn small ghost" data-vno="${v.id}">Refuser</button>` : ""}
       </div>
     </div>
   </div>`;
 }
 
+/* les recadrages en attente, regroupés par carte pour le développeur */
+function groupesRecadrage(){
+  const g = new Map();
+  for(const p of commu.toutes.filter(p => p.statut === "attente")){
+    if(!g.has(p.carte_id)) g.set(p.carte_id, []);
+    g.get(p.carte_id).push(p);
+  }
+  return [...g.values()];
+}
+function blocGroupe(liste){
+  const c = liste[0].carte || {};
+  return `<div class="panel pgroupe">
+    <div class="row" style="justify-content:space-between;align-items:baseline">
+      <b>${esc(c.title || liste[0].carte_id)}</b>
+      <span class="mtag ${liste.length > 1 ? "ok" : ""}">${liste.length} envoi${liste.length > 1 ? "s" : ""}</span>
+    </div>
+    <span class="sub">${esc(c.univ || "")}</span>
+    <div class="pvariantes">${liste.slice(0, 6).map(p => `
+      <div class="pvar">
+        ${mini(p.carte, {cadrage:p.cadrage})}
+        <span class="sub" style="font-size:.72rem">${esc(nomJoueur(p.joueur))}${p.note ? " · « " + esc(p.note) + " »" : ""}</span>
+        <button class="btn small" data-gok="${p.id}" data-gcarte="${esc(p.carte_id)}">Choisir</button>
+      </div>`).join("")}
+    </div>
+    <button class="btn small ghost" data-gno="${esc(liste[0].carte_id)}" style="margin-top:.5rem">Tout refuser</button>
+  </div>`;
+}
+
 function viewCommu(){
   const admin = estAdmin();
+  const moi = moiId();
   const ong = commu.onglet;
   const tab = (id, nom, n) => `<button class="chip" data-cong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
-  const attente = commu.toutes.filter(p => p.statut === "attente");
-  const aExporter = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte);
+  const ouverts = commu.votes.filter(v => v.statut === "ouvert");
+  const aVoter = ouverts.filter(v => commu.mesVoix[v.id] === undefined).length;
+  const groupes = admin ? groupesRecadrage() : [];
+  const exportP = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte && !dejaIntegre(p));
+  const exportV = commu.votes.filter(v => v.statut === "acceptee" && !v.exporte && !voteIntegre(v));
   let corps = "";
+
   if(!commu.charge){
     corps = `<div class="panel"><span class="spinner"></span></div>`;
   }else if(commu.erreur){
     const manque = /404|PGRST|relation|does not exist|schema cache/i.test(commu.erreur);
     corps = `<div class="panel"><p class="sub" style="margin:0 0 .6rem">${manque
-        ? "La table des propositions n'existe pas encore. Copiez ce script dans Supabase → SQL Editor → Run."
+        ? "Il manque des tables sur le serveur. Copiez ce script dans Supabase → SQL Editor → Run."
         : "Le serveur n'a pas répondu : " + esc(commu.erreur)}</p>
       ${manque ? `<pre class="sql">${esc(COMMU_SQL)}</pre><button class="btn small ghost" id="ccopie">Copier le script</button>` : ""}
       <button class="btn small ghost" id="creessai" style="margin-left:.4rem">Réessayer</button></div>`;
-  }else if(ong === "proposer"){
+  }else if(ong === "votes"){
+    corps = `<div class="row" style="gap:.4rem;margin-bottom:.8rem">
+        <button class="btn small" id="vrarete">Proposer une rareté</button>
+        <button class="btn small ghost" id="vembleme">Changer un emblème</button>
+      </div>
+      ${ouverts.length ? `<div class="mliste">${ouverts.map(blocVote).join("")}</div>`
+        : `<div class="panel"><p class="sub" style="margin:0">Aucun vote en cours.</p></div>`}
+      ${commu.votes.filter(v => v.statut !== "ouvert").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
+        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+  }else if(ong === "recadrer"){
     const c = commu.carte ? state.collection.find(x => x.id === commu.carte) : null;
-    const apercu = c ? Object.assign({}, c, {cadrage:commu.cadrage, rarity:commu.rarete || c.rarity}) : null;
+    const apercu = c ? Object.assign({}, c, {cadrage:commu.cadrage}) : null;
     corps = `<div class="panel">
       <div class="propgrille">
         <div class="propcarte">${apercu ? cardHTML(apercu) : `<div class="slot" id="pchoix" style="cursor:pointer;height:100%;display:grid;place-items:center;font-size:2rem">+</div>`}</div>
         <div class="minfo">
           <button class="btn small ghost" id="pchoisir">${c ? "Changer de carte" : "Choisir une carte"}</button>
           ${c ? `
-          <span class="sub" style="margin-top:.6rem">Recadrer : faites glisser l'image sur la carte</span>
+          <span class="sub" style="margin-top:.6rem">Faites glisser l'image sur la carte</span>
           <label class="echmontant"><span>Zoom</span>
             <input type="range" id="pzoom" min="1" max="3" step="0.05" value="${commu.cadrage.z}"></label>
           <button class="btn small ghost" id="preset" style="margin-top:.3rem">Recentrer</button>
-          <label class="sub" for="prar" style="margin-top:.7rem">Rareté proposée</label>
-          <select id="prar" style="margin:0">
-            <option value="">Inchangée (${esc(c.rarity)})</option>
-            ${RARITIES.filter(r => r !== "Relique").map(r => `<option ${commu.rarete === r ? "selected" : ""}>${esc(r)}</option>`).join("")}
-          </select>
-          <label class="sub" for="pnote" style="margin-top:.7rem">Pourquoi ? (facultatif)</label>
-          <input id="pnote" maxlength="200" value="${esc(commu.note)}" placeholder="ex. personnage principal, devrait être Légendaire" style="margin:0">
-          <button class="btn" id="penvoyer" style="margin-top:.9rem">Envoyer la proposition</button>` : ""}
+          <label class="sub" for="pnote" style="margin-top:.7rem">Remarque (facultatif)</label>
+          <input id="pnote" maxlength="120" value="${esc(commu.note)}" style="margin:0">
+          <button class="btn" id="penvoyer" style="margin-top:.9rem">Envoyer le recadrage</button>` : `
+          <span class="sub" style="margin-top:.5rem">Cartes spéciales : seulement les versions Standard et Holographique.</span>`}
         </div>
-      </div></div>`;
-  }else if(ong === "miennes"){
-    corps = commu.miennes.length ? `<div class="mliste">${commu.miennes.map(p => blocProposition(p, false)).join("")}</div>`
-      : `<div class="panel"><p class="sub" style="margin:0">Aucune proposition envoyée.</p></div>`;
+      </div></div>
+      ${commu.miennes.length ? `<h3 class="amih" style="margin-top:1rem">Mes envois</h3>
+        <div class="mesenvois">${commu.miennes.map(p => `<div class="menvoi">${mini(p.carte, {cadrage:p.cadrage})}
+          <span class="mtag ${p.statut === "acceptee" ? "ok" : p.statut === "refusee" ? "ko" : ""}">${{attente:"en attente", acceptee:"acceptée", refusee:"refusée"}[p.statut]}</span></div>`).join("")}</div>` : ""}`;
   }else if(ong === "valider" && admin){
-    corps = attente.length ? `<div class="mliste">${attente.map(p => blocProposition(p, true)).join("")}</div>`
-      : `<div class="panel"><p class="sub" style="margin:0">Rien à valider.</p></div>`;
+    corps = `${groupes.length ? groupes.map(blocGroupe).join("") : `<div class="panel"><p class="sub" style="margin:0">Aucun recadrage en attente.</p></div>`}`;
   }else if(ong === "export" && admin){
+    const n = exportP.length + exportV.length;
     corps = `<div class="panel">
-      <p class="sub" style="margin:0 0 .6rem">${aExporter.length} correction${aExporter.length > 1 ? "s" : ""} acceptée${aExporter.length > 1 ? "s" : ""} à intégrer.</p>
-      ${aExporter.length ? `<pre class="sql" id="pexport" style="white-space:pre-wrap;max-height:40vh;overflow:auto">${esc(exportCorrections(aExporter))}</pre>
-      <div class="row" style="gap:.4rem;margin-top:.6rem">
-        <button class="btn small" id="pcopier">Copier</button>
-        <button class="btn small ghost" id="pmarquer">Marquer comme envoyées</button>
-      </div>` : ""}
-    </div>
-    ${commu.toutes.filter(p => p.statut !== "attente").length ? `<h3 class="amih" style="margin-top:1rem">Historique</h3>
-      <div class="mliste">${commu.toutes.filter(p => p.statut !== "attente").slice(0, 40).map(p => blocProposition(p, true)).join("")}</div>` : ""}`;
+      ${n ? `<pre class="sql" id="pexport" style="white-space:pre-wrap;max-height:45vh;overflow:auto">${esc(exportCorrections(exportP, exportV))}</pre>
+        <div class="row" style="gap:.4rem;margin-top:.6rem">
+          <button class="btn small" id="pcopier">Copier</button>
+        </div>
+        <p class="sub" style="margin:.6rem 0 0;font-size:.8rem">Une fois intégrées au jeu, ces corrections disparaissent d'ici d'elles-mêmes.</p>`
+        : `<p class="sub" style="margin:0">Rien de nouveau à intégrer.</p>`}
+      <button class="btn small ghost" id="pnettoyer" style="margin-top:.8rem">Nettoyer l'historique (refusés et intégrés de plus de 7 jours)</button>
+    </div>`;
   }
 
   view.innerHTML = `
     <h2 class="vuetitre">Communauté</h2>
     <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
-      ${tab("proposer", "Proposer", 0)}
-      ${tab("miennes", "Mes propositions", commu.miennes.filter(p => p.statut === "attente").length)}
-      ${admin ? tab("valider", "À valider", attente.length) + tab("export", "Export", aExporter.length) : ""}
+      ${tab("votes", "Votes", aVoter)}
+      ${tab("recadrer", "Recadrer", 0)}
+      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Export", exportP.length + exportV.length) : ""}
     </div>
     ${corps}`;
 
   view.querySelectorAll("[data-cong]").forEach(b => b.onclick = ()=>{ commu.onglet = b.dataset.cong; viewCommu(); });
+  const recharger = async ()=>{ await commuCharger(); if(state.view === "communaute") viewCommu(); };
   const cr = view.querySelector("#creessai");
-  if(cr) cr.onclick = async ()=>{ commu.charge = false; viewCommu(); await commuCharger(); viewCommu(); };
+  if(cr) cr.onclick = async ()=>{ commu.charge = false; viewCommu(); await recharger(); };
   const cc = view.querySelector("#ccopie");
   if(cc) cc.onclick = ()=>{ try{ navigator.clipboard.writeText(COMMU_SQL); toast("Script copié", "", "info"); }catch(e){} };
 
+  // ---- votes
+  view.querySelectorAll("[data-voui],[data-vnon]").forEach(b => b.onclick = async ()=>{
+    const id = +(b.dataset.voui || b.dataset.vnon), oui = !!b.dataset.voui;
+    b.disabled = true;
+    try{
+      await nuageRest("bulletins", {method:"POST", body:JSON.stringify([{vote:id, joueur:moi, oui}])});
+      commu.mesVoix[id] = oui;
+    }catch(e){ toast("Vote impossible", /duplicate|409|23505/i.test(e.message) ? "vous avez déjà voté" : String(e.message || e), "lose"); }
+    await recharger();
+  });
+  const trancher = async (id, statut)=>{
+    try{ await nuageRest("votes_cartes?id=eq." + id, {method:"PATCH", body:JSON.stringify({statut})}); }
+    catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
+    await recharger();
+  };
+  view.querySelectorAll("[data-vok]").forEach(b => b.onclick = ()=>{ b.disabled = true; trancher(+b.dataset.vok, "acceptee"); });
+  view.querySelectorAll("[data-vno]").forEach(b => b.onclick = ()=>{ b.disabled = true; trancher(+b.dataset.vno, "refusee"); });
+
+  const lancerVote = async (type, sujet, carte, proposition)=>{
+    const deja = commu.votes.find(v => v.statut === "ouvert" && v.type === type && v.sujet === sujet);
+    if(deja){ toast("Déjà soumise à un vote", "votez dans la liste ci-dessous", "info"); return; }
+    try{
+      await nuageRest("votes_cartes", {method:"POST", body:JSON.stringify([{type, sujet, carte, proposition, auteur:moi}])});
+      const r = await nuageRest("votes_cartes?select=id&type=eq." + type + "&sujet=eq." + encodeURIComponent(sujet) + "&statut=eq.ouvert");
+      if(r && r[0]) await nuageRest("bulletins", {method:"POST", body:JSON.stringify([{vote:r[0].id, joueur:moi, oui:true}])}).catch(()=>{});
+      toast("Vote lancé", "les autres joueurs peuvent voter", "info");
+    }catch(e){
+      toast(/duplicate|409|23505/i.test(e.message) ? "Déjà soumise à un vote" : "Vote impossible",
+            /duplicate|409|23505/i.test(e.message) ? "votez dans la liste" : String(e.message || e), "lose");
+    }
+    await recharger();
+  };
+  const vr = view.querySelector("#vrarete");
+  if(vr) vr.onclick = async ()=>{
+    const r = await choisirCartes({titre:"Carte dont la rareté est discutable", liste:state.collection.filter(c => !specParts(c.id) && c.rarity !== "Relique"), max:1, deja:[]});
+    if(!r || !r[0]) return;
+    const c = state.collection.find(x => x.id === r[0]);
+    const deja = commu.votes.find(v => v.statut === "ouvert" && v.type === "rarete" && v.sujet === c.id);
+    if(deja){ toast("Déjà soumise à un vote", c.title + " : votez dans la liste", "info"); return; }
+    const choix = await choisirRarete(c);
+    if(choix) lancerVote("rarete", c.id, ficheCarte(c), {rarete:choix});
+  };
+  const ve = view.querySelector("#vembleme");
+  if(ve) ve.onclick = async ()=>{
+    const sp = state.collection.filter(c => specParts(c.id));
+    if(!sp.length){ toast("Aucune carte spéciale", "il faut posséder l'emblème d'un univers", "lose"); return; }
+    const r = await choisirCartes({titre:"Emblème à remplacer", liste:sp, max:1, deja:[]});
+    if(!r || !r[0]) return;
+    const e = state.collection.find(x => x.id === r[0]);
+    const sujet = "embleme:" + e.univ;
+    if(commu.votes.find(v => v.statut === "ouvert" && v.type === "embleme" && v.sujet === sujet)){ toast("Déjà soumise à un vote", "un vote sur l'emblème de " + e.univ + " est en cours", "info"); return; }
+    const autres = state.collection.filter(c => c.univ === e.univ && !specParts(c.id) && c.title !== String(e.title).replace(/ — .*$/, ""));
+    if(!autres.length){ toast("Aucune autre carte de cet univers", "il faut posséder la carte proposée", "lose"); return; }
+    const r2 = await choisirCartes({titre:"Nouvel emblème pour " + e.univ, liste:autres, max:1, deja:[]});
+    if(!r2 || !r2[0]) return;
+    const n = state.collection.find(x => x.id === r2[0]);
+    lancerVote("embleme", sujet, ficheCarte(e), {remplacant:ficheCarte(n)});
+  };
+
+  // ---- recadrage
   const choisir = async ()=>{
-    const r = await choisirCartes({titre:"Carte à corriger", liste:state.collection.filter(c => c.img), max:1, deja:commu.carte ? [commu.carte] : []});
+    const r = await choisirCartes({titre:"Carte à recadrer", liste:state.collection.filter(recadrable), max:1, deja:commu.carte ? [commu.carte] : []});
     if(r && r[0]){
       commu.carte = r[0];
       const c = state.collection.find(x => x.id === r[0]);
       commu.cadrage = Object.assign({x:50, y:50, z:1}, cadrageDe(c) || {});
-      commu.rarete = ""; commu.note = "";
+      commu.note = "";
     }
     viewCommu();
   };
   const pc = view.querySelector("#pchoisir"); if(pc) pc.onclick = choisir;
   const pc2 = view.querySelector("#pchoix"); if(pc2) pc2.onclick = choisir;
-
-  /* recadrage au doigt : on fait glisser l'image dans la carte */
   const zone = view.querySelector(".propcarte .art");
   const appliquer = ()=>{ const im = view.querySelector(".propcarte .art img"); if(im) im.setAttribute("style", styleCadrage(commu.cadrage)); };
   if(zone){
+    const carteEl = view.querySelector(".propcarte .card");
     zone.style.touchAction = "none"; zone.style.cursor = "grab";
     let depart = null;
-    zone.addEventListener("pointerdown", ev => { depart = {x:ev.clientX, y:ev.clientY, cx:commu.cadrage.x, cy:commu.cadrage.y}; zone.setPointerCapture(ev.pointerId); });
+    const stop = ev => { ev.stopPropagation(); };
+    zone.addEventListener("pointerdown", ev => { stop(ev); ev.preventDefault(); depart = {x:ev.clientX, y:ev.clientY, cx:commu.cadrage.x, cy:commu.cadrage.y}; zone.setPointerCapture(ev.pointerId); });
     zone.addEventListener("pointermove", ev => {
+      stop(ev);
       if(!depart) return;
       const r = zone.getBoundingClientRect();
       const k = 100 / Math.max(1, commu.cadrage.z);
@@ -7136,61 +7403,82 @@ function viewCommu(){
       commu.cadrage.y = Math.max(0, Math.min(100, depart.cy - (ev.clientY - depart.y) / r.height * k * 1.6));
       appliquer();
     });
-    const fin = ()=>{ depart = null; };
+    const fin = ev => { stop(ev); depart = null; };
     zone.addEventListener("pointerup", fin); zone.addEventListener("pointercancel", fin);
+    if(carteEl) ["pointermove","pointerdown","mousemove","touchmove"].forEach(t => carteEl.addEventListener(t, ev => ev.stopPropagation(), true));
   }
   const pz = view.querySelector("#pzoom"); if(pz) pz.oninput = ()=>{ commu.cadrage.z = +pz.value; appliquer(); };
   const pr = view.querySelector("#preset"); if(pr) pr.onclick = ()=>{ commu.cadrage = {x:50, y:50, z:1}; viewCommu(); };
-  const ps = view.querySelector("#prar"); if(ps) ps.onchange = ()=>{ commu.rarete = ps.value; viewCommu(); };
   const pn = view.querySelector("#pnote"); if(pn) pn.oninput = ()=>{ commu.note = pn.value; };
   const pe = view.querySelector("#penvoyer");
   if(pe) pe.onclick = async ()=>{
     const c = state.collection.find(x => x.id === commu.carte);
     if(!c) return;
     const cd = commu.cadrage;
-    const recadre = Math.abs(cd.x - 50) > 0.5 || Math.abs(cd.y - 50) > 0.5 || cd.z > 1.01;
-    if(!recadre && !commu.rarete){ toast("Rien à proposer", "recadrez l'image ou choisissez une rareté", "lose"); return; }
+    if(!(Math.abs(cd.x - 50) > 0.5 || Math.abs(cd.y - 50) > 0.5 || cd.z > 1.01)){ toast("Image non déplacée", "faites glisser l'image ou zoomez", "lose"); return; }
     pe.disabled = true;
-    const carte = {id:c.id, title:c.title, univ:c.univ, rarity:c.rarity, img:c.img, atk:c.atk, def:c.def, role:c.role, variant:c.variant || null};
     try{
       await nuageRest("propositions", {method:"POST", body:JSON.stringify([{
-        joueur:moiId(), carte_id:c.id, carte,
-        rarete:commu.rarete || null,
-        cadrage:recadre ? {x:Math.round(cd.x), y:Math.round(cd.y), z:Math.round(cd.z * 100) / 100} : null,
-        note:(commu.note || "").trim().slice(0, 200) || null
+        joueur:moi, carte_id:c.id, carte:ficheCarte(c),
+        cadrage:{x:Math.round(cd.x), y:Math.round(cd.y), z:Math.round(cd.z * 100) / 100},
+        note:(commu.note || "").trim().slice(0, 120) || null
       }])});
-      toast("Proposition envoyée", "merci ! elle sera examinée", "info");
-      commu.carte = null; commu.onglet = "miennes";
-      await commuCharger();
+      toast("Recadrage envoyé", "merci !", "info");
+      commu.carte = null;
     }catch(e){ toast("Envoi impossible", String(e.message || e), "lose"); pe.disabled = false; }
-    viewCommu();
+    await recharger();
   };
 
-  // développeur
-  const decider = async (id, statut)=>{
+  // ---- développeur : recadrages groupés
+  view.querySelectorAll("[data-gok]").forEach(b => b.onclick = async ()=>{
+    b.disabled = true;
+    const id = +b.dataset.gok, carte = b.dataset.gcarte;
     try{
-      await nuageRest("propositions?id=eq." + id, {method:"PATCH", body:JSON.stringify({statut, traite:new Date().toISOString()})});
-      await commuCharger();
+      const autres = commu.toutes.filter(p => p.carte_id === carte && p.statut === "attente" && p.id !== id).map(p => p.id);
+      await nuageRest("propositions?id=eq." + id, {method:"PATCH", body:JSON.stringify({statut:"acceptee", traite:new Date().toISOString()})});
+      if(autres.length) await nuageRest("propositions?id=in.(" + autres.join(",") + ")", {method:"PATCH", body:JSON.stringify({statut:"refusee", traite:new Date().toISOString()})});
     }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
-    viewCommu();
-  };
-  view.querySelectorAll("[data-pok]").forEach(b => b.onclick = ()=>{ b.disabled = true; decider(+b.dataset.pok, "acceptee"); });
-  view.querySelectorAll("[data-pno]").forEach(b => b.onclick = ()=>{ b.disabled = true; decider(+b.dataset.pno, "refusee"); });
-  view.querySelectorAll("[data-prevoir]").forEach(b => b.onclick = ()=>{ b.disabled = true; decider(+b.dataset.prevoir, "attente"); });
+    await recharger();
+  });
+  view.querySelectorAll("[data-gno]").forEach(b => b.onclick = async ()=>{
+    b.disabled = true;
+    try{ await nuageRest("propositions?carte_id=eq." + encodeURIComponent(b.dataset.gno) + "&statut=eq.attente", {method:"PATCH", body:JSON.stringify({statut:"refusee", traite:new Date().toISOString()})}); }
+    catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
+    await recharger();
+  });
   const pcop = view.querySelector("#pcopier");
   if(pcop) pcop.onclick = ()=>{ try{ navigator.clipboard.writeText(view.querySelector("#pexport").textContent); toast("Corrections copiées", "collez-les dans la conversation", "info"); }catch(e){} };
-  const pm = view.querySelector("#pmarquer");
-  if(pm) pm.onclick = async ()=>{
-    pm.disabled = true;
+  const pnet = view.querySelector("#pnettoyer");
+  if(pnet) pnet.onclick = async ()=>{
+    pnet.disabled = true;
+    const avant = encodeURIComponent(new Date(Date.now() - 7 * 864e5).toISOString());
     try{
-      const ids = aExporter.map(p => p.id);
-      await nuageRest("propositions?id=in.(" + ids.join(",") + ")", {method:"PATCH", body:JSON.stringify({exporte:true})});
-      await commuCharger();
-    }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
-    viewCommu();
+      await nuageRest("propositions?cree=lt." + avant + "&or=(statut.eq.refusee,exporte.eq.true)", {method:"DELETE"});
+      await nuageRest("votes_cartes?cree=lt." + avant + "&or=(statut.eq.refusee,exporte.eq.true)", {method:"DELETE"});
+      toast("Historique nettoyé", "", "info");
+    }catch(e){ toast("Nettoyage impossible", String(e.message || e), "lose"); }
+    await recharger();
   };
 
-  if(!commu.charge) commuCharger().then(()=>{ if(state.view === "communaute") viewCommu(); });
+  if(!commu.charge) recharger();
+}
+
+/* choix d'une rareté cible, plus ou moins rare que l'actuelle */
+function choisirRarete(c){
+  return new Promise(res => {
+    const m = document.createElement("div");
+    m.className = "modal";
+    const liste = RARITIES.filter(r => r !== "Relique" && r !== c.rarity);
+    m.innerHTML = `<div class="inner" style="max-width:420px">
+      <h3 style="font-size:1.1rem;margin-bottom:.4rem">${esc(c.title)}</h3>
+      <p class="sub" style="margin:0 0 .7rem">Actuellement ${esc(c.rarity)}. Elle devrait être…</p>
+      <div class="row" style="gap:.35rem">${liste.map(r => `<button class="chip" data-r="${esc(r)}">${RARITIES.indexOf(r) > RARITIES.indexOf(c.rarity) ? "▲" : "▼"} ${esc(r)}</button>`).join("")}</div>
+      <button class="btn small ghost" id="rno" style="margin-top:.8rem">Annuler</button>
+    </div>`;
+    document.body.appendChild(m);
+    m.querySelectorAll("[data-r]").forEach(b => b.onclick = ()=>{ m.remove(); res(b.dataset.r); });
+    m.querySelector("#rno").onclick = ()=>{ m.remove(); res(null); };
+  });
 }
 
 /* ---------- page « Couleurs » ---------- */
@@ -8932,7 +9220,7 @@ async function runBoosterCountdown(kind, total, expose){
       const now = performance.now(), t = (now - T0) / 1000;
       const entree = easeOutCubic(Math.min(1, t / 0.7));
       const permis = (stop || fait >= total) ? N : Math.floor(fait / parSachet);
-      if(eclates < permis && now - dernierPop > (stop ? 120 : 170)){
+      if(eclates < permis && now - dernierPop > (stop ? 60 : 110)){
         const p = sachets[eclates];
         p.pop = now; eclates++; dernierPop = now;
         eclater(p);
@@ -8950,7 +9238,7 @@ async function runBoosterCountdown(kind, total, expose){
         let z = -rel * PAS_Z, y = rel * PAS_Y + respire, x = 0, scl = 0.4 + 0.6 * entree, rx = 0.04, ry = Math.sin(t * 0.8) * 0.08, rz = 0, glow = 0;
         if(p.pop >= 0){
           /* le sachet de devant s'arrache vers la caméra et file hors champ */
-          const u = (now - p.pop) / 340;
+          const u = (now - p.pop) / 260;
           if(u >= 1) continue;                      // parti : plus jamais dessiné
           const k = easeOutCubic(u);
           z = k * recul * 0.55; y = k * 5.5; x = (i % 2 ? 1 : -1) * k * 3.5;
@@ -8964,7 +9252,7 @@ async function runBoosterCountdown(kind, total, expose){
       if(!restants && (stop || fait >= total)){
         wrap.classList.add("burst");
         setTimeout(()=>{ wrap.classList.add("out"); }, 180);
-        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 560);
+        setTimeout(()=>{ view3d.dispose(); wrap.remove(); resolve(); }, 400);
         return;
       }
       requestAnimationFrame(frame);
@@ -9134,17 +9422,22 @@ async function openPack(n, kind){
     const pool = await ensurePool();
     if(!pool.length) throw new Error("aucun univers joignable");
 
-    let all = [];
-    for(let k=0;k<n;k++){
-      if(n > 1){
-        state.reveal.msg = `paquet ${k+1} sur ${n}…`;
-        renderStage();
+    /* Plusieurs paquets se tirent en même temps (quatre, six au-delà de
+       cinquante) : le temps d'attente est celui du réseau, pas d'une file. */
+    const resultats = new Array(n);
+    let prochain = 0, faits = 0;
+    const ouvrier = async ()=>{
+      while(prochain < n && state.openToken === token){
+        const k = prochain++;
+        resultats[k] = await drawPack(pool, kind).catch(()=>[]);
+        faits++;
+        if(intro.tick) intro.tick(faits);
       }
-      if(intro.tick) intro.tick(k);
-      const cards = await drawPack(pool, kind);
-      if(state.openToken !== token){ intro.finish(); state.busy = false; return; }   // le joueur a quitté
-      all = all.concat(cards);
-    }
+    };
+    if(n > 1){ state.reveal.msg = `${n} paquets…`; renderStage(); }
+    await Promise.all(Array.from({length:Math.min(n, n >= 50 ? 6 : 4)}, ouvrier));
+    if(state.openToken !== token){ intro.finish(); state.busy = false; return; }   // le joueur a quitté
+    let all = [].concat(...resultats.filter(Boolean));
     if(!all.length) throw new Error("aucun wiki n'a répondu");
     if(state.openToken !== token){ intro.finish(); state.busy = false; return; }
 
@@ -11968,7 +12261,7 @@ function holoLayers(el){
 }
 
 function holoTrack(el, fx){
-  if(!el || el.dataset.holo) return;
+  if(!el || el.dataset.holo || el.closest(".propcarte")) return;
   el.dataset.holo = "1";
   el.dataset.fx = fx;
   el.classList.add("holo");
@@ -13541,12 +13834,19 @@ document.addEventListener("keydown", e=>{
 /* ---------- amorçage ---------- */
 const SCRIM = document.getElementById("scrim");
 const MENU = document.getElementById("menupanel");
-const SECONDARY = ["cat","decks","inv","ach","profil","shop","market","compte","theme","duel","communaute"];
+const SECONDARY = ["menu","cat","decks","inv","ach","shop","market","duel","communaute"];
 function setMenu(open){
   MENU.classList.toggle("open", open);
   SCRIM.classList.toggle("open", open);
 }
-document.getElementById("more").onclick = ()=>{ sfx.tick(); setMenu(!MENU.classList.contains("open")); };
+/* Sur téléphone, le menu est une vraie page : on y fait défiler et on en
+   revient comme de n'importe quelle autre. */
+document.getElementById("more").onclick = ()=>{ sfx.tick(); setMenu(false); go(state.view === "menu" ? "hub" : "menu"); };
+function viewMenu(){
+  const grille = document.querySelector("#menupanel .mpgrid");
+  view.innerHTML = `<h2 class="vuetitre">Menu</h2><div class="mpgrid menupage">${grille ? grille.innerHTML : ""}</div>`;
+  view.querySelectorAll("button[data-view]").forEach(b => b.onclick = ()=>{ sfx.tick(); go(b.dataset.view); });
+}
 SCRIM.onclick = ()=>setMenu(false);
 document.querySelectorAll("#nav button[data-view], #menupanel button[data-view]").forEach(b=>{
   b.onclick = ()=>{ setMenu(false); sfx.tick(); go(b.dataset.view); };
@@ -13570,8 +13870,8 @@ function paintMe(){
 }
 document.getElementById("wikitag").onclick = openSettings;
 const soundBtn = document.getElementById("sound");
-function paintSound(){ soundBtn.textContent = state.profile.mute ? "♪̸" : "♪"; }
-soundBtn.onclick = async ()=>{
+function paintSound(){ if(soundBtn) soundBtn.style.display = "none"; }
+if(soundBtn) soundBtn.onclick = async ()=>{
   state.profile.mute = !state.profile.mute;
   paintSound();
   if(!state.profile.mute) sfx.flip();
@@ -13582,9 +13882,13 @@ function openSettings(){
   const m = document.createElement("div");
   m.className = "modal";
   m.innerHTML = `<div class="inner">
-    <h3 style="font-size:1.2rem;margin-bottom:.6rem">Réglages</h3>
-    <p class="sub" style="margin-top:0">${state.pool.length? state.pool.length+" univers joignables sur "+UNIVERSES.length : "univers en cours de repérage…"}</p>
-    <p class="sub" style="margin:.2rem 0 0">Le pseudo et la photo se changent dans l'onglet Profil.</p>
+    <h3 style="font-size:1.2rem;margin-bottom:.8rem">Réglages</h3>
+    <div class="reglages">
+      <button class="btn ghost" id="s-son">${state.profile.mute ? "♪̸ Son coupé" : "♪ Son activé"}</button>
+      <button class="btn ghost" id="s-compte">☁ Compte</button>
+      <button class="btn ghost" id="s-couleurs">◐ Couleurs</button>
+    </div>
+    <p class="sub" style="margin:.9rem 0 0">${state.pool.length? state.pool.length+" univers joignables sur "+UNIVERSES.length : "univers en cours de repérage…"}</p>
     ${POOL_MISSES.length ? `<details class="lore" style="margin:.7rem 0 0">
       <summary>⚠ ${POOL_MISSES.length} univers sans réponse</summary>
       <div class="txt">Ces wikis n'ont pas répondu, ou comptent moins de ${MIN_ARTICLES} articles.
@@ -13598,6 +13902,14 @@ function openSettings(){
   </div>`;
   m.onclick = e=>{ if(e.target===m) m.remove(); };
   document.body.appendChild(m);
+  m.querySelector("#s-son").onclick = async (e)=>{
+    state.profile.mute = !state.profile.mute;
+    e.currentTarget.textContent = state.profile.mute ? "♪̸ Son coupé" : "♪ Son activé";
+    if(!state.profile.mute) sfx.flip();
+    await sset("fm:profile", state.profile);
+  };
+  m.querySelector("#s-compte").onclick = ()=>{ m.remove(); go("compte"); };
+  m.querySelector("#s-couleurs").onclick = ()=>{ m.remove(); go("theme"); };
   m.querySelector("#s-holo").onclick = async ()=>{
     state.profile.holo = state.profile.holo === false;
     await sset("fm:profile", state.profile);
