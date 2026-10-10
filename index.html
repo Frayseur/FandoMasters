@@ -1692,7 +1692,7 @@ body.cardopen .wrap,body.cardopen .nav{visibility:hidden}
   /* panneaux */
   .panel{padding:.8rem}
   .modal{padding:.5rem}
-  .modal .inner{padding:.85rem;border-radius:14px;max-height:86vh}
+  .modal .inner:not(.card .inner){padding:.85rem;border-radius:14px;max-height:86vh}
   .camp .content{flex-direction:column;gap:.55rem}
   .camp .boss{width:100%;height:170px;border-radius:14px;background-position:center 22%}
   .camp .boss img{object-position:center 25%}
@@ -2216,7 +2216,7 @@ details.fold .in{padding-top:.6rem}
   overscroll-behavior:contain}
 body.overlay{overflow:hidden}
 body.overlay .wrap,body.overlay .nav,body.overlay .scrim{visibility:hidden}
-.modal .inner{background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:420px;width:100%;padding:1.1rem;max-height:88vh;overflow:auto}
+.modal .inner:not(.card .inner){background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:420px;width:100%;padding:1.1rem;max-height:88vh;overflow:auto}
 .spinner{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--brass);animation:spin .8s linear infinite;display:inline-block;vertical-align:-5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .chip{background:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:.35rem .75rem;font-size:.85rem;color:var(--text)}
@@ -7282,8 +7282,26 @@ function cadrageDe(c){
 function styleCadrage(cd){
   if(!cd) return "";
   const x = Math.max(0, Math.min(100, cd.x == null ? 50 : +cd.x)), y = Math.max(0, Math.min(100, cd.y == null ? 50 : +cd.y)), z = Math.max(0.5, Math.min(3, +cd.z || 1));
+  if(z < 1) return `--cz:${z};--cx:${x};--cy:${y};object-fit:contain;object-position:${x}% ${y}%`;   // ajusté dès que l'image est chargée
   return `object-position:${x}% ${y}%;transform:scale(${z});transform-origin:${x}% ${y}%`;
 }
+/* Dézoomer, c'est voir davantage de l'illustration : l'image est posée dans le
+   cadre à z fois sa taille « couvrante », le point x % y % restant en place. */
+function ajusterZoom(im){
+  try{
+    const z = parseFloat(im.style.getPropertyValue("--cz"));
+    if(!(z > 0 && z < 1)) return;
+    const a = im.parentElement, nw = im.naturalWidth, nh = im.naturalHeight;
+    if(!a || !nw || !nh) return;
+    const W = a.clientWidth, H = a.clientHeight; if(!W || !H) return;
+    const x = parseFloat(im.style.getPropertyValue("--cx")) || 0, y = parseFloat(im.style.getPropertyValue("--cy")) || 0;
+    const sc = Math.max(W / nw, H / nh) * z;
+    const pw = nw * sc / W * 100, ph = nh * sc / H * 100;
+    im.style.cssText = `--cz:${z};--cx:${x};--cy:${y};position:absolute;max-width:none;object-fit:fill;` +
+      `width:${pw.toFixed(3)}%;height:${ph.toFixed(3)}%;left:${((100 - pw) * x / 100).toFixed(3)}%;top:${((100 - ph) * y / 100).toFixed(3)}%`;
+  }catch(e){}
+}
+document.addEventListener("load", ev => { const t = ev.target; if(t && t.tagName === "IMG" && t.style && t.style.getPropertyValue("--cz")) ajusterZoom(t); }, true);
 /* les raretés corrigées s'appliquent aux cartes déjà possédées */
 function appliquerCorrections(col){
   let n = 0;
@@ -7300,7 +7318,95 @@ function recadrable(c){
   return !sp || sp.variant === "std" || sp.variant === "holo";
 }
 
-const commu = {onglet:"votes", carte:null, cadrage:{x:50, y:50, z:1}, note:"",
+/* ---- toutes les cartes du catalogue, possédées ou non ---- */
+const ATK_RARETE = {"Commun":1500, "Peu commun":3200, "Rare":4800, "Super rare":6300, "Ultra rare":7600, "Légendaire":9000};
+const catalogueCartes = new Map();
+async function cartesCatalogue(w){
+  const k = w.host + (w.path || "");
+  if(catalogueCartes.has(k)) return catalogueCartes.get(k);
+  const liste = ((await mostLinked(w).catch(()=>[])) || []).slice(0, CAT_LIMIT);
+  if(!liste.length) return [];
+  const tiers = tierMap(liste), rar = {};
+  for(const r of RARITIES) for(const t of (tiers[r] || [])) rar[t] = r;
+  const rang = new Map(liste.map((e, i)=>[e.t, i]));
+  const lots = [];
+  for(let i = 0; i < liste.length; i += 50) lots.push(liste.slice(i, i + 50).map(e => e.t));
+  const rep = await Promise.all(lots.map(l => api({action:"query", titles:l.join("|"), prop:"pageimages", piprop:"thumbnail", pithumbsize:"900"}, w).catch(()=>null)));
+  const out = [];
+  for(const d of rep) for(const pg of ((d && d.query && d.query.pages) || [])){
+    if(!pg || pg.missing || !pg.thumbnail || artRefusee(pg.thumbnail.source) || rang.get(pg.title) == null) continue;
+    const r = rar[pg.title] || "Commun", v = ATK_RARETE[r] || 1500;
+    out.push({id:w.host + ":" + pg.pageid, univ:w.label, title:pg.title, rarity:r, img:pg.thumbnail.source, atk:v, def:v, count:0, role:null});
+  }
+  out.sort((a, b)=>rang.get(a.title) - rang.get(b.title));
+  if(out.length) catalogueCartes.set(k, out);
+  return out;
+}
+/* Fenêtre de choix sur l'ensemble du catalogue. Renvoie la carte choisie (la
+   vôtre si vous la possédez), ou null. */
+function choisirDansCatalogue({titre, univ, filtre}){
+  return new Promise(async res => {
+    try{ if(!state.pool.length) await ensurePool(); }catch(e){}
+    const mesU = {};
+    for(const c of state.collection) mesU[c.univ] = (mesU[c.univ] || 0) + 1;
+    const univs = state.pool.slice().sort((a, b)=>a.label.localeCompare(b.label));
+    if(!univs.length){ toast("Catalogue indisponible", "réessayez dans un instant", "lose"); res(null); return; }
+    const fixe = univ ? univs.find(u => u.label === univ) : null;
+    let courant = fixe || univs.find(u => u.label === (commu.carteObj && commu.carteObj.univ)) ||
+                  univs.slice().sort((a, b)=>(mesU[b.label] || 0) - (mesU[a.label] || 0))[0];
+    const m = document.createElement("div");
+    m.className = "modal";
+    m.innerHTML = `<div class="inner" style="max-width:680px">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="font-size:1.15rem">${esc(titre)}</h3>
+        <button class="btn small ghost" id="close">Annuler</button>
+      </div>
+      <div class="row" style="margin:.6rem 0 .5rem;gap:.4rem">
+        <select id="pu" style="flex:1 1 150px;margin:0" ${fixe ? "disabled" : ""}>${univs.map(u => `<option value="${esc(u.label)}" ${u === courant ? "selected" : ""}>${esc(u.label)}</option>`).join("")}</select>
+        <input id="pq" placeholder="Rechercher une carte…" style="flex:2 1 160px;margin:0">
+      </div>
+      <div class="row" style="margin-bottom:.5rem"><button class="btn small" id="ok" disabled>Valider</button>
+        <span class="sub" id="cpt">Toutes les cartes de l'univers, même celles que vous n'avez pas encore.</span></div>
+      <div class="pickgrid" id="pg"></div>
+    </div>`;
+    document.body.appendChild(m);
+    const pg = m.querySelector("#pg");
+    let cartes = new Map(), choix = null, jeton = 0;
+    const peindre = ()=>{
+      const q = (m.querySelector("#pq").value || "").toLowerCase();
+      const l = [...cartes.values()].filter(c => !q || c.title.toLowerCase().includes(q));
+      pg.innerHTML = l.length ? l.slice(0, 150).map(c => `<div class="pickwrap ${choix === c.id ? "on" : ""}" data-id="${esc(c.id)}">${cardHTML(c, {compact:true, count:0})}</div>`).join("")
+                              : `<p class="sub" style="grid-column:1/-1">Aucune carte.</p>`;
+      pg.querySelectorAll(".pickwrap").forEach(el => el.onclick = ()=>{
+        choix = el.dataset.id;
+        pg.querySelectorAll(".pickwrap.on").forEach(x => x.classList.remove("on"));
+        el.classList.add("on");
+        m.querySelector("#ok").disabled = false;
+        m.querySelector("#cpt").textContent = cartes.get(choix).title;
+      });
+    };
+    const charger = async ()=>{
+      const mon = ++jeton;
+      choix = null; m.querySelector("#ok").disabled = true;
+      pg.innerHTML = `<p class="sub" style="grid-column:1/-1"><span class="spinner"></span> lecture du catalogue…</p>`;
+      const cat = await cartesCatalogue(courant).catch(()=>[]);
+      if(mon !== jeton) return;
+      const mine = new Map(state.collection.filter(c => c.univ === courant.label).map(c => [c.id, c]));
+      const tout = new Map();
+      for(const c of cat) tout.set(c.id, mine.get(c.id) || c);
+      for(const c of mine.values()) if(!tout.has(c.id)) tout.set(c.id, c);
+      cartes = new Map([...tout].filter(([, c]) => !filtre || filtre(c)));
+      peindre();
+    };
+    m.querySelector("#pu").onchange = ev => { courant = univs.find(u => u.label === ev.target.value) || courant; charger(); };
+    m.querySelector("#pq").oninput = peindre;
+    m.querySelector("#close").onclick = ()=>{ m.remove(); res(null); };
+    m.querySelector("#ok").onclick = ()=>{ const c = cartes.get(choix); m.remove(); res(c || null); };
+    charger();
+  });
+}
+
+const commu = {onglet:"votes", carte:null, carteObj:null, cadrage:{x:50, y:50, z:1}, note:"",
                miennes:[], toutes:[], votes:[], mesVoix:{}, charge:false, erreur:""};
 
 /* fiche minimale envoyée au serveur : de quoi afficher la carte, rien de plus */
@@ -7466,7 +7572,7 @@ function viewCommu(){
       ${commu.votes.filter(v => v.statut !== "ouvert").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
         <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
   }else if(ong === "recadrer"){
-    const c = commu.carte ? state.collection.find(x => x.id === commu.carte) : null;
+    const c = commu.carteObj || null;
     const apercu = c ? Object.assign({}, c, {cadrage:commu.cadrage}) : null;
     corps = `<div class="panel">
       <div class="propgrille">
@@ -7552,9 +7658,8 @@ function viewCommu(){
   };
   const vr = view.querySelector("#vrarete");
   if(vr) vr.onclick = async ()=>{
-    const r = await choisirCartes({titre:"Carte dont la rareté est discutable", liste:state.collection.filter(c => !specParts(c.id) && c.rarity !== "Relique"), max:1, deja:[]});
-    if(!r || !r[0]) return;
-    const c = state.collection.find(x => x.id === r[0]);
+    const c = await choisirDansCatalogue({titre:"Carte dont la rareté est discutable", filtre:x => !specParts(x.id) && x.rarity !== "Relique"});
+    if(!c) return;
     const deja = commu.votes.find(v => v.statut === "ouvert" && v.type === "rarete" && v.sujet === c.id);
     if(deja){ toast("Déjà soumise à un vote", c.title + " : votez dans la liste", "info"); return; }
     const choix = await choisirRarete(c);
@@ -7579,10 +7684,9 @@ function viewCommu(){
 
   // ---- recadrage
   const choisir = async ()=>{
-    const r = await choisirCartes({titre:"Carte à recadrer", liste:state.collection.filter(recadrable), max:1, deja:commu.carte ? [commu.carte] : []});
-    if(r && r[0]){
-      commu.carte = r[0];
-      const c = state.collection.find(x => x.id === r[0]);
+    const c = await choisirDansCatalogue({titre:"Carte à recadrer", filtre:recadrable});
+    if(c){
+      commu.carte = c.id; commu.carteObj = c;
       commu.cadrage = Object.assign({x:50, y:50, z:1}, cadrageDe(c) || {});
       commu.note = "";
     }
@@ -7591,7 +7695,7 @@ function viewCommu(){
   const pc = view.querySelector("#pchoisir"); if(pc) pc.onclick = choisir;
   const pc2 = view.querySelector("#pchoix"); if(pc2) pc2.onclick = choisir;
   const zone = view.querySelector(".propcarte .art");
-  const appliquer = ()=>{ const im = view.querySelector(".propcarte .art img"); if(im) im.setAttribute("style", styleCadrage(commu.cadrage)); };
+  const appliquer = ()=>{ const im = view.querySelector(".propcarte .art img"); if(im){ im.setAttribute("style", styleCadrage(commu.cadrage)); ajusterZoom(im); } };
   if(zone){
     const carteEl = view.querySelector(".propcarte .card");
     zone.style.touchAction = "none"; zone.style.cursor = "grab";
@@ -7617,7 +7721,7 @@ function viewCommu(){
   const pn = view.querySelector("#pnote"); if(pn) pn.oninput = ()=>{ commu.note = pn.value; };
   const pe = view.querySelector("#penvoyer");
   if(pe) pe.onclick = async ()=>{
-    const c = state.collection.find(x => x.id === commu.carte);
+    const c = commu.carteObj;
     if(!c) return;
     const cd = commu.cadrage;
     if(!(Math.abs(cd.x - 50) > 0.5 || Math.abs(cd.y - 50) > 0.5 || Math.abs(cd.z - 1) > 0.01)){ toast("Image non déplacée", "faites glisser l'image ou zoomez", "lose"); return; }
@@ -7629,7 +7733,7 @@ function viewCommu(){
         note:(commu.note || "").trim().slice(0, 120) || null
       }])});
       toast("Recadrage envoyé", "merci !", "info");
-      commu.carte = null;
+      commu.carte = null; commu.carteObj = null;
     }catch(e){ toast("Envoi impossible", String(e.message || e), "lose"); pe.disabled = false; }
     await recharger();
   };
