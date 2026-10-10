@@ -3210,7 +3210,7 @@ function libererStockage(){
     for(let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
       if(!k) continue;
-      if(/fm:pool2$/.test(k) || /fm:ml[23]:/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
+      if(/fm:pool[23]$/.test(k) || /fm:ml[23]:/.test(k) || k === "fm-local:artvide2" || k === "fm-local:artvide" || k === "fm-local:diag-journal") sup.push(k);
     }
     sup.forEach(k=>{ n += (localStorage.getItem(k) || "").length; localStorage.removeItem(k); });
   }catch(e){}
@@ -4112,7 +4112,7 @@ async function slist(prefix, shared=false){
 }
 /* les parties créées avant les comptes sont reprises dans l'espace « invité » */
 async function migrateLegacy(){
-  const keys = ["fm:profile","fm:col","fm:pool2"];
+  const keys = ["fm:profile","fm:col","fm:pool3"];
   for(const k of keys){
     try{
       if(HAS_WS){
@@ -4336,15 +4336,27 @@ let POOL_MISSES = [];
 
 async function probe(u){
   const hosts = [u.host].concat(ALT_HOSTS[u.host] || []);
+  const taille = async w => {
+    try{
+      const d = await api({action:"query", meta:"siteinfo", siprop:"statistics"}, w, 9000);
+      return (d.query && d.query.statistics && d.query.statistics.articles) || 0;
+    }catch(e){ return 0; }
+  };
   for(const host of hosts){
-    for(const path of ["/fr",""]){
-      const w = {label:u.label, host, path, cat:u.cat};
-      try{
-        const d = await api({action:"query", meta:"siteinfo", siprop:"statistics"}, w, 9000);
-        const n = d.query && d.query.statistics ? d.query.statistics.articles : 0;
-        if(n && n >= MIN_ARTICLES) return Object.assign(w, {articles:n});
-      }catch(e){ /* adresse suivante */ }
+    /* chemin imposé par la liste des univers (ex. Digital Circus en français) */
+    if(u.path != null){
+      const w = {label:u.label, host, path:u.path, cat:u.cat};
+      const n = await taille(w);
+      if(n >= MIN_ARTICLES) return Object.assign(w, {articles:n});
+      continue;
     }
+    /* Version française seulement si elle est vraiment fournie : une
+       traduction de quelques pages (Baldur's Gate) cachait le vrai wiki. */
+    const fr = {label:u.label, host, path:"/fr", cat:u.cat}, en = {label:u.label, host, path:"", cat:u.cat};
+    const [nf, ne] = await Promise.all([taille(fr), taille(en)]);
+    if(nf >= 60 && (nf >= 400 || nf >= ne * 0.05)) return Object.assign(fr, {articles:nf});
+    if(ne >= MIN_ARTICLES) return Object.assign(en, {articles:ne});
+    if(nf >= MIN_ARTICLES) return Object.assign(fr, {articles:nf});
   }
   POOL_MISSES.push(u.label + " — " + u.host);
   return null;
@@ -8457,7 +8469,7 @@ function viewHub(){
 let poolPromise = null;
 function ensurePool(){ if(!poolPromise) poolPromise = buildPool(); return poolPromise; }
 async function buildPool(){
-  const cached = await sget("fm:pool2", true);
+  const cached = await sget("fm:pool3", true);
   if(cached && cached.pool && cached.pool.length && (Date.now()-cached.t) < 7*864e5){
     state.pool = cached.pool;
     POOL_MISSES = cached.misses || [];
@@ -8474,7 +8486,7 @@ async function buildPool(){
     if(state.view === "cat" && !state.catW) viewCatalog();
   }
   state.pool = res.filter(Boolean);
-  if(state.pool.length) await sset("fm:pool2", {t:Date.now(), pool:state.pool, misses:POOL_MISSES}, true);
+  if(state.pool.length) await sset("fm:pool3", {t:Date.now(), pool:state.pool, misses:POOL_MISSES}, true);
   if(state.view==="hub"||state.view==="pack") render();
   return state.pool;
 }
@@ -14428,7 +14440,7 @@ function openSettings(){
     m.remove(); render();
   };
   m.querySelector("#s-recheck").onclick = async ()=>{
-    await sset("fm:pool2", {t:0, pool:[]}, true);
+    await sset("fm:pool3", {t:0, pool:[]}, true);
     poolPromise = null; state.pool = [];
     m.remove(); render(); ensurePool();
   };
