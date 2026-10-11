@@ -2735,19 +2735,17 @@ body.horsjeu #nav, body.horsjeu .topbar > :not(.logo), body.horsjeu .surtitre{di
 /* écran des cartes : meilleure carte + cascade */
 .bulkhero{position:relative;width:100%;display:grid;place-items:center;padding:1.4rem 0 1rem;overflow:hidden;border-radius:18px;
   background:radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--hc) 35%, transparent), transparent 70%)}
-.bhrayons{position:absolute;left:50%;top:55%;width:160vmax;height:160vmax;transform:translate(-50%,-50%);
+.bhrayons{display:none;position:absolute;left:50%;top:55%;width:160vmax;height:160vmax;transform:translate(-50%,-50%);
   background:repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--hc) 30%, transparent) 0 5deg, transparent 5deg 15deg);
   -webkit-mask:radial-gradient(circle, #000 0 5%, transparent 32%);mask:radial-gradient(circle, #000 0 5%, transparent 32%);animation:fnspin 14s linear infinite;pointer-events:none}
-.bhlabel{position:relative;z-index:2;font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.18em;font-size:.8rem;color:var(--hc);
-  text-shadow:0 0 12px var(--hc);margin-bottom:.6rem}
-.bhcarte{position:relative;z-index:2;width:min(46vw,210px);aspect-ratio:63/88;cursor:pointer;filter:drop-shadow(0 0 22px color-mix(in srgb, var(--hc) 70%, transparent))}
+.bhlabel{position:relative;z-index:2;font-family:var(--f-titre);text-transform:uppercase;letter-spacing:.18em;font-size:.8rem;color:var(--hc);margin-bottom:.6rem}
+.bhcarte{position:relative;z-index:2;width:min(46vw,210px);aspect-ratio:63/88;cursor:pointer}
 .bhcarte .card{position:absolute;inset:0;width:100%;height:100%}
-.bulkhero.anime .bhcarte{animation:bhentree 1s cubic-bezier(.2,1.4,.3,1) both}
+.bulkhero.anime .bhcarte{animation:bhentree .7s cubic-bezier(.2,1.2,.3,1) both}
 .bulkhero.anime .bhlabel{animation:bhlabel .6s .5s ease both}
-@keyframes bhentree{0%{transform:scale(.2) rotateY(540deg);opacity:0;filter:brightness(4) drop-shadow(0 0 60px var(--hc))}70%{transform:scale(1.08) rotateY(0)}100%{transform:scale(1);opacity:1}}
+@keyframes bhentree{0%{transform:scale(.6) translateY(20px);opacity:0}100%{transform:none;opacity:1}}
 @keyframes bhlabel{from{opacity:0;letter-spacing:.6em}to{opacity:1}}
-.bulkhero.r5 .bhcarte{animation:bhentree 1s cubic-bezier(.2,1.4,.3,1) both, bhlegende 2.4s 1s ease-in-out infinite}
-@keyframes bhlegende{50%{filter:drop-shadow(0 0 40px var(--hc)) brightness(1.08)}}
+
 .bulkcase{min-width:0}
 .cascade .bulkcase{animation:bkentree .55s var(--d) cubic-bezier(.2,1.5,.4,1) both}
 @keyframes bkentree{0%{opacity:0;transform:translateY(-40px) scale(.4) rotate(-10deg)}100%{opacity:1;transform:none}}
@@ -3137,9 +3135,10 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 .cinen{margin-top:.6rem;font-family:var(--f-corps);font-size:.95rem;color:rgba(255,255,255,.7)}
 .cinen b{color:#fff;font-weight:800}
 .cinetraits{position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden}
-.cinetraits i{position:absolute;left:-10%;top:var(--y);width:120%;height:2px;background:linear-gradient(90deg, transparent, #fff 45%, var(--b3dglow, var(--p4)) 55%, transparent);
-  transform:translateX(-100%) skewX(-30deg);animation:cinetrait .6s cubic-bezier(.3,.7,.2,1) forwards;opacity:.85}
-@keyframes cinetrait{to{transform:translateX(100%) skewX(-30deg);opacity:0}}
+.cinetraits i{position:absolute;left:50%;top:50%;width:min(30vmin,240px);height:3px;margin-top:-1.5px;border-radius:3px;transform-origin:0 50%;
+  background:linear-gradient(90deg, #fff, var(--b3dglow, var(--p4)) 35%, transparent);
+  transform:rotate(var(--a)) translateX(min(62vmin,520px)) scaleX(.4);opacity:0;animation:cinetrait .55s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes cinetrait{15%{opacity:.9}100%{transform:rotate(var(--a)) translateX(min(13vmin,100px)) scaleX(1);opacity:0}}
 .b3d.cine.cede .b3dflash{animation:cineflash .5s ease-out}
 @keyframes cineflash{0%{opacity:0}25%{opacity:.9}100%{opacity:0}}
 .cineaffiche{position:absolute;inset:0;z-index:6;display:grid;place-items:center;cursor:pointer;--ac:#FFD36A}
@@ -3250,7 +3249,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.0.3";
+const BUILD = "V1.0.4";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -9655,7 +9654,7 @@ function viewHub(){
       const p = await pageByTitle(w, icon);
       if(!p || p.missing) throw new Error("emblème introuvable sur le wiki");
       const rich = await enrich(p, w);
-      const base = makeCard(rich, w, bestRarity("Ultra rare", intrinsicRarity(p, list)));
+      const base = makeCard(rich, w, bestRarity("Ultra rare", intrinsicRarity(p, list, w)));
       VARIANTS.forEach(v=>addCard(makeSpecial(base, v)));
       await sset("fm:col", state.collection);
       sfx.legendary();
@@ -9892,7 +9891,10 @@ async function pageByTitle(w, title){
 /* Tire une carte d'un univers pour une rareté imposée par la table de drop. */
 /* Rareté intrinsèque : rang de l'article au palmarès du wiki, sinon sa notoriété brute.
    L'Anneau unique reste Légendaire même s'il sort sur un tirage Commun. */
-function intrinsicRarity(page, list){
+function intrinsicRarity(page, list, w){
+  /* une rareté votée par la communauté (ou un ajout officiel) fait foi */
+  const o = w && page ? rarTitre(w.label, page.title) : null;
+  if(o && RARITIES.indexOf(o) >= 0 && o !== "Relique") return o;
   if(list && list.length >= 20){
     const top = list[0].v;
     const e = list.find(x=>x.t === page.title);
@@ -9988,59 +9990,55 @@ function maybeSpecial(card, w, list){
   return makeSpecial(card, rollVariant());
 }
 
+/* Une carte porte toujours SON rang : celui que lui donne le palmarès du wiki
+   ou la communauté. Si un univers n'a personne au rang tiré, il passe la main
+   à un autre univers ; jamais un figurant n'est promu Légendaire pour tenir
+   la promesse de la table de drop. */
 async function drawForRarity(w, rarity){
+  const ri = RARITIES.indexOf(rarity);
   const perso = cartesPerso(w.label).filter(c => c.rarity === rarity);
   if(perso.length && Math.random() < 0.08) return copiePerso(perso[Math.floor(Math.random() * perso.length)]);
   const list = await mostLinked(w).catch(()=>[]);
   const tiers = list.length >= 20 ? tierMap(avecAjouts(list, w), w) : null;
+  const persos = new Set(cartesPerso(w.label).map(c => c.title));
 
-  if(RARITIES.indexOf(rarity) >= 2){          // Rare et au-dessus : on vise le palier
+  if(ri >= 2){                                // Rare et au-dessus : uniquement le palier exact
     if(tiers){
-      // si le wiki n'a personne à ce rang, on descend d'un cran
-      let i = RARITIES.indexOf(rarity), pick = null;
-      while(i >= 2 && !pick){
-        const bucket = tiers[RARITIES[i]];
-        if(bucket && bucket.length) pick = shuffled(bucket).slice(0,3);
-        else i--;
+      const bucket = (tiers[rarity] || []).filter(t => !persos.has(t));
+      for(const title of shuffled(bucket).slice(0, 4)){
+        const p = await pageByTitle(w, title).catch(()=>null);
+        if(!p || (p.length||0) <= 300) continue;
+        const rich = await enrich(p, w);
+        if(!hasBody(rich)) continue;
+        return maybeSpecial(makeCard(rich, w, rarity), w, list);
       }
-      if(pick){
-        for(const title of pick){
-          const p = await pageByTitle(w, title);
-          if(p && (p.length||0) > 300){
-            const rich = await enrich(p, w);
-            if(!hasBody(rich)) continue;
-            // la table de drop a promis ce rang : on l'honore, quitte à puiser un cran plus bas
-            const built = makeCard(rich, w,
-              capFiller(p, bestRarity(rarity, intrinsicRarity(p, list))));
-            return maybeSpecial(built, w, list);
-          }
-        }
-      }
+      return null;                            // personne à ce rang ici : un autre univers s'en charge
     }
-    const pages = await drawPages(8, w);
-    if(!pages.length) return null;
-    pages.sort((x,y)=>notoriety(y)-notoriety(x));
-    for(const pg of pages.slice(0,4)){
-      const rich = await enrich(pg, w);
-      if(!hasBody(rich)) continue;
-      return maybeSpecial(makeCard(rich, w,
-        capFiller(pg, bestRarity(rarity, intrinsicRarity(pg, list)))), w, list);
-    }
-    return null;
+    if(ri > 2) return null;                   // sans palmarès, impossible de savoir qui est culte
   }
 
-  // Commun / Peu commun : le tout-venant du wiki. Un article notable peut monter,
-  // mais jamais au-delà de Rare — les hauts rangs restent l'affaire de la table de drop.
-  const pages = await drawPages(6, w);
+  /* Commun, Peu commun (et Rare sur un wiki sans palmarès) : le tout-venant du
+     wiki. Une page que le palmarès ou la communauté classe au-dessus de Rare
+     est laissée aux tirages de son rang. */
+  const pages = await drawPages(ri >= 2 ? 8 : 6, w);
   if(!pages.length) return null;
   const sorted = pages.sort((x,y)=>notoriety(y)-notoriety(x));
-  const order = rarity === "Peu commun" ? sorted : sorted.slice().reverse();
+  const order = ri >= 1 ? sorted : sorted.slice().reverse();
+  /* le rang tiré est celui de la carte : une page classée plus haut est
+     laissée aux tirages de son propre rang */
+  let repli = null;
   for(const pick of order){
+    const intr = intrinsicRarity(pick, list, w);
+    const ii = RARITIES.indexOf(intr);
+    if(ii > ri){ if(ii <= 2 && (!repli || ii < repli.ii)) repli = {pick, ii, intr}; continue; }
     const rich = await enrich(pick, w);
     if(!hasBody(rich)) continue;
-    const up = bestRarity(rarity, intrinsicRarity(pick, list));
-    const capped = RARITIES.indexOf(up) > 2 ? "Rare" : up;
-    return maybeSpecial(makeCard(rich, w, capFiller(pick, capped)), w, list);
+    return maybeSpecial(makeCard(rich, w, capFiller(pick, rarity)), w, list);
+  }
+  /* rien d'assez modeste dans ce tirage : la page la moins haut placée, avec son vrai rang */
+  if(repli && ri <= 1){
+    const rich = await enrich(repli.pick, w);
+    if(hasBody(rich)) return maybeSpecial(makeCard(rich, w, capFiller(repli.pick, repli.intr)), w, list);
   }
   return null;
 }
@@ -10071,7 +10069,7 @@ function oddsFold(){
           <div class="oddsrow"><span>Légendaire ou Ultra rare</span><b>30,0 %</b></div>
           <div class="oddsrow"><span>Cinq communes</span><b>70,0 %</b></div></div>
       </div>
-      <p class="sub" style="margin:.6rem 0 0;font-size:.82rem">Les cartes spéciales tombent au rythme des Légendaires, dans tous les boosters. Un article culte garde son rang même sur un tirage modeste, mais un tirage Commun ou Peu commun ne dépasse jamais Rare.</p>
+      <p class="sub" style="margin:.6rem 0 0;font-size:.82rem">Les cartes spéciales tombent au rythme des Légendaires, dans tous les boosters. Chaque carte sort avec son vrai rang (palmarès du wiki ou vote de la communauté) : si aucun univers du paquet n\'a de carte au rang tiré, elle descend d\'un cran plutôt que de promouvoir un figurant.</p>
     </div>
   </details>`;
 }
@@ -10463,7 +10461,7 @@ async function drawVillain(w, rarity){
     for(const title of shuffled(zone).slice(0,3)){
       try{
         const p = await pageByTitle(w, title);
-        if(p && (p.length||0) > 300) return makeCard(await enrich(p, w), w, bestRarity(rarity, intrinsicRarity(p, ranked)));
+        if(p && (p.length||0) > 300) return makeCard(await enrich(p, w), w, bestRarity(rarity, intrinsicRarity(p, ranked, w)));
       }catch(e){}
     }
   }
@@ -10537,7 +10535,7 @@ async function drawSpecial(w){
   if(!p || p.missing) return null;
   const rich = await enrich(p, w);
   if(!hasBody(rich)) return null;
-  const base = makeCard(rich, w, bestRarity("Ultra rare", intrinsicRarity(p, list)));
+  const base = makeCard(rich, w, bestRarity("Ultra rare", intrinsicRarity(p, list, w)));
   return makeSpecial(base, rollVariant());
 }
 
@@ -10563,11 +10561,15 @@ async function drawPack(pool, kind){
     ? Array(5).fill(state.pool.find(w=>w.label === state.forcedUniv) || weighted[0])
     : weighted;
   const draw = async (rarity, i)=>{
-    for(let t=0;t<2;t++){
+    const ri = RARITIES.indexOf(rarity);
+    const vus = new Set();
+    for(let t=0;t<(ri >= 3 ? 6 : 2);t++){
       const w = queue[(i + t*5) % queue.length];
+      if(!w || vus.has(w)) continue;
+      vus.add(w);
       try{
-        // une carte spéciale peut surgir partout, au rythme des Légendaires
-        if(Math.random() < legOdds){
+        // une carte spéciale peut surgir partout, au rythme des Légendaires (une chance par carte)
+        if(t === 0 && Math.random() < legOdds){
           const sp = await drawSpecial(w);
           if(sp) return sp;
         }
@@ -10575,6 +10577,8 @@ async function drawPack(pool, kind){
         if(c) return c;
       }catch(e){}
     }
+    /* aucun univers du paquet n'a ce rang : la carte descend d'un cran, avec son vrai rang */
+    if(ri >= 1 && ri <= 5) return draw(RARITIES[ri - 1], i);
     return null;
   };
   let cards = (await Promise.all(rolls.map(draw))).filter(Boolean);
@@ -11017,7 +11021,7 @@ async function runBoosterCountdown(kind, total, expose){
   expose(n=>{ fait = n; }, ()=>{ stop = true; }, (r, comptes)=>{ if(r) meilleure = r; if(comptes) resume = comptes; });
   const trait = ()=>{
     const t = document.createElement("i");
-    t.style.setProperty("--y", (38 + Math.random() * 24).toFixed(1) + "%");
+    t.style.setProperty("--a", Math.round(Math.random() * 360) + "deg");
     traits.appendChild(t); setTimeout(()=>t.remove(), 650);
   };
   requestAnimationFrame(()=>wrap.classList.add("on"));
@@ -15512,7 +15516,7 @@ async function collectCamp(id){
         const p = await pageByTitle(w, c.vilain);
         if(p && !p.missing){
           const ranked = await mostLinked(w).catch(()=>[]);
-          boss = makeCard(await enrich(p, w), w, bestRarity("Ultra rare", intrinsicRarity(p, ranked)));
+          boss = makeCard(await enrich(p, w), w, bestRarity("Ultra rare", intrinsicRarity(p, ranked, w)));
         }
       }
     }catch(e){}
