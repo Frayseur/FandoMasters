@@ -3312,7 +3312,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.0.12";
+const BUILD = "V1.0.13";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -3954,6 +3954,10 @@ async function nuageLire(cle){
 async function nuageEcrire(cle, valeur){
   const s = nuageSession();
   if(!s || !s.user) return;
+  /* un profil sans pseudo, c'est une partie pas encore commencée : il ne doit
+     jamais remplacer celui du compte (c'est ce qui faisait redemander un
+     pseudo en se connectant ailleurs) */
+  if(cle === "fm:profile" && !(valeur && valeur.pseudo)){ diagLog("profil sans pseudo : non envoyé"); return null; }
   const maj = new Date().toISOString();
   const corps = JSON.stringify([{joueur:s.user.id, cle, valeur, maj}]);
   await nuageRest(NUAGE_TABLE, {
@@ -3977,6 +3981,7 @@ function nuageAttente(){ try{ return JSON.parse(localStorage.getItem("fm-local:n
 function nuageAttentePose(l){ try{ localStorage.setItem("fm-local:nuage-attente", JSON.stringify(l)); }catch(e){} }
 function nuagePousse(cle, valeur){
   if(!nuageConfigure() || !nuageConnecte()) return;
+  if(cle === "fm:profile" && !(valeur && valeur.pseudo)) return;
   /* Date de la dernière modification locale, et marque « pas encore envoyé » :
      si la page se recharge avant l'envoi, le serveur ne doit pas écraser
      l'appareil avec une version plus ancienne. */
@@ -4289,7 +4294,7 @@ function fusionDemarrage(l, s, localPlusRecent){
   return out;
 }
 const estObjet = x => !!x && typeof x === "object" && !Array.isArray(x);
-const CLES_MAX = /At$|^since$|^v$|^day$|^t$/;
+const CLES_MAX = /At$|^since$|^v$|^day$|^t$|^foxNiv$|^foxV$/;
 function memeMaj(a, b){ return !!a && !!b && Date.parse(a) === Date.parse(b); }
 
 function fusionObjet(b, l, s, prof = 0){
@@ -4521,7 +4526,14 @@ async function nuageCollision(){
   const aLocal   = !!(local && local.pseudo);
   if(aDistant && aLocal) return "choix";
   if(aDistant) return "distant";
-  return "local";
+  if(aLocal){
+    /* un compte sans pseudo en ligne peut quand même avoir des cartes : on ne les écrase jamais */
+    try{ const c = await nuageLire("fm:col"); if(c && Array.isArray(c.valeur) && c.valeur.length) return "choix"; }catch(e){ return "erreur"; }
+    return "local";
+  }
+  /* ni pseudo en ligne ni partie sur l'appareil : on n'envoie rien, on
+     récupère ce que le compte a en ligne (cartes comprises) s'il a quelque chose */
+  return "vide";
 }
 
 /* ---------- stockage ---------- */
@@ -6159,9 +6171,13 @@ async function apresConnexion(){
     return;
   }
 
-  if(cas === "distant"){
-    await nuageDescendre(true);
-    location.reload();
+  if(cas === "distant" || cas === "vide"){
+    const ok = await nuageDescendre(true);
+    if(ok || cas === "vide"){ location.reload(); return; }
+    view.innerHTML = `<h2 class="vuetitre">Compte</h2>
+      <div class="panel"><p class="sub" style="margin:0">Votre partie en ligne n'a pas pu être
+      récupérée pour l'instant. Rien n'a été effacé. Réessayez dans un moment.</p>
+      <button class="btn small" style="margin-top:.8rem" onclick="location.reload()">Réessayer</button></div>`;
     return;
   }
   if(cas === "local"){
@@ -9468,7 +9484,7 @@ function viewOnboard(){
   view.innerHTML = `
   <div class="accueil"><div class="panel">
     <h1 style="font-size:clamp(1.9rem,6vw,2.8rem);margin-bottom:.8rem">Choisissez votre pseudo.</h1>
-    <input id="pseudo" maxlength="18" placeholder="Frayseur" value="${esc(state.profile.pseudo)}">
+    <input id="pseudo" maxlength="18" placeholder="Votre pseudo" value="${esc(state.profile.pseudo || "")}">
     <div class="row" style="margin-top:1.1rem">
       <button class="btn" id="start">Commencer avec ${FREE_MAX} boosters gratuits</button>
       <span class="sub" id="onbmsg"></span>
@@ -9482,6 +9498,7 @@ function viewOnboard(){
     state.profile.pseudo = pseudo;
     delete state.profile.apiKey;
     await saveAll();
+    try{ if(nuageConnecte()) nuageVide("fm:profile"); }catch(e){}   // le pseudo part tout de suite
     ensurePool();
     go("hub");
   };
@@ -9802,9 +9819,9 @@ function viewHub(){
     toast("Boosters mythiques", `${state.profile.mythic} en réserve`, "ach");
   };
   view.querySelector("#dbg-fox").onclick = async ()=>{
-    state.profile.fox = (state.profile.fox||0) + 3;
+    state.profile.foxBonus = (state.profile.foxBonus||0) + 3; majRenards();
     await sset("fm:profile", state.profile);
-    toast(`${state.profile.fox} booster(s) du marchand renard en réserve`);
+    toast(`${renardsDispo()} booster(s) renard en réserve`);
   };
   view.querySelector("#dbg-items").onclick = async ()=>{
     ITEMS.forEach(i=>addItem(i.key, 3));
@@ -10282,7 +10299,7 @@ function canRepeat(kind, n){
   if(state.busy) return false;
   if(kind === "mythic") return (state.profile.mythic||0) >= n;
   if(kind === "demon")  return (state.profile.demon||0) >= n;
-  if(kind === "fox")    return (state.profile.fox||0) >= n;
+  if(kind === "fox")    return renardsDispo() >= n;
   return canAfford(n);
 }
 function againButton(kind, n){
@@ -10352,9 +10369,9 @@ function renderStage(){
           <div>
             <h3 style="font-size:1.05rem">Booster renard 🦊</h3>
             <p class="sub" style="margin:.2rem 0 0">Cinq cartes face cachée : une seule est une Légendaire ou une carte spéciale. Vous en retournez deux.
-              ${state.profile.fox||0} en réserve · ${prochainsRenards()}</p>
+              ${renardsDispo()} en réserve · ${prochainsRenards()}</p>
           </div>
-          <button class="btn" id="openF" ${(state.profile.fox||0) ? "" : "disabled"}>Tenter</button>
+          <button class="btn" id="openF" ${renardsDispo() ? "" : "disabled"}>Tenter</button>
         </div>
       </div>
 
@@ -10622,18 +10639,41 @@ function prochainsRenards(){
   const n = renardsPourNiveau(lv + 1);
   return `+${n} au niveau ${lv + 1}`;
 }
+/* Le stock n'est pas un compteur qu'on incrémente : il se déduit de trois
+   nombres qui se fusionnent sans risque entre appareils.
+     foxNiv   — plus haut niveau atteint (fusion : le maximum)
+     foxOuv   — boosters renard ouverts (fusion : on additionne les ouvertures)
+     foxBonus — boosters donnés en plus (console)
+   Deux appareils qui constatent le même niveau ne donnent donc rien en double. */
+function renardsCumules(niv){ let n = 0; for(let L = 2; L <= (niv || 1); L++) n += renardsPourNiveau(L); return n; }
+function renardsDispo(){
+  const p = state.profile || {};
+  return Math.max(0, renardsCumules(p.foxNiv || 1) + (p.foxBonus || 0) - (p.foxOuv || 0));
+}
+function majRenards(){ const p = state.profile; if(!p) return; p.fox = renardsDispo(); sset("fm:profile", p); }
+function migrerRenards(){
+  const p = state.profile;
+  if(!p || p.foxV === 2) return;
+  /* ancien compteur : tout ce qui dépasse ce que les niveaux donnent était un doublon */
+  if(p.foxNiv != null) p.foxOuv = Math.max(0, renardsCumules(p.foxNiv) - (p.fox || 0));
+  p.foxBonus = 0;
+  p.foxV = 2;
+}
 function recompenserNiveaux(){
   const p = state.profile;
   if(!p || !p.pseudo || !fmPret) return;
+  migrerRenards();
   const lv = levelFromXP(playerXP()).lvl;
+  const avant = p.foxNiv == null ? 1 : p.foxNiv;
+  if(lv <= avant){
+    if(p.foxNiv == null){ p.foxNiv = Math.max(1, lv); majRenards(); }
+    else if(p.fox !== renardsDispo()) majRenards();
+    return;
+  }
+  const n = renardsCumules(lv) - renardsCumules(avant);
   const rattrapage = p.foxNiv == null;
-  const depuis = rattrapage ? 1 : p.foxNiv;
-  if(lv <= depuis){ if(rattrapage){ p.foxNiv = Math.max(1, lv); sset("fm:profile", p); } return; }
-  let n = 0;
-  for(let L = depuis + 1; L <= lv; L++) n += renardsPourNiveau(L);
   p.foxNiv = lv;
-  p.fox = (p.fox||0) + n;
-  sset("fm:profile", p);
+  majRenards();
   if(n) toast(rattrapage ? `+${n} boosters renard 🦊` : `Niveau ${lv} : +${n} booster${n > 1 ? "s" : ""} renard 🦊`,
               rattrapage ? `ceux de vos ${lv} niveaux` : "à ouvrir dans les boosters spéciaux", "ach");
 }
@@ -10658,7 +10698,7 @@ function addCard(c){
 }
 function refundPack(r){
   if(r.kind === "fox"){
-    state.profile.fox = (state.profile.fox||0) + 1;
+    state.profile.foxOuv = Math.max(0, (state.profile.foxOuv||0) - 1); majRenards();
   } else if(r.kind === "mythic"){
     state.profile.mythic = (state.profile.mythic||0) + (r.count||1);
   } else if(r.kind === "demon"){
@@ -11561,9 +11601,9 @@ function repeatOpen(kind, n){
 }
 
 async function openFox(){
-  if(state.busy || !(state.profile.fox||0)) return;
+  if(state.busy || renardsDispo() < 1) return;
   state.busy = true;
-  state.profile.fox--;
+  state.profile.foxOuv = (state.profile.foxOuv||0) + 1; majRenards();
   const intro = playBoosterIntro("fox");
   startShaking();
   state.reveal = {loading:true, kind:"fox", count:1, msg:"le renard bat les cartes…", cards:[], flipped:[]};
@@ -11614,7 +11654,7 @@ async function openFox(){
     intro.finish();
     await intro.done;
     state.busy = false; stopShaking();
-    state.profile.fox++;
+    state.profile.foxOuv = Math.max(0, (state.profile.foxOuv||0) - 1); majRenards();
     state.reveal = null; renderStage();
     const m = view.querySelector("#packmsg");
     if(m) m.innerHTML = `<div class="err">${esc(e.message)}</div>`;
@@ -16307,6 +16347,15 @@ function openSettings(){
   }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
+  if(!state.profile.pseudo && nuageConfigure() && nuageConnecte()){
+    try{
+      const r = await nuageLire("fm:profile");
+      if(r && r.valeur && r.valeur.pseudo && await nuageDescendre(true)){
+        const p2 = await sget("fm:profile"); if(p2) Object.assign(state.profile, p2);
+        diagLog("partie en ligne reprise au démarrage");
+      }
+    }catch(e){ diagLog("reprise en ligne impossible : " + (e && e.message)); }
+  }
   persoInstantane(state.profile);
   // les parties créées avant les Fandominus repartent avec la dotation complète
   if(!state.profile.v || state.profile.v < 3){
