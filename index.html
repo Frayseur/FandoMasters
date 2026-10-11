@@ -1059,6 +1059,10 @@ body:has(.card.holoact) .scrim{backdrop-filter:none;background:rgba(53,92,125,.7
 .flip.hint .in{animation:nudge 1.8s ease-in-out infinite}
 @keyframes nudge{0%,88%,100%{transform:none}94%{transform:rotateY(-12deg)}}
 .flip.done{cursor:default}
+.flip .back.fox{--dos-fond:#1E1208;--dos-lueur:#7A4A18;--dos-or:#E8A050;border-color:#E8A050}
+.flip .back.fox::before{border-color:#E8A05055}
+.flip.manque{opacity:.5;filter:grayscale(.7)}
+.flip.pris::after{content:"";position:absolute;inset:-4px;border-radius:16px;border:2px solid #E8A050;box-shadow:0 0 18px -4px #E8A050;pointer-events:none}
 
 .mythbox{width:100%;margin-top:.6rem;padding:1rem;border-radius:var(--radius);position:relative;overflow:hidden;
   background:var(--a1-voile);border:1px solid var(--p3)}
@@ -3308,7 +3312,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.0.10";
+const BUILD = "V1.0.11";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -3532,6 +3536,7 @@ const UNIVERSES = [
   {label:"Nana",               host:"nana.fandom.com",          cat:"Livres & mangas"},
   {label:"SCP Foundation",     host:"scp-fondation.fandom.com", cat:"Livres & mangas"},
   {label:"Peaky Blinders",     host:"peaky-blinders.fandom.com", cat:"Films & séries"},
+  {label:"Shameless",          host:"shameless.fandom.com",     cat:"Films & séries"},
   {label:"Avatar",             host:"james-camerons-avatar.fandom.com", cat:"Films & séries"},
   {label:"Barbie",             host:"barbie.fandom.com",         cat:"Films & séries"},
   {label:"Tarantino",          host:"tarantino.fandom.com",      cat:"Films & séries"},
@@ -10249,9 +10254,9 @@ function oddsFold(){
         <div><h4>Mythique</h4>${oddsTable(ODDS_MYTHIC)}</div>
         <div><h4>Démonique</h4>${oddsTable(ODDS_DEMON)}
           <div class="oddsrow"><span>Artefact</span><b>${pctLabel(RELIC_CHANCE)}</b></div></div>
-        <div><h4>Marchand renard</h4>
-          <div class="oddsrow"><span>Légendaire ou Ultra rare</span><b>30,0 %</b></div>
-          <div class="oddsrow"><span>Cinq communes</span><b>70,0 %</b></div></div>
+        <div><h4>Booster renard</h4>
+          <div class="oddsrow"><span>Légendaire ou spéciale cachée</span><b>1 sur 5</b></div>
+          <div class="oddsrow"><span>Trouvée en deux choix</span><b>40,0 %</b></div></div>
       </div>
       <p class="sub" style="margin:.6rem 0 0;font-size:.82rem">Les cartes spéciales tombent au rythme des Légendaires, dans tous les boosters. Chaque carte sort avec son vrai rang (palmarès du wiki ou vote de la communauté) : si aucun univers du paquet n\'a de carte au rang tiré, elle descend d\'un cran plutôt que de promouvoir un figurant.</p>
     </div>
@@ -10342,15 +10347,16 @@ function renderStage(){
         </div>
       </div>
 
-      ${(state.profile.fox||0)? `<div class="foxbox">
+      <div class="foxbox">
         <div class="row" style="justify-content:space-between;align-items:center">
           <div>
-            <h3 style="font-size:1.05rem">Booster « Choix du marchand » 🦊</h3>
-            <p class="sub" style="margin:.2rem 0 0">Cinq broutilles… ou une seule carte, Légendaire ou Ultra rare. ${state.profile.fox} en réserve.</p>
+            <h3 style="font-size:1.05rem">Booster renard 🦊</h3>
+            <p class="sub" style="margin:.2rem 0 0">Cinq cartes face cachée : une seule est une Légendaire ou une carte spéciale. Vous en retournez deux.
+              ${state.profile.fox||0} en réserve · ${prochainsRenards()}</p>
           </div>
-          <button class="btn" id="openF">Tenter</button>
+          <button class="btn" id="openF" ${(state.profile.fox||0) ? "" : "disabled"}>Tenter</button>
         </div>
-      </div>`:""}
+      </div>
 
       ${(state.profile.univBoosters||[]).length? `<div class="giftbox">
         <div class="row" style="justify-content:space-between;align-items:center">
@@ -10487,15 +10493,18 @@ function renderStage(){
   stage.innerHTML = `
     <div class="reveal" id="rev">
       ${r.cards.map((c,i)=>`
-        <div class="flip ${r.flipped[i]?"on done":""} ${(!r.flipped[i] && i===r.flipped.indexOf(false))?"hint":""}" data-i="${i}">
+        <div class="flip ${r.flipped[i]?"on done":""} ${(!r.fox && !r.flipped[i] && i===r.flipped.indexOf(false))?"hint":""} ${r.manque && r.manque[i]?"manque":""} ${r.fox && r.fox.pris.includes(i)?"pris":""}" data-i="${i}">
           <div class="in">
-            <div class="face back ${r.kind==="mythic"?"myth":r.kind==="demon"?"demon":""}"><span class="mk"></span></div>
+            <div class="face back ${r.kind==="mythic"?"myth":r.kind==="demon"?"demon":r.kind==="fox"?"fox":""}"><span class="mk"></span></div>
             <div class="face front">${cardHTML(c)}</div>
           </div>
         </div>`).join("")}
     </div>
     <div class="row" style="justify-content:center">
-      ${left? `<button class="btn ghost" id="all">Tout retourner</button>
+      ${left && r.fox ? `<span class="sub">${r.fox.pris.length < r.fox.max
+                 ? `Choisissez ${r.fox.max - r.fox.pris.length} carte${r.fox.max - r.fox.pris.length > 1 ? "s" : ""} — une seule des cinq est une Légendaire ou une carte spéciale`
+                 : "Le renard dévoile le reste…"}</span>`
+       : left? `<button class="btn ghost" id="all">Tout retourner</button>
                <span class="sub">Touchez les cartes — ${left} à découvrir</span>`
             : `${againButton(r.kind, r.count||1)}
                <button class="btn ghost" id="back">Retour aux ouvertures</button>
@@ -10552,6 +10561,10 @@ function animerRetournement(el, c, n, fin){
 function flipCard(i){
   const r = state.reveal;
   if(!r || r.flipped[i]) return;
+  if(r.fox){
+    if(r.fox.pris.length >= r.fox.max || r.fox.fini) return;
+    r.fox.pris.push(i);
+  }
   r.flipped[i] = true;
   const c = r.cards[i];
   const n = addCard(c);
@@ -10565,10 +10578,64 @@ function flipCard(i){
   try{ sfx.flip(); }catch(e){}
   if(el) animerRetournement(el, c, n, fete); else fete();
   checkAch();
+  if(r.fox){
+    if(el) el.classList.add("pris");
+    if(r.fox.pris.length >= r.fox.max){
+      const ligne = view.querySelector("#stage .row .sub"); if(ligne) ligne.textContent = "Le renard dévoile le reste…";
+      setTimeout(()=>devoilerRenard(r), 900);
+    } else {
+      const ligne = view.querySelector("#stage .row .sub"); if(ligne) ligne.textContent = "Encore une carte — une seule des cinq est une Légendaire ou une carte spéciale";
+    }
+    return;
+  }
   const next = r.flipped.indexOf(false);
   view.querySelectorAll(".flip").forEach(x=>x.classList.remove("hint"));
   if(next >= 0){ const n2 = view.querySelector(`.flip[data-i="${next}"]`); if(n2) n2.classList.add("hint"); }
   else setTimeout(()=>{ if(state.reveal === r) renderStage(); }, 1000);
+}
+
+/* Les deux choix faits, le renard retourne les trois autres cartes : on voit
+   ce qu'on a manqué, mais on ne les reçoit pas. */
+function devoilerRenard(r){
+  if(state.reveal !== r || r.fox.fini) return;
+  r.fox.fini = true;
+  const gagne = r.fox.pris.includes(r.fox.star);
+  r.cards.forEach((c, i)=>{
+    if(r.flipped[i]) return;
+    r.flipped[i] = true; r.manque[i] = true;
+    const el = view.querySelector(`.flip[data-i="${i}"]`);
+    if(el){ setTimeout(()=>{ animerRetournement(el, c, 0, ()=>{}); el.classList.add("manque"); }, 160 * i); }
+  });
+  r.note = gagne ? "Bien joué : vous avez trouvé la carte du renard !" : "Raté… la carte du renard vous a échappé.";
+  setTimeout(()=>{ try{ if(gagne) sfx.fanfare(); else sfx.hurt(); }catch(e){} }, 500);
+  setTimeout(()=>{ if(state.reveal === r) renderStage(); }, 1600);
+}
+
+/* ---- boosters renard gagnés en montant de niveau ----
+   1 par niveau jusqu'au 10, 2 par niveau du 11 au 20, 3 du 21 au 30, etc.
+   On retient le plus haut niveau déjà récompensé : vendre des cartes puis
+   remonter ne redonne rien, et les joueurs déjà avancés reçoivent d'un coup
+   ce que leurs niveaux leur auraient rapporté. */
+function renardsPourNiveau(L){ return L <= 1 ? 0 : Math.floor((L - 1) / 10) + 1; }
+function prochainsRenards(){
+  const lv = levelFromXP(playerXP()).lvl;
+  const n = renardsPourNiveau(lv + 1);
+  return `+${n} au niveau ${lv + 1}`;
+}
+function recompenserNiveaux(){
+  const p = state.profile;
+  if(!p || !p.pseudo || !fmPret) return;
+  const lv = levelFromXP(playerXP()).lvl;
+  const rattrapage = p.foxNiv == null;
+  const depuis = rattrapage ? 1 : p.foxNiv;
+  if(lv <= depuis){ if(rattrapage){ p.foxNiv = Math.max(1, lv); sset("fm:profile", p); } return; }
+  let n = 0;
+  for(let L = depuis + 1; L <= lv; L++) n += renardsPourNiveau(L);
+  p.foxNiv = lv;
+  p.fox = (p.fox||0) + n;
+  sset("fm:profile", p);
+  if(n) toast(rattrapage ? `+${n} boosters renard 🦊` : `Niveau ${lv} : +${n} booster${n > 1 ? "s" : ""} renard 🦊`,
+              rattrapage ? `ceux de vos ${lv} niveaux` : "à ouvrir dans les boosters spéciaux", "ach");
 }
 
 function addCard(c){
@@ -10590,7 +10657,9 @@ function addCard(c){
   return c.count = 1;
 }
 function refundPack(r){
-  if(r.kind === "mythic"){
+  if(r.kind === "fox"){
+    state.profile.fox = (state.profile.fox||0) + 1;
+  } else if(r.kind === "mythic"){
     state.profile.mythic = (state.profile.mythic||0) + (r.count||1);
   } else if(r.kind === "demon"){
     state.profile.demon = (state.profile.demon||0) + (r.count||1);
@@ -10611,6 +10680,23 @@ function flushReveal(){
   const r = state.reveal;
   state.openToken = (state.openToken||0) + 1;      // coupe un tirage encore en cours
   if(!r || r.bulk || !r.cards || !r.cards.length) return;
+  if(r.fox){
+    if(r.fox.fini) return;
+    if(!r.fox.pris.length){
+      refundPack(r); sset("fm:profile", state.profile);
+      toast("Ouverture annulée — booster renard rendu");
+      return;
+    }
+    /* on quitte avant le second choix : il est fait au hasard, comme un tirage */
+    const restes = r.cards.map((c, i)=>i).filter(i => !r.flipped[i]);
+    while(r.fox.pris.length < r.fox.max && restes.length){
+      const k = restes.splice(Math.floor(Math.random() * restes.length), 1)[0];
+      r.fox.pris.push(k); r.flipped[k] = true; addCard(r.cards[k]);
+    }
+    r.fox.fini = true;
+    sset("fm:col", state.collection); checkAch();
+    return;
+  }
   const started = r.flipped.some(Boolean);
   if(!started){
     refundPack(r);
@@ -11479,35 +11565,50 @@ async function openFox(){
   state.profile.fox--;
   const intro = playBoosterIntro("fox");
   startShaking();
-  state.reveal = {loading:true, kind:"fox", count:1, msg:"le marchand fouille son sac…", cards:[], flipped:[]};
+  state.reveal = {loading:true, kind:"fox", count:1, msg:"le renard bat les cartes…", cards:[], flipped:[]};
   renderStage();
   try{
-    const pool = await ensurePool();
+    let pool = await ensurePool();
+    if(!pool.length) pool = state.pool;
     if(!pool.length) throw new Error("aucun univers joignable");
-    const jackpot = Math.random() < 0.3;
-    const queue = shuffled(pool);
-    let cards = [];
-    if(jackpot){
-      const rar = Math.random() < 0.25 ? "Légendaire" : "Ultra rare";
-      for(let t=0;t<3 && !cards.length;t++){
-        const c = await drawForRarity(queue[t % queue.length], rar).catch(()=>null);
-        if(c) cards = [c];
-      }
-    } else {
-      const got = await Promise.all([0,1,2,3,4].map(i=>drawForRarity(queue[i % queue.length], "Commun").catch(()=>null)));
-      cards = got.filter(Boolean);
+    await chargerRangs();
+    /* la carte maîtresse : une Légendaire (tirée sur tous les univers) ou une carte spéciale */
+    let star = null;
+    const special = Math.random() < 0.2;
+    for(let t = 0; t < 8 && !star; t++){
+      const enSpeciale = special ? t < 4 : t >= 6;
+      try{
+        if(enSpeciale){
+          star = await drawSpecial(pool[Math.floor(Math.random() * pool.length)]);
+        } else {
+          const w = universPourRang(pool, "Légendaire", new Set(), null) || pool[Math.floor(Math.random() * pool.length)];
+          const c = await drawForRarity(w, "Légendaire");
+          if(c && (c.rarity === "Légendaire" || c.variant)) star = c;
+        }
+      }catch(e){}
     }
-    if(!cards.length) throw new Error("le marchand n'a rien trouvé");
+    if(!star) throw new Error("le renard n'a pas trouvé sa carte");
+    /* quatre leurres */
+    const leurres = [];
+    const rangs = shuffled(["Commun", "Commun", "Peu commun", "Rare"]);
+    for(let t = 0; t < 3 && leurres.length < 4; t++){
+      const q = shuffled(pool);
+      const manque = rangs.slice(leurres.length);
+      const got = await Promise.all(manque.map((r, i)=>drawForRarity(q[i % q.length], r).catch(()=>null)));
+      for(const c of got) if(c && leurres.length < 4 && c.id !== star.id && !leurres.some(x => x.id === c.id)) leurres.push(c);
+    }
+    if(leurres.length < 4) throw new Error("le renard n'a pas pu compléter son jeu");
+    const cards = shuffled([star, ...leurres]);
     state.profile.packs = (state.profile.packs||0) + 1;
     await saveAll();
     intro.finish();
     await intro.done;
     state.busy = false;
     stopShaking();
-    state.reveal = {loading:false, kind:"fox", count:1, cards, flipped:cards.map(()=>false), jackpot,
-      note: jackpot ? "Le marchand a l'œil brillant." : "Le marchand hausse les épaules."};
+    state.reveal = {loading:false, kind:"fox", count:1, cards, flipped:cards.map(()=>false), manque:cards.map(()=>false),
+      fox:{pris:[], max:2, star:cards.indexOf(star), fini:false},
+      note:"Deux essais. Les cartes que vous retournez sont à vous."};
     renderStage();
-    setTimeout(()=>{ if(jackpot) sfx.fanfare(); else sfx.hurt(); }, 300);
   }catch(e){
     intro.finish();
     await intro.done;
@@ -14239,6 +14340,7 @@ function achPending(){
 }
 
 async function checkAch(){
+  try{ recompenserNiveaux(); }catch(e){}
   const owned = new Set(state.profile.ach||[]);
   const fresh = [];
   for(const a of ACHIEVEMENTS){
@@ -15800,10 +15902,6 @@ async function finishCollect(c, gains, m){
   if(c.loot2) addCard(c.loot2);
   if(c.boss) addCard(c.boss);
   if(c.relicLoot) addCard(c.relicLoot);
-  if(c.win && Math.random() < 0.05){
-    p.fox = (p.fox||0) + 1;
-    toast("Le marchand renard vous glisse un booster");
-  }
   if(c.win){
     p.campWins = (p.campWins||0) + 1;
     p.campDone = (p.campDone||[]).concat(c.id);
@@ -16271,6 +16369,7 @@ function openSettings(){
   paintSound();
   render();
   installerHistorique();
+  setTimeout(()=>{ try{ recompenserNiveaux(); }catch(e){} }, 2500);
   paintAchDot();
   tick();
   checkAch();
