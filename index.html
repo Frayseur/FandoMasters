@@ -3281,6 +3281,96 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 .admcarte .row{gap:.4rem;flex-wrap:wrap}
 .admcarte input{width:auto;min-width:0;flex:1 1 110px;padding:.4rem .55rem}
 .admbloque{color:var(--red);font-weight:700}
+
+/* ---- duels ---- */
+.derr{margin-bottom:.8rem;color:var(--red)}
+.ddeckbilan{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
+.ddeckbilan > div{display:flex;flex-direction:column;flex:1;min-width:180px}
+.dmodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem;margin-top:.8rem}
+.dmode{display:flex;flex-direction:column;gap:.5rem}
+.dmode h3{font-size:1.05rem;margin:0;display:flex;gap:.4rem;align-items:center}
+.dmode .sub{margin:0;flex:1}
+.dmode.verrou{opacity:.75}
+.dniv{gap:.3rem;flex-wrap:wrap}
+.dattente{display:flex;flex-direction:column;align-items:center;gap:.45rem;text-align:center;margin-bottom:.8rem}
+.dcode{font-size:2.2rem;font-weight:800;letter-spacing:.35em;color:var(--brass)}
+.dspin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brass);animation:dtour 1s linear infinite}
+@keyframes dtour{to{transform:rotate(360deg)}}
+.dtab{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.88rem}
+.dtab th,.dtab td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line)}
+.ddeck,.dcoll{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:.5rem}
+.ddeckcase{position:relative}
+.dretirer{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer;line-height:1}
+.dcollcase.pleine{opacity:.5}
+.dcarte{position:relative;border-radius:10px;border:2px solid var(--line);background:var(--panel);overflow:hidden;display:flex;flex-direction:column;cursor:default;min-width:0;color:var(--text);transition:transform .15s ease, box-shadow .15s ease}
+.dcarte[role=button]{cursor:pointer}
+.dcarte[data-r="Peu commun"]{border-color:#9DB4C0}
+.dcarte[data-r="Rare"]{border-color:#7FD0C2}
+.dcarte[data-r="Super rare"]{border-color:#E8A8C6}
+.dcarte[data-r="Ultra rare"]{border-color:#F09468}
+.dcarte[data-r="Légendaire"],.dcarte[data-r="Relique"]{border-color:#E8B44C;box-shadow:0 0 0 1px #E8B44C55}
+.dcarte.choisie{transform:translateY(-8px);box-shadow:0 0 0 3px var(--brass),0 8px 18px rgba(0,0,0,.25)}
+.dart{aspect-ratio:4/3;background:color-mix(in srgb,var(--panel) 80%,var(--brass));overflow:hidden;display:grid;place-items:center}
+.dart img{width:100%;height:100%;object-fit:cover}
+.dvide{font-size:1.6rem;font-weight:800;opacity:.5}
+.dnom{font-size:.74rem;font-weight:700;padding:.25rem .35rem 0;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.1em}
+.drar{font-size:.64rem;padding:0 .35rem;opacity:.7}
+.dstats{display:flex;justify-content:space-between;font-size:.7rem;font-weight:700;padding:.2rem .35rem .3rem}
+.dpost{font-size:.72rem;font-weight:800;text-align:center;padding:.2rem;background:var(--brass);color:#fff}
+.dcarte.petite .dnom{font-size:.68rem}
+.dplats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem;margin:.8rem 0}
+.dplat{min-height:96px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:.3rem;cursor:pointer;text-align:left;font:inherit}
+.dplat.on{outline:3px solid var(--brass);outline-offset:2px}
+.dplat:disabled{cursor:not-allowed;opacity:.6}
+.plateau{border-radius:16px;padding:.75rem;border:1px solid var(--line);position:relative;overflow:hidden;color:var(--text)}
+.plateau .sub{color:inherit;opacity:.75}
+.plateau .tag{background:rgba(0,0,0,.4);color:#fff;border-color:transparent}
+.plateau-classique{background:linear-gradient(160deg,var(--panel),color-mix(in srgb,var(--panel) 82%,var(--brass)))}
+.plateau-ebene{background:repeating-linear-gradient(100deg,#2b1d14 0 14px,#33241a 14px 30px);color:#f3e6d4;border-color:#5a3f2a}
+.plateau-aurore{background:linear-gradient(160deg,#ffd6e8,#c9e7ff 55%,#e3ffd6);color:#1f1a17}
+.plateau-braise{background:radial-gradient(circle at 30% 130%,#ff8a3d,#8a210f 55%,#2a0905);color:#ffeadb;border-color:#a33a1c}
+.plateau-abysse{background:radial-gradient(circle at 70% -30%,#3cc6d6,#0b2c4d 55%,#050f1f);color:#e2f6ff;border-color:#1d5f7a}
+.plateau-sakura{background:radial-gradient(circle at 15% 15%,#fff 0 6%,transparent 7%),radial-gradient(circle at 80% 30%,#fff7 0 4%,transparent 5%),linear-gradient(160deg,#fff0f5,#f5bcd3);color:#3a1f2a}
+.dpartie{display:flex;flex-direction:column;gap:.7rem}
+.ptete{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.ppseudo{font-weight:800;flex:1;min-width:0}
+.dpips{display:inline-flex;gap:4px}
+.dpips i{width:12px;height:12px;border-radius:50%;border:2px solid currentColor;opacity:.6}
+.dpips i.on{background:currentColor;opacity:1}
+.dpres{width:10px;height:10px;border-radius:50%;background:var(--red)}
+.dpres.on{background:var(--teal)}
+.dmainadv{display:flex;gap:6px;margin:.55rem 0 .35rem;min-height:48px}
+.ddos{width:34px;height:48px;border-radius:6px;border:1px solid rgba(255,255,255,.4);background:repeating-linear-gradient(45deg,var(--brass) 0 4px,color-mix(in srgb,var(--brass) 60%,#000) 4px 8px)}
+.pinfo{font-size:.8rem}
+.dcentre{min-height:120px;display:flex;flex-direction:column;gap:.4rem;align-items:stretch}
+.dbandeau{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.9rem}
+.dchrono{min-width:58px;text-align:center;padding:.15rem .5rem;border-radius:999px;background:var(--brass);color:#fff}
+.dchrono.urgent{background:var(--red);animation:dpouls 1s ease infinite}
+@keyframes dpouls{50%{transform:scale(1.08)}}
+.drevel{min-height:60px;display:grid;place-items:center;text-align:center}
+.drevelation{width:100%;animation:drv .35s ease}
+@keyframes drv{from{opacity:0;transform:scale(.92)}}
+.drduo{display:grid;grid-template-columns:1fr auto 1fr;gap:.5rem;align-items:center}
+.drcote{display:flex;flex-direction:column;align-items:center;gap:.3rem;max-width:150px;justify-self:center;width:100%}
+.drcote .dcarte{width:100%}
+.drcote.gagne .dcarte{box-shadow:0 0 0 3px var(--teal),0 0 18px color-mix(in srgb,var(--teal) 60%,transparent)}
+.drcalc{font-size:.78rem;text-align:center}
+.drvs{font-size:.8rem;opacity:.7}
+.drverdict{font-weight:800;font-size:1.1rem;margin-top:.4rem}
+.drverdict.v1{color:var(--teal)}
+.drverdict.v2{color:var(--red)}
+.dposts{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.55rem 0 .2rem}
+.dpbtn{display:flex;flex-direction:column;align-items:center;gap:.05rem;padding:.45rem .2rem;border-radius:12px;border:2px solid currentColor;background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.85}
+.dpbtn .ic{font-size:1.15rem}
+.dpbtn small{font-size:.72rem;opacity:.85}
+.dpbtn.on{background:var(--brass);border-color:var(--brass);color:#fff;opacity:1}
+.dpbtn:disabled{cursor:default}
+.dcycle{font-size:.72rem;margin:.1rem 0 .4rem}
+.dmain{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;padding-top:.6rem}
+.dfinmodal .inner{animation:drv .4s ease}
+.dfintitre{font-size:2rem;font-weight:900}
+.dfintitre.r-victoire{color:var(--teal)}
+.dfintitre.r-defaite{color:var(--red)}
 </style>
 </head>
 <body>
@@ -3311,7 +3401,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
       <button data-view="decks"><span class="ic">▤</span><b>Decks</b><small>Vos escouades toutes prêtes</small></button>
       <button data-view="inv"><span class="ic">▦</span><b>Inventaire</b><small>Potions et armements</small></button>
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
-      <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Donjons et duels</small></button>
+      <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Duels tactiques en ligne</small></button>
       <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
       <button data-view="shop"><span class="ic">⬢</span><b>Boutique</b><small>Cristaux et boosters</small></button>
       <button data-view="camp"><span class="ic">⚑</span><b>Campagnes</b><small>Expéditions et boss d'univers</small></button>
@@ -3335,7 +3425,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.2.0";
+const BUILD = "V1.3.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -12545,6 +12635,511 @@ const SOON = {
 };
 
 /* ======================================================================
+   Duels — le serveur arbitre tout
+   ----------------------------------------------------------------------
+   Chaque manche, les deux joueurs choisissent en secret une carte de leur
+   main et une posture. Le serveur garde les choix, les révèle ensemble et
+   calcule le résultat ; le jeu n'envoie que des intentions et affiche ce
+   que le serveur répond. Les calculs ci-dessous ne servent qu'à l'affichage.
+   ====================================================================== */
+const DUEL_RAR = {
+  "Commun":     {lo:900,  hi:2800, br:0,  cout:0, groupe:null},
+  "Peu commun": {lo:2400, hi:4200, br:20, cout:1, groupe:null},
+  "Rare":       {lo:4000, hi:5800, br:40, cout:2, groupe:null},
+  "Super rare": {lo:5600, hi:7000, br:50, cout:2, groupe:null},
+  "Ultra rare": {lo:6900, hi:8300, br:60, cout:3, groupe:"ultra"},
+  "Légendaire": {lo:8400, hi:9700, br:80, cout:5, groupe:"legende"},
+  "Relique":    {lo:8400, hi:9999, br:80, cout:5, groupe:"legende"}
+};
+const DUEL_BUDGET = 20, DUEL_TAILLE = 15;
+const POSTURES = {
+  ASSAULT:{nom:"Assaut", ic:"⚔", stat:"ATQ", bat:"FEINT"},
+  GUARD:  {nom:"Garde",  ic:"⛨", stat:"DÉF", bat:"ASSAULT"},
+  FEINT:  {nom:"Feinte", ic:"✦", stat:"moyenne", bat:"GUARD"}
+};
+const PLATEAUX = [
+  {id:"classique", nom:"Classique", vip:false},
+  {id:"ebene",  nom:"Ébène",  vip:true},
+  {id:"aurore", nom:"Aurore", vip:true},
+  {id:"braise", nom:"Braise", vip:true},
+  {id:"abysse", nom:"Abysse", vip:true},
+  {id:"sakura", nom:"Sakura", vip:true}
+];
+const MODES_DUEL = {TRAINING:"Entraînement", ONLINE:"En ligne", RANKED:"Classé", FRIENDS:"Entre amis"};
+function duelNorm(s, r){
+  const x = DUEL_RAR[r] || DUEL_RAR["Commun"];
+  return 1000 + 500 * Math.min(1, Math.max(0, ((+s || 0) - x.lo) / (x.hi - x.lo))) + x.br;
+}
+function duelBase(c, p){
+  const a = duelNorm(c.a, c.r), d = duelNorm(c.d, c.r);
+  return p === "ASSAULT" ? a : p === "GUARD" ? d : (a + d) / 2;
+}
+function duelMult(p, q){ return POSTURES[p].bat === q ? 1.35 : POSTURES[q].bat === p ? 0.85 : 1; }
+const duelArrondi = v => Math.round(v).toLocaleString("fr-FR");
+
+/* ---- état de l'écran de combat (séparé de l'ancien state.duel) ---- */
+const DUEL = {onglet:"jouer", profil:null, classement:null, id:null, etat:null, attente:null, erreur:"",
+              choix:{i:null, p:null}, cle:null, envoi:false, vus:0, revel:null, revelJusqua:0,
+              niveau:"normal", code:"", dernierMode:null, signature:"", recu:0, hors:0, demarre:false};
+
+/* ---- deck : 15 exemplaires « carte#k » ---- */
+function duelCarteDe(c, k){ return {i:c.id + "#" + k, c:c.id, t:c.title, r:c.rarity, a:+c.atk || 0, d:+c.def || 0, img:c.img, u:c.univ}; }
+function duelExemplaires(){
+  const out = [];
+  for(const c of state.collection){ for(let k = 1; k <= Math.max(1, c.count || 1); k++) out.push(duelCarteDe(c, k)); }
+  return out;
+}
+function duelDeck(){ return Array.isArray(state.profile.deckDuel) ? state.profile.deckDuel.slice() : []; }
+function duelValider(ids){
+  const exs = new Map(duelExemplaires().map(x => [x.i, x]));
+  const cartes = [], erreurs = [];
+  let points = 0, ultra = 0, leg = 0;
+  for(const i of ids){
+    const x = exs.get(i);
+    if(!x){ erreurs.push("une carte n'est plus dans votre collection"); continue; }
+    const r = DUEL_RAR[x.r];
+    if(!r){ erreurs.push("rareté inconnue : " + x.t); continue; }
+    points += r.cout; if(r.groupe === "ultra") ultra++; if(r.groupe === "legende") leg++;
+    cartes.push(x);
+  }
+  if(new Set(ids).size !== ids.length) erreurs.push("un exemplaire est utilisé deux fois");
+  if(ids.length !== DUEL_TAILLE) erreurs.push(ids.length < DUEL_TAILLE ? "il manque " + (DUEL_TAILLE - ids.length) + " carte" + (DUEL_TAILLE - ids.length > 1 ? "s" : "") : "il y a " + (ids.length - DUEL_TAILLE) + " carte(s) de trop");
+  if(leg > 1) erreurs.push("une seule Légendaire (ou Relique)");
+  if(ultra > 2) erreurs.push("deux Ultra rares au maximum");
+  if(points > DUEL_BUDGET) erreurs.push("budget dépassé : " + points + " points sur " + DUEL_BUDGET);
+  return {ok:!erreurs.length, erreurs:[...new Set(erreurs)], points, ultra, leg, cartes};
+}
+/* Deck conseillé : les meilleures cartes qui respectent toutes les règles */
+function duelDeckAuto(){
+  const val = x => Math.max(duelBase(x, "ASSAULT"), duelBase(x, "GUARD"), duelBase(x, "FEINT"));
+  const tous = duelExemplaires().filter(x => DUEL_RAR[x.r]).sort((a, b) => val(b) - val(a));
+  const gratuits = tous.filter(x => DUEL_RAR[x.r].cout === 0);
+  const deck = [];
+  let points = 0, ultra = 0, leg = 0;
+  for(const x of tous){
+    if(deck.length >= DUEL_TAILLE) break;
+    const r = DUEL_RAR[x.r];
+    if(points + r.cout > DUEL_BUDGET) continue;
+    if(r.groupe === "ultra" && ultra >= 2) continue;
+    if(r.groupe === "legende" && leg >= 1) continue;
+    // garder assez de cartes gratuites pour compléter le deck
+    const libres = gratuits.filter(g => !deck.includes(g) && g !== x).length;
+    if(r.cout > 0 && deck.length + 1 + libres < DUEL_TAILLE) continue;
+    deck.push(x); points += r.cout;
+    if(r.groupe === "ultra") ultra++; if(r.groupe === "legende") leg++;
+  }
+  return deck.map(x => x.i);
+}
+async function duelDeckEnregistrer(ids){
+  state.profile.deckDuel = ids;
+  await sset("fm:profile", state.profile);
+}
+/* La rareté affichée (corrections comprises) est celle que le serveur arbitre */
+async function duelAlignerRaretes(){
+  let n = 0;
+  for(const c of state.collection){
+    const r = rareteEffective(c);
+    if(r && r !== c.rarity){ c.rarity = r; n++; }
+  }
+  if(n) await sset("fm:col", state.collection);
+  return n;
+}
+function duelPlateauChoisi(){ return state.profile.plateauDuel || "classique"; }
+
+/* ---- appels au serveur ---- */
+async function duelAppel(nom, corps){
+  const r = await regRpc(nom, corps);
+  DUEL.recu = Date.now(); DUEL.hors = 0;
+  return r;
+}
+function duelAppliquer(r){
+  if(!r) return;
+  if(r.id){
+    if(DUEL.id !== r.id){ DUEL.vus = (r.historique || []).length; DUEL.choix = {i:null, p:null}; DUEL.cle = null; DUEL.revel = null; }
+    DUEL.id = r.id; DUEL.etat = r; DUEL.attente = null; DUEL.dernierMode = r.mode;
+    // une nouvelle manche révélée : on la montre quelques secondes
+    const h = r.historique || [];
+    if(h.length > DUEL.vus){
+      DUEL.revel = h[h.length - 1]; DUEL.vus = h.length; DUEL.revelJusqua = Date.now() + 3800;
+      DUEL.choix = {i:null, p:null}; DUEL.cle = null;
+      try{ (DUEL.revel.gagnant === 1 ? sfx.coin : sfx.flip || sfx.coin)(); }catch(e){}
+    }
+    if(r.statut !== "ACTIVE"){ duelProfilCharger(); setTimeout(()=>registreVerifier(), 500); }
+  }else if(r.recherche){ DUEL.attente = {type:"recherche", mode:r.recherche, depuis:Date.now() - (r.depuis_ms || 0)}; DUEL.id = null; DUEL.etat = null; }
+  else if(r.salon){ DUEL.attente = {type:"salon", code:r.salon}; DUEL.id = null; DUEL.etat = null; }
+  else if(r.libre){ DUEL.attente = null; if(DUEL.etat && DUEL.etat.statut === "ACTIVE"){ DUEL.id = null; DUEL.etat = null; } }
+}
+async function duelProfilCharger(){
+  try{ DUEL.profil = await duelAppel("duel_profil", {}); }catch(e){}
+  if(state.view === "duel" && !DUEL.id) viewDuel();
+}
+let duelBoucle = null;
+/* Chaque seconde pendant une partie ou une recherche : c'est aussi ce qui dit
+   au serveur que le joueur est toujours là. */
+async function duelVeille(){
+  const actif = (DUEL.id && DUEL.etat && DUEL.etat.statut === "ACTIVE") || DUEL.attente;
+  if(!actif || ongletFige || !nuageConnecte()) return;
+  if(DUEL.envoi) return;
+  const avant = JSON.stringify([DUEL.attente && DUEL.attente.type, DUEL.attente && DUEL.attente.code, DUEL.id, DUEL.erreur]);
+  try{
+    const r = await duelAppel("duel_etat", {p_match:DUEL.id || null});
+    duelAppliquer(r);
+  }catch(e){
+    DUEL.hors++;
+    if(regRefus(e)){ DUEL.erreur = regRaison(e); DUEL.attente = null; }
+  }
+  if(state.view !== "duel") return;
+  if(DUEL.etat) duelPeindre();
+  else if(avant !== JSON.stringify([DUEL.attente && DUEL.attente.type, DUEL.attente && DUEL.attente.code, DUEL.id, DUEL.erreur])) viewDuel();
+}
+function duelDemarrerVeille(){ if(!duelBoucle) duelBoucle = setInterval(duelVeille, 1000); }
+
+/* ---- actions ---- */
+async function duelPreparer(){
+  const ids = duelDeck();
+  const v = duelValider(ids);
+  if(!v.ok){ toast("Deck incomplet", v.erreurs[0], "lose"); DUEL.onglet = "deck"; viewDuel(); return null; }
+  await duelAlignerRaretes();
+  await regConfirmer();                    // le serveur a bien les dernières cartes
+  return ids;
+}
+async function duelLancer(type){
+  if(DUEL.envoi) return;
+  DUEL.erreur = "";
+  const ids = await duelPreparer(); if(!ids) return;
+  DUEL.envoi = true; viewDuel();
+  try{
+    let r;
+    const plateau = duelPlateauChoisi();
+    if(type === "TRAINING") r = await duelAppel("duel_entrainement", {p_deck:ids, p_plateau:plateau, p_difficulte:DUEL.niveau});
+    else if(type === "ONLINE" || type === "RANKED") r = await duelAppel("duel_chercher", {p_mode:type, p_deck:ids, p_plateau:plateau});
+    else if(type === "SALON") r = await duelAppel("duel_salon_creer", {p_deck:ids, p_plateau:plateau});
+    else if(type === "REJOINDRE") r = await duelAppel("duel_salon_rejoindre", {p_code:DUEL.code, p_deck:ids, p_plateau:plateau});
+    DUEL.dernierType = type;
+    duelAppliquer(r);
+    duelDemarrerVeille();
+  }catch(e){ DUEL.erreur = regRaison(e); }
+  DUEL.envoi = false;
+  viewDuel();
+}
+async function duelAnnulerAttente(){
+  try{ await duelAppel("duel_annuler", {}); }catch(e){}
+  DUEL.attente = null; viewDuel();
+}
+async function duelConfirmer(){
+  const e = DUEL.etat;
+  if(!e || DUEL.envoi || !DUEL.choix.i || !DUEL.choix.p) return;
+  DUEL.envoi = true;
+  DUEL.cle = DUEL.cle || regUid();         // même clé si on doit renvoyer : jamais deux choix
+  duelPeindre();
+  for(let essai = 1; essai <= 3; essai++){
+    try{
+      const r = await duelAppel("duel_choisir", {p_match:e.id, p_manche:e.manche, p_carte:DUEL.choix.i, p_posture:DUEL.choix.p, p_cle:DUEL.cle});
+      duelAppliquer(r);
+      break;
+    }catch(err){
+      if(regRefus(err)){ toast("Choix refusé", regRaison(err), "lose"); DUEL.choix = {i:null, p:null}; DUEL.cle = null; break; }
+      if(essai === 3) toast("Connexion instable", "votre choix sera renvoyé", "lose");
+      else await new Promise(res => setTimeout(res, 600 * essai));
+    }
+  }
+  DUEL.envoi = false;
+  duelPeindre();
+}
+async function duelAbandonner(){
+  if(!DUEL.id) return;
+  if(!(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner"))) return;
+  try{ duelAppliquer(await duelAppel("duel_abandonner", {p_match:DUEL.id})); }catch(e){ toast("Abandon impossible", regRaison(e), "lose"); }
+  duelPeindre();
+}
+function duelQuitter(){
+  document.querySelectorAll(".dfinmodal").forEach(x => x.remove());
+  DUEL.id = null; DUEL.etat = null; DUEL.revel = null; DUEL.vus = 0; DUEL.signature = "";
+  viewDuel();
+}
+
+/* ---- affichage ---- */
+function duelMini(c, opts = {}){
+  if(!c) return "";
+  const vrai = state.collection.find(x => x.id === c.c);
+  const img = c.img || (vrai && vrai.img);
+  const cadre = vrai ? styleCadrage(cadrageDe(vrai)) : "";
+  const p = opts.posture;
+  return `<div class="dcarte ${opts.choisie ? "choisie" : ""} ${opts.petite ? "petite" : ""}" data-r="${esc(c.r || "")}" ${opts.clic ? `data-dcarte="${esc(c.i)}" role="button" tabindex="0"` : ""}>
+    <div class="dart">${img && !artRefusee(img) ? `<img src="${esc(img)}" alt="" loading="lazy" ${cadre ? `style="${cadre}"` : ""} onerror="this.remove()">` : `<span class="dvide">${esc((c.t || "?").slice(0, 1))}</span>`}</div>
+    <div class="dnom">${esc(c.t || "")}</div>
+    <div class="drar">${esc(c.r || "")}</div>
+    <div class="dstats"><span>⚔ ${duelArrondi(duelNorm(c.a, c.r))}</span><span>⛨ ${duelArrondi(duelNorm(c.d, c.r))}</span></div>
+    ${p ? `<div class="dpost">${POSTURES[p].ic} ${POSTURES[p].nom}</div>` : ""}
+  </div>`;
+}
+function duelPips(n){ return `<span class="dpips">${[0, 1, 2].map(i => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>`; }
+function duelAide(){
+  return info("Règles du duel", `<p class='sub' style='margin:0 0 .5rem'>Deck de 15 cartes, 5 en main. À chaque manche, chacun choisit en secret une carte et une posture ; tout est révélé en même temps. Premier à 3 manches gagnées (5 manches au plus). Une carte jouée est défaussée, puis chacun pioche.</p>
+    <p class='sub' style='margin:0 0 .5rem'><b>Assaut</b> utilise l'ATQ, <b>Garde</b> la DÉF, <b>Feinte</b> la moyenne des deux. Assaut bat Feinte, Feinte bat Garde, Garde bat Assaut : la posture gagnante compte ×1,35, la posture battue ×0,85.</p>
+    <p class='sub' style='margin:0'>Les statistiques sont ramenées sur une même échelle par rareté (de 1 000 à 1 580) : une Commune bien jouée peut battre une Légendaire. Budget du deck : 20 points (Peu commune 1, Rare et Super rare 2, Ultra rare 3 — deux au plus, Légendaire 5 — une seule). 20 secondes par manche.</p>`);
+}
+
+function viewDuel(){
+  duelDemarrerVeille();
+  if(!DUEL.demarre){
+    DUEL.demarre = true;
+    // une partie en cours (après un rechargement ou sur un autre appareil) reprend
+    duelAppel("duel_etat", {p_match:null}).then(r => { duelAppliquer(r); if(state.view === "duel") viewDuel(); }).catch(()=>{});
+    duelProfilCharger();
+  }
+  if(DUEL.id && DUEL.etat) return duelPeindre(true);
+  DUEL.signature = "";
+  const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ["plateau", "Plateau"], ["classement", "Classement"]];
+  view.innerHTML = `
+    <h2 class="vuetitre">Combat</h2>
+    <div class="admtabs dongl">${onglets.map(([k, n]) => `<button class="btn small ${DUEL.onglet === k ? "" : "ghost"}" data-dong="${k}">${n}</button>`).join("")}</div>
+    ${DUEL.erreur ? `<div class="panel derr"><b>${esc(DUEL.erreur)}</b></div>` : ""}
+    <div id="dcorps"></div>`;
+  view.querySelectorAll("[data-dong]").forEach(b => b.onclick = ()=>{ DUEL.onglet = b.dataset.dong; DUEL.erreur = ""; viewDuel(); });
+  const corps = view.querySelector("#dcorps");
+  if(DUEL.onglet === "deck") return duelVueDeck(corps);
+  if(DUEL.onglet === "plateau") return duelVuePlateau(corps);
+  if(DUEL.onglet === "classement") return duelVueClassement(corps);
+  duelVueJouer(corps);
+}
+
+function duelVueJouer(corps){
+  const v = duelValider(duelDeck());
+  const pr = DUEL.profil || {};
+  const at = DUEL.attente;
+  const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
+  const occupe = DUEL.envoi || !!at || !enLigne;
+  corps.innerHTML = `
+    ${duelAide()}
+    <div class="panel ddeckbilan">
+      <div><b>Votre deck</b><span class="sub">${v.cartes.length} / 15 cartes · ${v.points} / 20 points</span></div>
+      ${v.ok ? `<span class="tag ok">prêt</span>` : `<span class="sub" style="color:var(--red)">${esc(v.erreurs[0] || "")}</span>`}
+      <button class="btn small ghost" data-dong2="deck">${v.ok ? "Modifier" : "Composer"}</button>
+    </div>
+    ${!enLigne ? `<p class="sub">Les duels demandent une connexion au serveur.</p>` : ""}
+    ${at ? `<div class="panel dattente">
+        ${at.type === "recherche"
+          ? `<div class="dspin"></div><b>Recherche d'un adversaire ${at.mode === "RANKED" ? "classé" : "en ligne"}…</b><span class="sub" id="dattente-t">${Math.floor((Date.now() - at.depuis) / 1000)} s</span>`
+          : `<b>Votre salon</b><div class="dcode">${esc(at.code)}</div><span class="sub">Donnez ce code à votre ami : la partie démarre dès qu'il le saisit.</span>`}
+        <button class="btn small ghost" id="dannuler">Annuler</button></div>` : ""}
+    <div class="dmodes">
+      <div class="panel dmode">
+        <h3>Entraînement</h3><p class="sub">Contre un bot qui ne voit jamais votre main.</p>
+        <div class="row dniv">${[["facile", "Facile"], ["normal", "Normal"], ["difficile", "Difficile"]].map(([k, n]) => `<button class="btn small ${DUEL.niveau === k ? "" : "ghost"}" data-dniv="${k}">${n}</button>`).join("")}</div>
+        <button class="btn" data-dlancer="TRAINING" ${occupe || !v.ok ? "disabled" : ""}>Lancer</button>
+      </div>
+      <div class="panel dmode">
+        <h3>En ligne</h3><p class="sub">Un adversaire au hasard, en temps réel. Sans effet sur la cote.</p>
+        <button class="btn" data-dlancer="ONLINE" ${occupe || !v.ok ? "disabled" : ""}>Chercher un adversaire</button>
+      </div>
+      <div class="panel dmode ${pr.vip ? "" : "verrou"}">
+        <h3>Classé <span class="tag">VIP</span></h3>
+        <p class="sub">${pr.vip ? `Votre cote : <b>${pr.cote}</b> · rang ${pr.rang}` : "Réservé aux comptes VIP. Le VIP ne donne aucun bonus de combat : il ouvre l'accès au classement."}</p>
+        <button class="btn" data-dlancer="RANKED" ${occupe || !v.ok || !pr.vip ? "disabled" : ""}>${pr.vip ? "Partie classée" : "Réservé aux VIP"}</button>
+      </div>
+      <div class="panel dmode">
+        <h3>Entre amis</h3><p class="sub">Un salon privé et un code à 5 caractères.</p>
+        <button class="btn" data-dlancer="SALON" ${occupe || !v.ok ? "disabled" : ""}>Créer un salon</button>
+        <div class="row" style="gap:.4rem;margin-top:.5rem"><input id="dcodein" maxlength="5" placeholder="CODE" value="${esc(DUEL.code)}" style="flex:1;text-transform:uppercase;letter-spacing:.2em">
+          <button class="btn small" data-dlancer="REJOINDRE" ${occupe || !v.ok ? "disabled" : ""}>Rejoindre</button></div>
+      </div>
+    </div>`;
+  corps.querySelectorAll("[data-dong2]").forEach(b => b.onclick = ()=>{ DUEL.onglet = b.dataset.dong2; viewDuel(); });
+  corps.querySelectorAll("[data-dniv]").forEach(b => b.onclick = ()=>{ DUEL.niveau = b.dataset.dniv; viewDuel(); });
+  const ci = corps.querySelector("#dcodein"); if(ci) ci.oninput = ()=>{ DUEL.code = ci.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5); };
+  corps.querySelectorAll("[data-dlancer]").forEach(b => b.onclick = ()=>{
+    if(b.dataset.dlancer === "REJOINDRE" && DUEL.code.length !== 5) return toast("Code incomplet", "5 caractères", "lose");
+    duelLancer(b.dataset.dlancer);
+  });
+  const an = corps.querySelector("#dannuler"); if(an) an.onclick = duelAnnulerAttente;
+}
+
+function duelVueDeck(corps){
+  duelAlignerRaretes().then(n => { if(n && state.view === "duel" && DUEL.onglet === "deck") duelVueDeck(corps); });
+  const ids = duelDeck();
+  const v = duelValider(ids);
+  const dans = new Set(ids);
+  const q = (DUEL.filtre || "").toLowerCase();
+  const rf = DUEL.filtreR || "";
+  // une ligne par carte : les exemplaires libres et ceux déjà dans le deck
+  const cartes = state.collection.filter(c => DUEL_RAR[c.rarity])
+    .filter(c => (!q || (c.title + " " + c.univ).toLowerCase().includes(q)) && (!rf || c.rarity === rf))
+    .map(c => { const ex = duelCarteDe(c, 1); return {c, ex, val:Math.max(duelBase(ex, "ASSAULT"), duelBase(ex, "GUARD"), duelBase(ex, "FEINT"))}; })
+    .sort((a, b) => b.val - a.val).slice(0, 120);
+  corps.innerHTML = `
+    <div class="panel ddeckbilan">
+      <div><b>${v.cartes.length} / 15 cartes · ${v.points} / 20 points</b>
+        <span class="sub">Ultra rares ${v.ultra} / 2 · Légendaire ${v.leg} / 1</span></div>
+      ${v.ok ? `<span class="tag ok">deck valide</span>` : `<span class="sub" style="color:var(--red)">${esc(v.erreurs.join(" · "))}</span>`}
+    </div>
+    <div class="row" style="gap:.4rem;margin:.6rem 0;flex-wrap:wrap">
+      <button class="btn small" id="dauto">Deck conseillé</button>
+      <button class="btn small ghost" id="dvider">Vider</button>
+    </div>
+    <div class="ddeck">${v.cartes.length ? v.cartes.map(x => `<div class="ddeckcase">${duelMini(x, {petite:true})}<button class="dretirer" data-dretirer="${esc(x.i)}" aria-label="Retirer">×</button></div>`).join("") : `<p class="sub">Choisissez 15 cartes ci-dessous, ou prenez le deck conseillé.</p>`}</div>
+    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Votre collection</h3>
+    <div class="row" style="gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">
+      <input id="dfiltre" placeholder="Rechercher…" value="${esc(DUEL.filtre || "")}" style="flex:1;min-width:140px">
+      <select id="dfiltrer" style="width:auto">${["", ...Object.keys(DUEL_RAR)].map(r => `<option value="${esc(r)}" ${r === rf ? "selected" : ""}>${r || "Toutes raretés"}</option>`).join("")}</select>
+    </div>
+    <div class="dcoll">${cartes.map(({c}) => {
+      const n = Math.max(1, c.count || 1);
+      const pris = [...Array(n)].filter((_, k) => dans.has(c.id + "#" + (k + 1))).length;
+      return `<div class="dcollcase ${pris >= n ? "pleine" : ""}">${duelMini(duelCarteDe(c, 1), {petite:true})}
+        <div class="row" style="justify-content:space-between;align-items:center;margin-top:.25rem">
+          <span class="sub" style="font-size:.75rem">${pris} / ${n} · ${DUEL_RAR[c.rarity].cout} pt</span>
+          <button class="btn small" data-dajout="${esc(c.id)}" ${pris >= n || ids.length >= 15 ? "disabled" : ""}>+</button></div></div>`;
+    }).join("")}</div>`;
+  const maj = async nouveaux => { await duelDeckEnregistrer(nouveaux); duelVueDeck(corps); };
+  corps.querySelector("#dauto").onclick = ()=>maj(duelDeckAuto());
+  corps.querySelector("#dvider").onclick = ()=>maj([]);
+  corps.querySelectorAll("[data-dretirer]").forEach(b => b.onclick = ()=>maj(ids.filter(i => i !== b.dataset.dretirer)));
+  corps.querySelectorAll("[data-dajout]").forEach(b => b.onclick = ()=>{
+    const c = state.collection.find(x => x.id === b.dataset.dajout); if(!c) return;
+    for(let k = 1; k <= Math.max(1, c.count || 1); k++){ const i = c.id + "#" + k; if(!dans.has(i)) return maj([...ids, i]); }
+  });
+  const f = corps.querySelector("#dfiltre");
+  f.oninput = ()=>{ DUEL.filtre = f.value; clearTimeout(DUEL.tf); DUEL.tf = setTimeout(()=>{ duelVueDeck(corps); const g = corps.querySelector("#dfiltre"); if(g){ g.focus(); g.setSelectionRange(g.value.length, g.value.length); } }, 250); };
+  corps.querySelector("#dfiltrer").onchange = e => { DUEL.filtreR = e.target.value; duelVueDeck(corps); };
+}
+
+function duelVuePlateau(corps){
+  const vip = !!(DUEL.profil && DUEL.profil.vip);
+  const choisi = duelPlateauChoisi();
+  corps.innerHTML = `
+    <p class="sub">Votre plateau s'affiche dans votre moitié de l'écran, et votre adversaire le voit aussi. Purement décoratif : il ne change jamais le combat.</p>
+    <div class="dplats">${PLATEAUX.map(p => {
+      const ok = !p.vip || vip;
+      return `<button class="dplat plateau plateau-${p.id} ${choisi === p.id ? "on" : ""}" data-dplat="${p.id}" ${ok ? "" : "disabled"}>
+        <b>${esc(p.nom)}</b>${p.vip ? `<span class="tag">VIP</span>` : ""}${choisi === p.id ? `<span class="tag ok">choisi</span>` : ""}</button>`;
+    }).join("")}</div>
+    ${vip ? "" : `<p class="sub">Les plateaux alternatifs sont réservés aux comptes VIP. Le serveur vérifie le droit au plateau à chaque partie.</p>`}`;
+  corps.querySelectorAll("[data-dplat]").forEach(b => b.onclick = async ()=>{
+    state.profile.plateauDuel = b.dataset.dplat; await sset("fm:profile", state.profile); duelVuePlateau(corps);
+  });
+}
+
+function duelVueClassement(corps){
+  const pr = DUEL.profil;
+  const bil = (pr && pr.bilan) || {};
+  const ligne = m => { const b = bil[m] || {}; return `<tr><td>${MODES_DUEL[m]}</td><td>${b.parties || 0}</td><td>${b.victoires || 0}</td><td>${b.nuls || 0}</td><td>${b.defaites || 0}</td></tr>`; };
+  corps.innerHTML = `
+    <div class="panel">
+      <b>Cote classée : ${pr ? pr.cote : "…"}</b>${pr && pr.bilan && pr.bilan.RANKED ? ` <span class="sub">· rang ${pr.rang}</span>` : ""}
+      <table class="dtab"><tr><th>Mode</th><th>Parties</th><th>Victoires</th><th>Nuls</th><th>Défaites</th></tr>
+        ${["TRAINING", "ONLINE", "RANKED", "FRIENDS"].map(ligne).join("")}</table>
+    </div>
+    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Dernières parties</h3>
+    ${pr && pr.parties && pr.parties.length ? `<ul class="btqhist">${pr.parties.map(p => `<li><span>${MODES_DUEL[p.mode]} · ${esc(p.adv || "")} <span class="sub">${p.score}</span></span>
+      <span class="${p.resultat === "victoire" ? "plus" : p.resultat === "defaite" ? "moins" : ""}">${p.resultat === "victoire" ? "Victoire" : p.resultat === "defaite" ? "Défaite" : "Nul"}${p.delta ? " · " + (p.delta > 0 ? "+" : "") + p.delta : ""}</span></li>`).join("")}</ul>` : `<p class="sub">Aucune partie pour l'instant.</p>`}
+    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Classement</h3>
+    <div id="dclass"><p class="sub">Chargement…</p></div>`;
+  duelAppel("duel_classement", {}).then(l => {
+    const el = corps.querySelector("#dclass"); if(!el) return;
+    el.innerHTML = l && l.length ? `<table class="dtab"><tr><th>#</th><th>Joueur</th><th>Cote</th><th>Victoires</th></tr>${l.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.pseudo || "—")}</td><td>${x.cote}</td><td>${x.victoires} / ${x.parties}</td></tr>`).join("")}</table>` : `<p class="sub">Personne n'a encore joué en classé.</p>`;
+  }).catch(()=>{});
+}
+
+/* ---- la partie : deux plateaux, la révélation au centre ---- */
+function duelPeindre(force){
+  if(state.view !== "duel") return;
+  const e = DUEL.etat;
+  if(!e){ if(force !== true) viewDuel(); return; }
+  const revel = DUEL.revel && Date.now() < DUEL.revelJusqua ? DUEL.revel : null;
+  const fini = e.statut !== "ACTIVE";
+  const sig = JSON.stringify([e.id, e.manche, e.phase, e.statut, e.moi.main.map(c => c.i), e.moi.wins, e.adv.wins, e.adv.present, e.moi.choix && e.moi.choix.i, DUEL.choix, DUEL.envoi, !!revel, fini]);
+  const chrono = view.querySelector("#dchrono");
+  const reste = e.reste_ms == null ? null : Math.max(0, Math.ceil((e.reste_ms - (Date.now() - DUEL.recu)) / 1000));
+  if(sig === DUEL.signature && chrono){
+    if(reste != null) chrono.textContent = Math.min(20, reste);
+    chrono.closest(".dchrono").classList.toggle("urgent", reste != null && reste <= 5);
+    const h = view.querySelector("#dhors"); if(h) h.hidden = DUEL.hors < 3;
+    return;
+  }
+  DUEL.signature = sig;
+  const choixFait = e.moi.choix;
+  const sel = DUEL.choix;
+  const posts = Object.keys(POSTURES);
+  const carteSel = e.moi.main.find(c => c.i === (choixFait ? choixFait.i : sel.i));
+  view.innerHTML = `
+    <div class="dpartie">
+      <div class="plateau plateau-${esc(e.adv.plateau || "classique")} dadv">
+        <div class="ptete"><span class="ppseudo">${esc(e.adv.pseudo || "Adversaire")}${e.adv.bot ? ` <span class="tag">bot</span>` : ""}</span>
+          ${duelPips(e.adv.wins)}<span class="dpres ${e.adv.present ? "on" : ""}" title="${e.adv.present ? "connecté" : "déconnecté"}"></span></div>
+        <div class="dmainadv">${[...Array(e.adv.main_n)].map(() => `<span class="ddos"></span>`).join("")}</div>
+        <div class="pinfo sub">Pioche ${e.adv.pioche} · Défausse ${e.adv.defausse.length}${e.adv.present ? "" : " · <b>déconnecté, la partie l'attend</b>"}</div>
+      </div>
+
+      <div class="dcentre">
+        <div class="dbandeau"><span>${MODES_DUEL[e.mode]} · manche ${e.manche} / 5</span>
+          ${fini ? "" : `<span class="dchrono"><b id="dchrono">${reste == null ? "" : Math.min(20, reste)}</b> s</span>`}</div>
+        <div class="drevel">${revel ? duelRevelation(revel) : fini ? "" : choixFait ? `<p class="sub">Choix verrouillé : ${POSTURES[choixFait.p].ic} ${POSTURES[choixFait.p].nom}. En attente de la révélation…</p>` : `<p class="sub">Choisissez une carte et une posture, puis confirmez.</p>`}</div>
+        <p class="sub" id="dhors" ${DUEL.hors >= 3 ? "" : "hidden"} style="color:var(--red)">Connexion perdue : reconnexion en cours, la partie vous attend 60 secondes.</p>
+      </div>
+
+      <div class="plateau plateau-${esc(e.moi.plateau || "classique")} dmoi">
+        <div class="ptete"><span class="ppseudo">${esc(e.moi.pseudo || "Vous")}</span>${duelPips(e.moi.wins)}<span class="sub">Pioche ${e.moi.pioche}</span></div>
+        ${fini ? "" : `<div class="dposts">${posts.map(p => {
+          const val = carteSel ? duelBase(carteSel, p) : null;
+          const on = (choixFait ? choixFait.p : sel.p) === p;
+          return `<button class="dpbtn ${on ? "on" : ""}" data-dp="${p}" ${choixFait || DUEL.envoi ? "disabled" : ""}>
+            <span class="ic">${POSTURES[p].ic}</span><b>${POSTURES[p].nom}</b><small>${val == null ? POSTURES[p].stat : duelArrondi(val)}</small></button>`;
+        }).join("")}</div>
+        <p class="sub dcycle">Assaut ⟶ Feinte ⟶ Garde ⟶ Assaut : chaque posture bat la suivante (×1,35 contre ×0,85).</p>`}
+        <div class="dmain">${e.moi.main.map(c => duelMini(c, {clic:!fini && !choixFait, choisie:(choixFait ? choixFait.i : sel.i) === c.i})).join("")}</div>
+        ${fini ? "" : `<div class="row" style="justify-content:space-between;margin-top:.6rem;gap:.5rem">
+          <button class="btn small ghost" id="dabandon">Abandonner</button>
+          <button class="btn" id="dconfirmer" ${choixFait || DUEL.envoi || !sel.i || !sel.p ? "disabled" : ""}>${choixFait ? "Choix verrouillé" : DUEL.envoi ? "Envoi…" : "Confirmer"}</button></div>`}
+      </div>
+    </div>
+`;
+  view.querySelectorAll("[data-dcarte]").forEach(el => el.onclick = ()=>{ DUEL.choix.i = el.dataset.dcarte; duelPeindre(); });
+  view.querySelectorAll("[data-dp]").forEach(b => b.onclick = ()=>{ DUEL.choix.p = b.dataset.dp; duelPeindre(); });
+  const cf = view.querySelector("#dconfirmer"); if(cf) cf.onclick = duelConfirmer;
+  const ab = view.querySelector("#dabandon"); if(ab) ab.onclick = duelAbandonner;
+  document.querySelectorAll(".dfinmodal").forEach(x => { if(!(fini && !revel) || x.dataset.id !== e.id) x.remove(); });
+  if(fini && !revel && !document.querySelector(".dfinmodal")){
+    const m = document.createElement("div");
+    m.innerHTML = duelFin(e);
+    const fen = m.firstElementChild; fen.dataset.id = e.id;
+    document.body.appendChild(fen);
+    const rj = fen.querySelector("#drejouer"); if(rj) rj.onclick = ()=>{ const t = DUEL.dernierType; duelQuitter(); if(t && t !== "REJOINDRE" && t !== "SALON") duelLancer(t); };
+    fen.querySelector("#dretour").onclick = duelQuitter;
+  }
+  // la révélation se referme seule
+  if(revel){ clearTimeout(DUEL.tr); DUEL.tr = setTimeout(()=>{ DUEL.signature = ""; duelPeindre(); }, Math.max(0, DUEL.revelJusqua - Date.now()) + 30); }
+}
+function duelRevelation(h){
+  const cote = (c, p, b, m, v, gagne) => `<div class="drcote ${gagne ? "gagne" : ""}">
+    ${c ? duelMini(c, {posture:p}) : `<div class="dcarte petite"><span class="dvide">⌛</span><div class="dnom">Aucun choix</div></div>`}
+    ${c ? `<div class="drcalc">${duelArrondi(b)} × ${String(m).replace(".", ",")} = <b>${duelArrondi(v)}</b></div>` : ""}</div>`;
+  const verdict = h.gagnant === 1 ? "Manche gagnée" : h.gagnant === 2 ? "Manche perdue" : "Manche nulle";
+  return `<div class="drevelation">
+    <div class="drduo">${cote(h.c1, h.p1, h.b1, h.m1, h.v1, h.gagnant === 1)}<span class="drvs">contre</span>${cote(h.c2, h.p2, h.b2, h.m2, h.v2, h.gagnant === 2)}</div>
+    <div class="drverdict v${h.gagnant}">${verdict}${h.raison && h.raison !== "valeur" ? ` <span class="sub">· ${esc(h.raison)}</span>` : ""}</div></div>`;
+}
+function duelFin(e){
+  const titre = e.resultat === "victoire" ? "Victoire" : e.resultat === "defaite" ? "Défaite" : "Match nul";
+  return `<div class="modal dfinmodal"><div class="inner" style="max-width:380px;text-align:center">
+    <div class="dfintitre r-${e.resultat}">${titre}</div>
+    <p class="sub" style="margin:.3rem 0">${e.moi.wins} – ${e.adv.wins} contre ${esc(e.adv.pseudo || "")} · ${esc(e.raison || "")}</p>
+    ${e.cote && e.cote.delta != null ? `<p style="margin:.4rem 0"><b>Cote : ${e.cote.avant} → ${e.cote.avant + e.cote.delta}</b> (${e.cote.delta >= 0 ? "+" : ""}${e.cote.delta})</p>` : ""}
+    <div class="row" style="justify-content:center;gap:.5rem;margin-top:.8rem">
+      <button class="btn small ghost" id="dretour">Retour</button>
+      ${DUEL.dernierType && DUEL.dernierType !== "REJOINDRE" && DUEL.dernierType !== "SALON" ? `<button class="btn small" id="drejouer">Rejouer</button>` : ""}
+    </div></div></div>`;
+}
+/* Un duel en cours hors de l'écran Combat : un rappel, la veille continue */
+setInterval(()=>{
+  if(DUEL.id && DUEL.etat && DUEL.etat.statut === "ACTIVE" && state.view !== "duel" && fmPret){
+    if(!DUEL.rappel || Date.now() - DUEL.rappel > 15000){ DUEL.rappel = Date.now(); toast("Duel en cours", "revenez dans Combat : la partie continue", "info"); }
+  }
+  const t = document.getElementById("dattente-t");
+  if(t && DUEL.attente && DUEL.attente.depuis) t.textContent = Math.floor((Date.now() - DUEL.attente.depuis) / 1000) + " s";
+}, 1000);
+
+/* ======================================================================
    Boutique — les Cristaux
    ----------------------------------------------------------------------
    Les Cristaux sont la monnaie de la boutique. Seul le serveur les crédite
@@ -12707,6 +13302,11 @@ async function ouvrirAdmin(){
               <button class="btn small" data-crediter="${esc(j.joueur)}">Valider</button>
               <button class="btn small ghost" data-bloquer="${esc(j.joueur)}" data-etat="${j.bloque ? 0 : 1}">${j.bloque ? "Réactiver" : "Suspendre"}</button>
             </div>
+            <div class="row" style="margin-top:.4rem">
+              <span class="sub" style="font-size:.84rem;flex:1">${j.vip_jusqua && new Date(j.vip_jusqua) > new Date() ? "VIP jusqu'au " + new Date(j.vip_jusqua).toLocaleDateString("fr-FR") : "Pas VIP"}</span>
+              <button class="btn small ghost" data-vip="${esc(j.joueur)}" data-jours="30">+30 j VIP</button>
+              ${j.vip_jusqua && new Date(j.vip_jusqua) > new Date() ? `<button class="btn small ghost" data-vip="${esc(j.joueur)}" data-jours="0">Retirer le VIP</button>` : ""}
+            </div>
           </div>`).join("") : `<p class="sub">Aucun joueur trouvé.</p>`}</div>`}
     </div>`;
     m.querySelector("#close").onclick = ()=>m.remove();
@@ -12725,6 +13325,7 @@ async function ouvrirAdmin(){
       if(bloquer){ motif = prompt("Motif de la suspension (montré au joueur) :", "triche"); if(motif === null) return; }
       agir(()=>regRpc("admin_bloquer", {p_joueur:b.dataset.bloquer, p_bloque:bloquer, p_motif:motif}), bloquer ? "Compte suspendu." : "Compte réactivé.");
     });
+    m.querySelectorAll("[data-vip]").forEach(b => b.onclick = ()=>agir(()=>regRpc("admin_vip", {p_joueur:b.dataset.vip, p_jours:+b.dataset.jours}), +b.dataset.jours ? "VIP accordé." : "VIP retiré."));
     m.querySelectorAll("[data-crediter]").forEach(b => b.onclick = ()=>{
       const id = b.dataset.crediter;
       const n = Math.trunc(+m.querySelector(`[data-montant="${id}"]`).value || 0);
@@ -13378,7 +13979,7 @@ function heroFrom(c){
 }
 
 /* ---------- vue : engagement ---------- */
-function viewDuel(){
+function viewDuelAncien(){
   if(state.dj && state.dj.fight) return renderFight();
   state.dj = null;
   const pool = [...state.collection].sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity)||b.atk-a.atk);
