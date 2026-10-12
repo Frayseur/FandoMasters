@@ -3258,6 +3258,29 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
   .hhero-fantome{opacity:.6}
 }
 
+
+/* ---- boutique (Cristaux) ---- */
+.btqsolde{display:flex;gap:1.2rem;align-items:center;flex-wrap:wrap;margin-bottom:1.2rem}
+.btqsolde .montant{display:flex;flex-direction:column;min-width:150px}
+.btqsolde .montant b{font-size:1.9rem;line-height:1.1;color:var(--brass)}
+.btqsolde p{flex:1;min-width:220px;margin:0}
+.btqgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:.9rem;margin-bottom:1.6rem}
+.btqart{display:flex;flex-direction:column;gap:.45rem;padding:1rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.btqart b{font-size:1.05rem}
+.btqart .sub{flex:1;margin:0;font-size:.88rem}
+.btqart .prix{font-weight:700;color:var(--brass);font-size:1.1rem}
+.btqhist{display:flex;flex-direction:column;gap:.35rem;margin:0;padding:0;list-style:none}
+.btqhist li{display:flex;justify-content:space-between;gap:.8rem;padding:.45rem .2rem;border-bottom:1px solid var(--line);font-size:.9rem}
+.btqhist .plus{color:var(--teal);font-weight:700}
+.btqhist .moins{color:var(--red);font-weight:700}
+/* ---- administration ---- */
+.admtabs{display:flex;gap:.4rem;margin:.2rem 0 .8rem;flex-wrap:wrap}
+.admliste{display:flex;flex-direction:column;gap:.7rem;max-height:62vh;overflow:auto;padding-right:.2rem}
+.admcarte{border:1px solid var(--line);border-radius:var(--radius);padding:.75rem .85rem;background:var(--panel)}
+.admcarte ul{margin:.35rem 0;padding-left:1.1rem;font-size:.88rem}
+.admcarte .row{gap:.4rem;flex-wrap:wrap}
+.admcarte input{width:auto;min-width:0;flex:1 1 110px;padding:.4rem .55rem}
+.admbloque{color:var(--red);font-weight:700}
 </style>
 </head>
 <body>
@@ -3290,7 +3313,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
       <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Donjons et duels</small></button>
       <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
-      <button data-view="shop"><span class="ic">◈</span><b>Shop</b><small>Boosters et VIP · bientôt</small></button>
+      <button data-view="shop"><span class="ic">⬢</span><b>Boutique</b><small>Cristaux et boosters</small></button>
       <button data-view="camp"><span class="ic">⚑</span><b>Campagnes</b><small>Expéditions et boss d'univers</small></button>
     </div>
   </div>
@@ -3312,7 +3335,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.1.0";
+const BUILD = "V1.2.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4239,6 +4262,7 @@ function registrePlanifier(urgent){
 }
 async function registreEnvoyer(){
   if(!nuageConfigure() || !nuageConnecte() || ongletFige) return;
+  if(REG.achat) return;                  // un achat en boutique est en cours : l'envoi suit juste après
   if(!REG.pret){ if(fmPret) registreDemarrer(); return; }
   if(REG.enCours){ REG.aRefaire = true; return; }
   REG.enCours = true;
@@ -4395,7 +4419,7 @@ async function registreDemarrer(){
 
 /* Un autre appareil a-t-il joué ? Une petite requête qui ne lit que la version. */
 async function registreVerifier(){
-  if(!REG.pret || REG.enCours || REG.envoi || document.hidden || !fmPret || ongletFige) return;
+  if(!REG.pret || REG.enCours || REG.envoi || REG.achat || document.hidden || !fmPret || ongletFige) return;
   try{
     const d = await nuageRest("comptes?select=version&joueur=eq." + encodeURIComponent(acct()));
     const v = d && d[0] ? d[0].version : null;
@@ -5996,7 +6020,7 @@ function render(){
   ({hub:viewHub, pack:viewPack, album:viewAlbum, cat:viewCatalog, duel:viewDuel,
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
      village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur, communaute:viewCommu, menu:viewMenu,
-     shop:viewSoon, market:viewMarche}[state.view]||viewHub)();
+     shop:viewBoutique, market:viewMarche}[state.view]||viewHub)();
   poserSurtitre();
   poserRetour();
   majJauges();
@@ -9786,6 +9810,7 @@ function viewHub(){
           <button class="btn small ghost" id="dbg-skipc">Nouveaux théâtres</button>
           ${moiId() === ADMINS[0] ? CARTES_PERSO.map(c => `<button class="btn small" data-dbggive="${esc(c.id)}">Me donner « ${esc(c.title)} »</button>`).join("") : ""}
         </div>
+        <div class="row" style="margin-top:.7rem"><button class="btn small" id="adm-ouvrir">Surveillance · Cristaux · suspensions</button></div>
         <div class="sub" id="dbgmsg" style="margin-top:.4rem"></div>
         <p class="sub" style="margin:.5rem 0 0;font-size:.82rem">Vider l'album efface toutes les cartes et remet à zéro la mention « obtenue » dans Toutes les cartes.</p>
       </div>
@@ -9954,6 +9979,7 @@ function viewHub(){
       viewHub();
     }catch(e){ msg.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
   };
+  if(view.querySelector("#adm-ouvrir")) view.querySelector("#adm-ouvrir").onclick = ()=>ouvrirAdmin();
   view.querySelector("#dbg-wipe").onclick = async ()=>{
     REG.vidageAutorise = true;
     state.collection = [];
@@ -12517,6 +12543,201 @@ const SOON = {
               "Recherche par univers, rareté et prix",
               "Échanges directs entre collectionneurs"]}
 };
+
+/* ======================================================================
+   Boutique — les Cristaux
+   ----------------------------------------------------------------------
+   Les Cristaux sont la monnaie de la boutique. Seul le serveur les crédite
+   (paiement, geste d'un admin) et les débite (achat) : le jeu ne fait que
+   les afficher. Chaque achat a une clé unique : un double clic ou une
+   coupure réseau ne débite jamais deux fois.
+   ====================================================================== */
+const CRISTAL = "⬢";
+const btq = {articles:null, historique:[], erreur:"", achat:false};
+function soldeCristaux(){ return Math.max(0, Math.floor(+((state.profile || {}).cristaux) || 0)); }
+function lignesRpc(r, nom){ return (Array.isArray(r) ? r : r ? [r] : []).map(x => x && typeof x === "object" && nom in x && Object.keys(x).length === 1 ? x[nom] : x); }
+async function boutiqueCharger(){
+  try{
+    const [a, h] = await Promise.all([
+      nuageRest("boutique?select=id,nom,description,prix,contenu&order=ordre.asc,prix.asc"),
+      nuageRest("achats?select=type,article,cristaux,motif,cree&order=cree.desc&limit=20")
+    ]);
+    btq.articles = Array.isArray(a) ? a : [];
+    btq.historique = Array.isArray(h) ? h : [];
+    btq.erreur = "";
+  }catch(e){ btq.erreur = String(e && e.message || e); if(!btq.articles) btq.articles = []; }
+}
+function viewBoutique(){
+  const solde = soldeCristaux();
+  const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
+  const art = btq.articles;
+  view.innerHTML = `
+    <h2 class="vuetitre">Boutique</h2>
+    <div class="panel btqsolde">
+      <div class="montant"><span class="sub">Vos Cristaux</span><b id="btq-solde">${CRISTAL} ${solde.toLocaleString("fr-FR")}</b></div>
+      <p class="sub">Les Cristaux servent à acheter des boosters et des Fandominus. Chaque achat est réglé par le serveur : débité une seule fois, même en cas de double clic ou de coupure, et ce que vous achetez arrive tout de suite. L'achat de Cristaux en ligne arrive bientôt.</p>
+    </div>
+    ${btq.erreur ? `<div class="panel" style="margin-bottom:1rem"><b>Boutique indisponible pour l'instant</b><p class="sub" style="margin:.3rem 0 0">${esc(btq.erreur)}</p></div>` : ""}
+    ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
+    ${art === null ? `<p class="sub">Chargement des articles…</p>` : art.length ? `<div class="btqgrille">${art.map(a => `
+      <div class="btqart">
+        <b>${esc(a.nom)}</b>
+        <p class="sub">${esc(a.description || "")}</p>
+        <div class="row" style="justify-content:space-between;align-items:center">
+          <span class="prix">${CRISTAL} ${(+a.prix).toLocaleString("fr-FR")}</span>
+          <button class="btn small" data-acheter="${esc(a.id)}" ${!enLigne || btq.achat || solde < a.prix ? "disabled" : ""}>${solde < a.prix ? "Cristaux insuffisants" : "Acheter"}</button>
+        </div>
+      </div>`).join("")}</div>` : `<p class="sub">Aucun article pour le moment.</p>`}
+    <h3 style="font-size:1.05rem;margin-bottom:.5rem">Vos mouvements de Cristaux</h3>
+    ${btq.historique.length ? `<ul class="btqhist">${btq.historique.map(h => `
+      <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
+        <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul>`
+      : `<p class="sub">Aucun mouvement pour l'instant.</p>`}`;
+  view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{
+    const a = (btq.articles || []).find(x => x.id === b.dataset.acheter);
+    if(a) acheterArticle(a);
+  });
+  if(art === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
+}
+function demanderConfirmation(titre, texte, bouton){
+  return new Promise(res => {
+    const m = document.createElement("div");
+    m.className = "modal";
+    m.innerHTML = `<div class="inner" style="max-width:400px">
+      <h3 style="font-size:1.15rem;margin-bottom:.4rem">${esc(titre)}</h3>
+      <p class="sub" style="margin:0 0 1rem">${esc(texte)}</p>
+      <div class="row" style="justify-content:flex-end;gap:.5rem">
+        <button class="btn small ghost" id="non">Annuler</button>
+        <button class="btn small" id="oui">${esc(bouton)}</button>
+      </div></div>`;
+    document.body.appendChild(m);
+    m.querySelector("#non").onclick = ()=>{ m.remove(); res(false); };
+    m.querySelector("#oui").onclick = ()=>{ m.remove(); res(true); };
+  });
+}
+async function acheterArticle(a){
+  if(btq.achat) return;
+  if(!(await demanderConfirmation(a.nom, "Acheter pour " + (+a.prix).toLocaleString("fr-FR") + " Cristaux ? Il vous en restera " + (soldeCristaux() - a.prix).toLocaleString("fr-FR") + ".", "Acheter"))) return;
+  btq.achat = true;
+  if(state.view === "shop") viewBoutique();
+  const cle = regUid();                    // la même clé pour chaque nouvel essai : jamais deux débits
+  try{
+    if(!REG.pret) throw new Error("serveur injoignable, réessayez dans un instant");
+    await regConfirmer();                  // ce qui était en attente part d'abord
+    REG.achat = true;
+    for(let i = 0; i < 50 && REG.enCours; i++) await new Promise(r => setTimeout(r, 100));
+    let r = null;
+    for(let essai = 1; ; essai++){
+      try{ r = await regRpc("acheter", {p_article:a.id, p_cle:cle}); break; }
+      catch(e){ if(regRefus(e) || essai >= 4) throw e; await new Promise(res => setTimeout(res, 700 * essai)); }
+    }
+    const ancien = REG.confirme;
+    REG.confirme = {version:r.version, etat:r.etat || {}, cartes:regMap(r.cartes)};
+    await regPersister();
+    regRebaser(ancien, REG.confirme);
+    try{ sfx.coin(); }catch(e){}
+    toast(a.nom, "acheté · " + soldeCristaux().toLocaleString("fr-FR") + " Cristaux restants", "ach");
+    logEvent("Boutique : " + a.nom, "gold");
+  }catch(e){
+    toast("Achat non effectué", regRefus(e) ? regRaison(e) : "réseau indisponible : rien n'a été débité deux fois, vérifiez votre solde dans un instant", "lose");
+    if(!regRefus(e)) setTimeout(()=>registreVerifier(), 3000);
+  }finally{
+    REG.achat = false; btq.achat = false;
+    registrePlanifier(true);
+    await boutiqueCharger();
+    if(state.view === "shop") viewBoutique();
+  }
+}
+
+/* ---- administration : alertes de triche, Cristaux, suspensions ----
+   Tout est vérifié par le serveur (est_admin) : ce panneau n'est qu'une vue. */
+async function ouvrirAdmin(){
+  const m = document.createElement("div");
+  m.className = "modal";
+  const st = {onglet:"alertes", alertes:null, joueurs:null, q:"", msg:"", toutes:false};
+  const date = d => new Date(d).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+  const NOMS = {coins:"◆ Fandominus", mana:"★ Mana", free:"boosters gratuits", mythic:"mythiques", demon:"démoniaques", foxBonus:"renards offerts", foxNiv:"niveaux", cartes:"exemplaires"};
+  const gainsTexte = g => Object.entries(g || {}).map(([k, v]) => (NOMS[k] || k) + " +" + Math.round(v).toLocaleString("fr-FR")).join(" · ");
+  const agir = async (f, ok)=>{
+    try{ await f(); st.msg = ok || ""; }catch(e){ st.msg = "Erreur : " + regRaison(e); }
+    registreVerifier();
+    await charger();
+  };
+  const charger = async ()=>{
+    try{
+      if(st.onglet === "alertes") st.alertes = lignesRpc(await regRpc("admin_alertes", {p_toutes:st.toutes}), "admin_alertes");
+      else st.joueurs = lignesRpc(await regRpc("admin_chercher", {p_texte:st.q}), "admin_chercher");
+    }catch(e){ st.msg = "Erreur : " + regRaison(e); }
+    peindre();
+  };
+  const peindre = ()=>{
+    const alertes = st.alertes, joueurs = st.joueurs;
+    m.innerHTML = `<div class="inner" style="max-width:760px">
+      <div class="row" style="justify-content:space-between;margin-bottom:.3rem">
+        <h3 style="font-size:1.15rem">Administration</h3>
+        <button class="btn small ghost" id="close" style="flex:none;width:auto">Fermer</button>
+      </div>
+      <div class="admtabs">
+        <button class="btn small ${st.onglet === "alertes" ? "" : "ghost"}" data-onglet="alertes">Alertes</button>
+        <button class="btn small ${st.onglet === "joueurs" ? "" : "ghost"}" data-onglet="joueurs">Joueurs et Cristaux</button>
+      </div>
+      ${st.msg ? `<p class="sub" style="margin:0 0 .6rem"><b>${esc(st.msg)}</b></p>` : ""}
+      ${st.onglet === "alertes" ? `
+        <label class="sub" style="display:flex;gap:.4rem;align-items:center;margin-bottom:.6rem"><input type="checkbox" id="toutes" ${st.toutes ? "checked" : ""} style="width:auto"> afficher aussi les alertes classées</label>
+        <div class="admliste">${alertes === null ? `<p class="sub">Chargement…</p>` : alertes.length ? alertes.map(a => `
+          <div class="admcarte">
+            <div class="row" style="justify-content:space-between"><b>${esc(a.pseudo || "Joueur sans pseudo")}${a.bloque ? ` <span class="admbloque">· suspendu</span>` : ""}</b><span class="sub">${date(a.cree)}${a.traitee ? " · classée" : ""}</span></div>
+            <ul>${(a.raisons || []).map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+            ${a.gains && Object.keys(a.gains).length ? `<p class="sub" style="margin:0 0 .45rem;font-size:.84rem">Gains de cet envoi : ${esc(gainsTexte(a.gains))}</p>` : ""}
+            <div class="row">
+              ${a.journal ? `<button class="btn small" data-retirer="${a.journal}">Retirer les gains de cet envoi</button>` : ""}
+              <button class="btn small ghost" data-bloquer="${esc(a.joueur)}" data-etat="${a.bloque ? 0 : 1}">${a.bloque ? "Réactiver le compte" : "Suspendre le compte"}</button>
+              ${a.traitee ? "" : `<button class="btn small ghost" data-classer="${a.id}">Classer</button>`}
+            </div>
+          </div>`).join("") : `<p class="sub">Aucune alerte à traiter.</p>`}</div>` : `
+        <div class="row" style="gap:.4rem;margin-bottom:.7rem"><input id="admq" placeholder="Pseudo (vide : derniers actifs)" value="${esc(st.q)}" style="flex:1"><button class="btn small" id="admgo">Chercher</button></div>
+        <div class="admliste">${joueurs === null ? `<p class="sub">Chargement…</p>` : joueurs.length ? joueurs.map(j => `
+          <div class="admcarte">
+            <div class="row" style="justify-content:space-between"><b>${esc(j.pseudo || "Sans pseudo")}${j.bloque ? ` <span class="admbloque">· suspendu${j.motif ? " (" + esc(j.motif) + ")" : ""}</span>` : ""}</b><span class="sub">actif ${date(j.maj)}</span></div>
+            <p class="sub" style="margin:.25rem 0 .45rem;font-size:.86rem">${CRISTAL} ${(+j.cristaux).toLocaleString("fr-FR")} · ◆ ${short(j.coins)} · ★ ${short(j.mana)} · ${(+j.cartes).toLocaleString("fr-FR")} exemplaires${j.gains_jour && Object.keys(j.gains_jour).length ? " · aujourd'hui : " + esc(gainsTexte(j.gains_jour)) : ""}</p>
+            ${(j.achats || []).length ? `<ul>${j.achats.map(x => `<li>${x.cristaux > 0 ? "+" : "−"}${Math.abs(x.cristaux)} ${CRISTAL} · ${esc(x.motif || x.type)} · ${date(x.cree)}</li>`).join("")}</ul>` : ""}
+            <div class="row">
+              <input type="number" step="1" inputmode="numeric" placeholder="± Cristaux" data-montant="${esc(j.joueur)}">
+              <input placeholder="Motif (obligatoire)" data-motif="${esc(j.joueur)}">
+              <button class="btn small" data-crediter="${esc(j.joueur)}">Valider</button>
+              <button class="btn small ghost" data-bloquer="${esc(j.joueur)}" data-etat="${j.bloque ? 0 : 1}">${j.bloque ? "Réactiver" : "Suspendre"}</button>
+            </div>
+          </div>`).join("") : `<p class="sub">Aucun joueur trouvé.</p>`}</div>`}
+    </div>`;
+    m.querySelector("#close").onclick = ()=>m.remove();
+    m.querySelectorAll("[data-onglet]").forEach(b => b.onclick = ()=>{ st.onglet = b.dataset.onglet; st.msg = ""; peindre(); charger(); });
+    const tt = m.querySelector("#toutes"); if(tt) tt.onchange = ()=>{ st.toutes = tt.checked; charger(); };
+    const go = m.querySelector("#admgo"), q = m.querySelector("#admq");
+    if(go){ go.onclick = ()=>{ st.q = q.value.trim(); charger(); }; q.onkeydown = e => { if(e.key === "Enter") go.click(); }; }
+    m.querySelectorAll("[data-retirer]").forEach(b => b.onclick = async ()=>{
+      if(!(await demanderConfirmation("Retirer les gains", "Les monnaies, boosters et exemplaires gagnés dans cet envoi seront retirés du compte (sans descendre sous zéro).", "Retirer"))) return;
+      agir(()=>regRpc("admin_retirer_gains", {p_journal:+b.dataset.retirer}), "Gains retirés.");
+    });
+    m.querySelectorAll("[data-classer]").forEach(b => b.onclick = ()=>agir(()=>regRpc("admin_classer_alerte", {p_id:+b.dataset.classer}), "Alerte classée."));
+    m.querySelectorAll("[data-bloquer]").forEach(b => b.onclick = async ()=>{
+      const bloquer = b.dataset.etat === "1";
+      let motif = null;
+      if(bloquer){ motif = prompt("Motif de la suspension (montré au joueur) :", "triche"); if(motif === null) return; }
+      agir(()=>regRpc("admin_bloquer", {p_joueur:b.dataset.bloquer, p_bloque:bloquer, p_motif:motif}), bloquer ? "Compte suspendu." : "Compte réactivé.");
+    });
+    m.querySelectorAll("[data-crediter]").forEach(b => b.onclick = ()=>{
+      const id = b.dataset.crediter;
+      const n = Math.trunc(+m.querySelector(`[data-montant="${id}"]`).value || 0);
+      const motif = m.querySelector(`[data-motif="${id}"]`).value.trim();
+      if(!n){ st.msg = "Indiquez un nombre de Cristaux (négatif pour retirer)."; return peindre(); }
+      if(!motif){ st.msg = "Indiquez un motif : il reste dans le registre."; return peindre(); }
+      agir(()=>regRpc("admin_crediter", {p_joueur:id, p_cristaux:n, p_motif:motif, p_cle:regUid()}), (n > 0 ? "+" : "") + n + " Cristaux enregistrés.");
+    });
+  };
+  document.body.appendChild(m);
+  peindre();
+  charger();
+}
 
 function viewSoon(){
   const d = SOON[state.view] || SOON.shop;
