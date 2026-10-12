@@ -3312,7 +3312,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.0.16";
+const BUILD = "V1.1.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4016,87 +4016,420 @@ async function nuageLire(cle){
   return (d && d[0]) ? d[0] : null;
 }
 
-async function nuageEcrire(cle, valeur){
-  const s = nuageSession();
-  if(!s || !s.user) return;
-  /* un profil sans pseudo, c'est une partie pas encore commencée : il ne doit
-     jamais remplacer celui du compte (c'est ce qui faisait redemander un
-     pseudo en se connectant ailleurs) */
-  if(cle === "fm:profile" && !(valeur && valeur.pseudo)){ diagLog("profil sans pseudo : non envoyé"); return null; }
-  const maj = new Date().toISOString();
-  const corps = JSON.stringify([{joueur:s.user.id, cle, valeur, maj}]);
-  await nuageRest(NUAGE_TABLE, {
-    method:"POST",
-    headers:{"Prefer":"resolution=merge-duplicates"},
-    body:corps,
-    keepalive: corps.length < 60000
-  });
-  return maj;
+
+/* ======================================================================
+   Registre — le serveur fait autorité
+   ----------------------------------------------------------------------
+   Le jeu n'envoie plus sa partie entière : il envoie ce qui a CHANGÉ
+   depuis le dernier état confirmé par le serveur (« −20 Fandominus,
+   +1 carte X »). Le serveur l'applique en une seule transaction, une seule
+   fois par clé d'envoi, refuse tout solde négatif, et renvoie l'état qui
+   fait foi. Deux appareils, deux envois : les deux comptent, rien ne
+   s'écrase, et rien n'est jamais fusionné « à peu près ».
+   ====================================================================== */
+const REG = {confirme:null, envoi:null, pret:false, enCours:false, aRefaire:false,
+             minuteur:null, echeance:0, essais:0, vidageAutorise:false, derniere:0,
+             coupe:null, uniques:[], refus:0};
+const REG_MAX = /At$|^since$|^v$|^day$|^t$|^foxNiv$|^foxV$/;   // dates, versions, niveaux atteints : on garde le plus grand
+const REG_UNION = new Set(["ach", "achClaimed", "campDone"]);   // listes qui ne font que grandir
+function regUid(){
+  try{ if(crypto.randomUUID) return crypto.randomUUID(); }catch(e){}
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+}
+const regObjet = x => !!x && typeof x === "object" && !Array.isArray(x);
+function regInv(inv){ const m = {}; for(const s of (Array.isArray(inv) ? inv : [])) if(s && s.key) m[s.key] = (m[s.key] || 0) + (+s.n || 0); return m; }
+function regMap(list){ const m = new Map(); for(const c of (Array.isArray(list) ? list : [])) if(c && c.id) m.set(c.id, c); return m; }
+function regFiche(c){
+  const f = Object.assign({}, c);
+  delete f.count; delete f.text; delete f.id;
+  if(f.img && String(c.id).startsWith("perso:") && String(f.img).startsWith("data:")) delete f.img;   // l'image embarquée reste dans le code
+  return f;
 }
 
-/* Le jeu enregistre souvent ; on ne veut pas une requête par clic. Chaque
-   clé attend un court instant que les écritures se calment, puis part en
-   une seule fois. */
+/* ---- ce qui a changé entre deux états du profil ---- */
+function regDiffProfil(A, B, prof = 0){
+  A = regObjet(A) ? A : {}; B = regObjet(B) ? B : {};
+  const d = {};
+  for(const k of new Set([...Object.keys(A), ...Object.keys(B)])){
+    const a = A[k], b = B[k];
+    if(egalJ(a, b)) continue;
+    if(b === undefined){ d[k] = {x:1}; continue; }
+    if(typeof b === "number" && isFinite(b) && (a === undefined || typeof a === "number")){
+      if(REG_MAX.test(k)) d[k] = {m:b};
+      else{ const x = b - (typeof a === "number" && isFinite(a) ? a : 0); if(x !== 0) d[k] = {a:x}; }
+      continue;
+    }
+    if(prof === 0 && k === "inv" && Array.isArray(b)){
+      const ca = regInv(a), cb = regInv(b), o = {};
+      for(const key of new Set([...Object.keys(ca), ...Object.keys(cb)])){ const x = (cb[key] || 0) - (ca[key] || 0); if(x) o[key] = x; }
+      d[k] = Object.keys(o).length ? {inv:o, pile:STACK} : {s:b};
+      continue;
+    }
+    if(prof === 0 && REG_UNION.has(k) && Array.isArray(b) && (a === undefined || Array.isArray(a))){
+      const aa = a || [], sa = new Set(aa.map(stable)), sb = new Set(b.map(stable));
+      if(aa.every(x => sb.has(stable(x)))){ const ajout = b.filter(x => !sa.has(stable(x))); if(ajout.length) d[k] = {u:ajout}; }
+      else d[k] = {s:b};
+      continue;
+    }
+    if(regObjet(a) && regObjet(b) && prof < 3){ const o = regDiffProfil(a, b, prof + 1); if(Object.keys(o).length) d[k] = {o}; continue; }
+    d[k] = {s:b};
+  }
+  return d;
+}
+/* ---- même règle que le serveur (fm_appliquer), pour rejouer en local ---- */
+function regAppliquerProfil(E, D, prof = 0){
+  const e = regObjet(E) ? JSON.parse(JSON.stringify(E)) : {};
+  for(const [k, op] of Object.entries(D || {})){
+    if(!regObjet(op)) continue;
+    if("a" in op) e[k] = (typeof e[k] === "number" && isFinite(e[k]) ? e[k] : 0) + (+op.a || 0);
+    else if("m" in op) e[k] = typeof e[k] === "number" ? Math.max(e[k], op.m) : op.m;
+    else if("s" in op) e[k] = JSON.parse(JSON.stringify(op.s));
+    else if("x" in op) delete e[k];
+    else if("o" in op) e[k] = regAppliquerProfil(regObjet(e[k]) ? e[k] : {}, op.o, prof + 1);
+    else if("u" in op){
+      const cur = Array.isArray(e[k]) ? e[k].slice() : [], vu = new Set(cur.map(stable));
+      for(const x of op.u) if(!vu.has(stable(x))){ cur.push(x); vu.add(stable(x)); }
+      e[k] = cur;
+    }else if("inv" in op){
+      const pile = Math.max(1, +op.pile || STACK);
+      const piles = Array.isArray(e[k]) ? e[k].map(s => Object.assign({}, s)) : [];
+      for(const [obj, n] of Object.entries(op.inv)){
+        let reste = Math.abs(+n || 0);
+        if(n > 0){
+          for(const s of piles){ if(reste <= 0) break; if(s.key === obj && s.n < pile){ const t = Math.min(pile - s.n, reste); s.n += t; reste -= t; } }
+          while(reste > 0){ const t = Math.min(pile, reste); piles.push({key:obj, n:t}); reste -= t; }
+        }else{
+          for(let i = piles.length - 1; i >= 0 && reste > 0; i--){
+            if(piles[i].key !== obj) continue;
+            const t = Math.min(piles[i].n, reste); piles[i].n -= t; reste -= t;
+            if(piles[i].n <= 0) piles.splice(i, 1);
+          }
+        }
+      }
+      e[k] = piles;
+    }
+  }
+  return e;
+}
+function regDiffCartes(A, B){
+  const d = {};
+  for(const id of new Set([...A.keys(), ...B.keys()])){
+    const a = A.get(id), b = B.get(id);
+    const na = a ? Math.max(1, a.count || 1) : 0, nb = b ? Math.max(1, b.count || 1) : 0, op = {};
+    if(nb !== na) op.d = nb - na;
+    if(b && (!a || stable(regFiche(a)) !== stable(regFiche(b)))) op.f = regFiche(b);
+    if(Object.keys(op).length) d[id] = op;
+  }
+  return d;
+}
+function regAppliquerCartes(M, D){
+  const m = new Map(M);
+  for(const [id, op] of Object.entries(D || {})){
+    const c = m.get(id), n = (c ? Math.max(1, c.count || 1) : 0) + (op.d || 0);
+    if(n <= 0){ m.delete(id); continue; }
+    const base = Object.assign({}, op.f || c || {});
+    delete base.count;
+    m.set(id, Object.assign(base, {id, count:n}));
+  }
+  return m;
+}
+function regAppliquer(R, delta){
+  return {version:R.version, etat:regAppliquerProfil(R.etat, delta.profil), cartes:regAppliquerCartes(R.cartes, delta.cartes)};
+}
+function regVide(delta){ return !Object.keys(delta.profil || {}).length && !Object.keys(delta.cartes || {}).length; }
+/* première synchro avec ce système : seulement ce qui est en plus sur l'appareil */
+function regFavorable(d){
+  const o = {};
+  for(const [k, op] of Object.entries(d || {})){
+    if("a" in op){ if(op.a > 0) o[k] = op; }
+    else if("m" in op || "u" in op) o[k] = op;
+    else if("o" in op){ const s = regFavorable(op.o); if(Object.keys(s).length) o[k] = {o:s}; }
+    else if("inv" in op){ const p = {}; for(const [x, n] of Object.entries(op.inv)) if(n > 0) p[x] = n; if(Object.keys(p).length) o[k] = {inv:p, pile:op.pile}; }
+  }
+  return o;
+}
+/* Une collection qui perd d'un coup (presque) tout ce qu'elle avait : c'est un
+   navigateur qui a perdu sa copie, jamais une partie normale. */
+function regVidageSuspect(cartes, dc){
+  let retire = 0, total = 0;
+  for(const c of cartes.values()) total += Math.max(1, c.count || 1);
+  for(const op of Object.values(dc || {})) if(op.d < 0) retire -= op.d;
+  return total >= 20 && retire >= total * 0.9;
+}
+function regFavorableCartes(d){ const o = {}; for(const [id, op] of Object.entries(d || {})) if(op.d > 0) o[id] = op; return o; }
+
+async function regPersister(){
+  if(ongletFige) return;                 // un onglet en pause n'écrit plus rien : c'est l'autre qui tient la partie
+  const moi = acct();
+  await ecrireEspace(moi, "srv:confirme", REG.confirme ? {version:REG.confirme.version, etat:REG.confirme.etat, cartes:[...REG.confirme.cartes.values()]} : null);
+  await ecrireEspace(moi, "srv:envoi", REG.envoi);
+}
+function regDepuisStock(c){ return {version:c.version, etat:c.etat || {}, cartes:regMap(c.cartes)}; }
+const regRpc = (nom, corps)=>nuageRest("rpc/" + nom, {method:"POST", body:JSON.stringify(corps || {})});
+const regRefus = e => /FM_REFUS/.test(String(e && e.message || e));
+const regRaison = e => String(e && e.message || e).replace(/^.*FM_REFUS:/, "").trim();
+
+/* Gains qui ne se touchent qu'une fois (échange réglé, succès, mission du
+   jour…). Appelé JUSTE AVANT de créditer : ce qui était déjà en attente part
+   d'abord, seul ; le gain part ensuite avec son nom, et le serveur refuse de
+   le créditer s'il a déjà été encaissé sur un autre appareil. */
+function regGainUnique(nom){
+  if(!REG.pret || !fmPret || !REG.confirme || !state || !state.profile) return;
+  if(!REG.coupe) REG.coupe = {etat:JSON.parse(JSON.stringify(state.profile)), cartes:regMap(JSON.parse(JSON.stringify(state.collection)))};
+  if(!REG.uniques.includes(nom)) REG.uniques.push(nom);
+  registrePlanifier(true);
+}
+/* Attend que tout ce qui est en attente soit confirmé par le serveur.
+   Renvoie false si le serveur a refusé quelque chose ou reste injoignable. */
+async function regConfirmer(){
+  if(!REG.pret) return false;
+  const avant = REG.refus;
+  for(let i = 0; i < 6; i++){
+    await registreEnvoyer();
+    if(REG.refus !== avant) return false;
+    const reste = REG.envoi || REG.coupe || REG.uniques.length
+      || !regVide({profil:regDiffProfil(REG.confirme.etat, state.profile), cartes:regDiffCartes(REG.confirme.cartes, regMap(state.collection))});
+    if(!reste && !REG.enCours) return true;
+    await new Promise(r => setTimeout(r, 250 + i * 250));
+  }
+  return false;
+}
+
+/* Rejoue sur le nouvel état du serveur ce que le joueur a fait depuis « ancien ». */
+function regRebaser(ancien, nouv){
+  REG.coupe = null;          // la photo d'avant un gain ne vaut plus : tout repartira d'un bloc
+  if(!state || !state.profile || !fmPret) return;
+  const dp = regDiffProfil(ancien.etat, state.profile);
+  const dc = regDiffCartes(ancien.cartes, regMap(state.collection));
+  const p = regAppliquerProfil(nouv.etat, dp);
+  const col = [...regAppliquerCartes(nouv.cartes, dc).values()];
+  for(const k of Object.keys(state.profile)) if(!(k in p)) delete state.profile[k];
+  Object.assign(state.profile, p);
+  state.collection.length = 0; for(const c of col) state.collection.push(c);
+  try{ majCartesPerso(state.collection); colVueDepuis(state.collection); }catch(e){}
+  if(ongletFige) return;
+  ecrireEspace(acct(), "fm:profile", state.profile);
+  ecrireEspace(acct(), "fm:col", allegerCol(state.collection));
+  rafraichirApresSynchro();
+}
+/* L'état qui fait foi, relu en entier (au démarrage, après un refus, ou quand
+   un autre appareil a joué). */
+async function regRecharger(ancien, ecraser){
+  const s = await regRpc("etat_joueur");
+  const nouv = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)};
+  const avant = ancien || REG.confirme;
+  REG.confirme = nouv;
+  await regPersister();
+  /* ecraser : la copie locale n'est pas fiable, l'appareil reprend l'état du serveur tel quel */
+  if(ecraser){ REG.uniques = []; lectureEchouee["fm:col"] = false; lectureEchouee["fm:profile"] = false;
+    if(fmPret && state && state.profile) regRebaser({etat:JSON.parse(JSON.stringify(state.profile)), cartes:regMap(state.collection)}, nouv); }
+  else if(avant) regRebaser(avant, nouv);
+  return nouv;
+}
+
+/* ---- envoi : ce qui a changé part, avec une clé unique ---- */
+function registrePlanifier(urgent){
+  if(!REG.pret) return;
+  const dans = urgent === true ? 500 : urgent === "col" ? 1200 : 8000;
+  const due = Date.now() + dans;
+  if(REG.minuteur && REG.echeance <= due) return;          // un envoi plus proche est déjà prévu
+  clearTimeout(REG.minuteur);
+  REG.echeance = due;
+  REG.minuteur = setTimeout(()=>{ REG.minuteur = null; registreEnvoyer(); }, dans);
+}
+async function registreEnvoyer(){
+  if(!nuageConfigure() || !nuageConnecte() || ongletFige) return;
+  if(!REG.pret){ if(fmPret) registreDemarrer(); return; }
+  if(REG.enCours){ REG.aRefaire = true; return; }
+  REG.enCours = true;
+  clearTimeout(REG.minuteur); REG.minuteur = null;
+  let encore = false;
+  try{
+    if(!REG.envoi){
+      if(!fmPret || !state.profile || !state.profile.pseudo) return;
+      if(lectureEchouee["fm:col"] || lectureEchouee["fm:profile"]){ diagLog("envoi suspendu : lecture locale ratée"); await regRecharger(null, true); return; }
+      /* d'abord ce qui précédait un gain unique, puis le reste avec les gains */
+      let delta = null, uniques = [];
+      if(REG.coupe){
+        const c = REG.coupe; REG.coupe = null;
+        delta = {profil:regDiffProfil(REG.confirme.etat, c.etat), cartes:regDiffCartes(REG.confirme.cartes, c.cartes)};
+        if(regVide(delta)) delta = null; else encore = true;
+      }
+      if(!delta){
+        delta = {profil:regDiffProfil(REG.confirme.etat, state.profile), cartes:regDiffCartes(REG.confirme.cartes, regMap(state.collection))};
+        uniques = REG.uniques.splice(0);
+      }
+      if(regVide(delta)){ nuageEtat = "repos"; return; }
+      if(uniques.length) delta.uniques = uniques;
+      /* Garde-fou contre un navigateur qui aurait perdu sa copie locale : une
+         collection qui se viderait d'un coup n'est jamais envoyée. */
+      if(!REG.vidageAutorise && regVidageSuspect(REG.confirme.cartes, delta.cartes)){
+        diagLog("envoi bloqué : collection presque vidée d'un coup");
+        await regRecharger(null, true);
+        return;
+      }
+      REG.vidageAutorise = false;
+      REG.envoi = {cle:regUid(), delta, version:REG.confirme.version};
+      REG.confirme = regAppliquer(REG.confirme, delta);    // optimiste : ce que le serveur va confirmer
+      await regPersister();                                  // gardé AVANT l'appel réseau
+    }
+    nuageEtat = "envoi"; majEtatNuage();
+    const opt = REG.confirme;
+    const r = await regRpc("synchroniser", {p_cle:REG.envoi.cle, p_delta:REG.envoi.delta, p_version:REG.envoi.version});
+    REG.envoi = null;
+    REG.confirme = {version:r.version, etat:r.etat || {}, cartes:r.cartes ? regMap(r.cartes) : opt.cartes};
+    await regPersister();
+    if(r.cartes || !egalJ(opt.etat, REG.confirme.etat)) regRebaser(opt, REG.confirme);   // un autre appareil a joué entre-temps
+    REG.essais = 0; REG.derniere = Date.now();
+    nuageEtat = "repos";
+    encore = true;
+  }catch(e){
+    if(regRefus(e)){
+      /* Le serveur a refusé (solde insuffisant, carte déjà partie…) : rien n'a
+         été appliqué. On reprend son état ; ce qui a été refusé disparaît. */
+      const raison = regRaison(e);
+      REG.refus++;
+      diagLog("refusé par le serveur : " + raison);
+      const opt = REG.confirme;
+      REG.envoi = null;
+      try{ await regRecharger(opt); }catch(e2){}
+      try{ toast("Action annulée par le serveur", raison, "lose"); }catch(e3){}
+      nuageEtat = "repos";
+    }else{
+      nuageEtat = navigator.onLine === false ? "hors-ligne" : "erreur";
+      nuageErreur = String(e && e.message || e);
+      const att = [2000, 5000, 10000, 30000][Math.min(REG.essais++, 3)];
+      clearTimeout(REG.minuteur);
+      REG.minuteur = setTimeout(()=>{ REG.minuteur = null; registreEnvoyer(); }, att);
+    }
+  }finally{
+    REG.enCours = false;
+    majEtatNuage();
+    if(REG.aRefaire || encore){ REG.aRefaire = false; if(encore) registrePlanifier(true); else registreEnvoyer(); }
+  }
+}
+
+/* ---- au démarrage : l'état du serveur, plus ce que l'appareil avait en attente ---- */
+async function registreDemarrer(){
+  if(!nuageConfigure() || !nuageConnecte()) return false;
+  if(REG.demarrage) return REG.demarrage;
+  REG.demarrage = (async ()=>{
+    const moi = acct();
+    const conf = await lireEspace(moi, "srv:confirme");
+    let env = await lireEspace(moi, "srv:envoi");
+    /* l'état local de référence : la partie en mémoire si le jeu tourne déjà,
+       sinon la copie gardée sur l'appareil */
+    const lp = fmPret ? JSON.parse(JSON.stringify(state.profile)) : await lireEspace(moi, "fm:profile");
+    const lc = fmPret ? JSON.parse(JSON.stringify(state.collection)) : await lireEspace(moi, "fm:col");
+    let S;
+    try{
+      if(env && env.cle){
+        /* un envoi resté en suspens part tel quel : même clé, jamais appliqué deux fois */
+        try{ await regRpc("synchroniser", {p_cle:env.cle, p_delta:env.delta, p_version:env.version}); }
+        catch(e){ if(!regRefus(e)) throw e; diagLog("envoi en suspens refusé : " + regRaison(e)); }
+        env = null;
+      }
+      const s = await regRpc("etat_joueur");
+      S = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)};
+    }catch(e){
+      diagLog("serveur injoignable au démarrage : " + (e && e.message));
+      if(conf && conf.version != null && !REG.confirme){ REG.confirme = regDepuisStock(conf); REG.envoi = env || null; REG.pret = true; }
+      return false;
+    }
+    /* ce que l'appareil a de plus que le dernier état confirmé */
+    const L = {etat:regObjet(lp) ? lp : null, cartes:Array.isArray(lc) ? regMap(lc) : null};
+    let delta = {profil:{}, cartes:{}}, motif = "reprise";
+    if(conf && conf.version != null){
+      const C = regDepuisStock(conf);
+      if(L.etat && L.etat.pseudo) delta.profil = regDiffProfil(C.etat, L.etat);
+      /* une copie locale vide ou presque vidée n'est pas une partie jouée : le
+         navigateur l'a perdue. On ne garde alors que ce qu'elle a EN PLUS. */
+      if(L.cartes && L.cartes.size === 0 && C.cartes.size > 0) L.cartes = null;
+      if(L.cartes){
+        delta.cartes = regDiffCartes(C.cartes, L.cartes);
+        if(regVidageSuspect(C.cartes, delta.cartes)){ diagLog("copie locale presque vide : seuls les ajouts sont gardés"); delta.cartes = regFavorableCartes(delta.cartes); }
+      }
+    }else if(L.etat || L.cartes){
+      /* Première fois avec ce système : l'ancienne base de l'appareil (dernier
+         état qu'il avait en commun avec le serveur), sinon le serveur lui-même.
+         On n'envoie que ce que l'appareil a EN PLUS : rien ne peut être retiré. */
+      motif = "rattrapage";
+      const bp = await lireEspace(moi, "base:fm:profile"), bc = await lireEspace(moi, "base:fm:col");
+      const B = {etat:regObjet(bp) ? bp : S.etat, cartes:Array.isArray(bc) ? regMap(bc) : S.cartes};
+      if(L.etat && L.etat.pseudo) delta.profil = regFavorable(regDiffProfil(B.etat, L.etat));
+      if(L.cartes) delta.cartes = regFavorableCartes(regDiffCartes(B.cartes, L.cartes));
+    }
+    const ancienLocal = {etat:L.etat || S.etat, cartes:L.cartes || S.cartes};
+    REG.confirme = S;
+    if(!regVide(delta) && !(lectureEchouee["fm:col"] || lectureEchouee["fm:profile"])){
+      delta.motif = motif;
+      REG.envoi = {cle:regUid(), delta, version:S.version};
+      REG.confirme = regAppliquer(S, delta);
+      await regPersister();
+      try{
+        const r = await regRpc("synchroniser", {p_cle:REG.envoi.cle, p_delta:delta, p_version:S.version});
+        REG.confirme = {version:r.version, etat:r.etat || {}, cartes:r.cartes ? regMap(r.cartes) : REG.confirme.cartes};
+        REG.envoi = null;
+      }catch(e){
+        if(regRefus(e)){ REG.envoi = null; diagLog("reprise refusée : " + regRaison(e)); try{ const s = await regRpc("etat_joueur"); REG.confirme = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)}; }catch(e2){ REG.confirme = S; } }
+        else{ REG.pret = true; return false; }               // l'envoi reste en suspens, il repartira
+      }
+    }
+    await regPersister();
+    if(fmPret){
+      /* le jeu tournait déjà : ce qui a bougé pendant l'appel est rejoué */
+      const base = {etat:ancienLocal.etat, cartes:ancienLocal.cartes};
+      regRebaser({etat:regAppliquerProfil(base.etat, {}), cartes:base.cartes}, REG.confirme);
+    }else{
+      /* le cache local devient l'état qui fait foi : c'est lui que le jeu va lire */
+      await ecrireEspace(moi, "fm:profile", REG.confirme.etat);
+      await ecrireEspace(moi, "fm:col", allegerCol([...REG.confirme.cartes.values()]));
+      lectureEchouee["fm:col"] = false; lectureEchouee["fm:profile"] = false;
+    }
+    REG.pret = true;
+    REG.derniere = Date.now();
+    return true;
+  })().finally(()=>{ REG.demarrage = null; });
+  return REG.demarrage;
+}
+
+/* Un autre appareil a-t-il joué ? Une petite requête qui ne lit que la version. */
+async function registreVerifier(){
+  if(!REG.pret || REG.enCours || REG.envoi || document.hidden || !fmPret || ongletFige) return;
+  try{
+    const d = await nuageRest("comptes?select=version&joueur=eq." + encodeURIComponent(acct()));
+    const v = d && d[0] ? d[0].version : null;
+    if(v != null && v !== REG.confirme.version && !REG.enCours && !REG.envoi) await regRecharger(REG.confirme);
+  }catch(e){}
+}
+
+/* Les anciens noms restent : tout le jeu les appelle. */
 const nuageEnAttente = new Map();
-const nuageMinuteurs = new Map();
 let nuageErreur = "";
 let nuageEtat = "repos";       // repos | envoi | erreur | hors-ligne
-
-function nuageAttente(){ try{ return JSON.parse(localStorage.getItem("fm-local:nuage-attente") || "[]"); }catch(e){ return []; } }
-function nuageAttentePose(l){ try{ localStorage.setItem("fm-local:nuage-attente", JSON.stringify(l)); }catch(e){} }
-function nuagePousse(cle, valeur){
+function nuageAttente(){ return []; }
+function nuageAttentePose(){}
+function nuagePousse(cle){
   if(!nuageConfigure() || !nuageConnecte()) return;
-  if(cle === "fm:profile" && !(valeur && valeur.pseudo)) return;
-  /* Date de la dernière modification locale, et marque « pas encore envoyé » :
-     si la page se recharge avant l'envoi, le serveur ne doit pas écraser
-     l'appareil avec une version plus ancienne. */
-  ecrireEspace(acct(), "maj:" + cle, new Date().toISOString());   // sans attendre
-  const l = nuageAttente(); if(l.indexOf(cle) < 0){ l.push(cle); nuageAttentePose(l); }
-  nuageEnAttente.set(cle, valeur);
-  /* Le profil change sans cesse (le mana monte chaque seconde) : on l'envoie
-     au plus toutes les 30 secondes (et toujours en quittant l'onglet). La collection part vite. Un envoi déjà
-     prévu n'est pas repoussé : il prendra la dernière valeur. */
-  if(!nuageMinuteurs.has(cle))
-    nuageMinuteurs.set(cle, setTimeout(()=>nuageVide(cle), cle === "fm:profile" ? 30000 : 1200));
+  registrePlanifier(cle === "fm:col" ? "col" : false);
 }
-
-async function nuageVide(cle){
-  if(!nuageEnAttente.has(cle)) return;
-  const v = JSON.parse(JSON.stringify(nuageEnAttente.get(cle)));
-  nuageEnAttente.delete(cle);
-  clearTimeout(nuageMinuteurs.get(cle));
-  nuageMinuteurs.delete(cle);
-  nuageEtat = "envoi"; majEtatNuage();
-  try{
-    await nuageSynchroniser(cle, v, true);
-    if(!nuageEnAttente.has(cle)) nuageAttentePose(nuageAttente().filter(c => c !== cle));
-    nuageEtat = nuageEnAttente.size ? "envoi" : "repos";
-  }catch(e){
-    /* On remet la valeur en attente : elle repartira au prochain
-       enregistrement, ou à la fermeture de la page. */
-    if(!nuageEnAttente.has(cle)) nuageEnAttente.set(cle, v);
-    nuageEtat = navigator.onLine === false ? "hors-ligne" : "erreur";
-    nuageErreur = String(e && e.message || e);
-  }
-  majEtatNuage();
-}
-
-function nuageToutVider(){
-  for(const cle of [...nuageEnAttente.keys()]){
-    clearTimeout(nuageMinuteurs.get(cle));
-    nuageVide(cle);
-  }
-}
-/* Dernière chance avant que l'onglet ne parte. */
+function nuageVide(){ return registreEnvoyer(); }
+function nuageToutVider(){ if(REG.pret) registreEnvoyer(); }
+function nuageVerifier(){ return registreVerifier(); }
+function nuageRepousser(){ return registreEnvoyer(); }
+function nuageDescendre(){ return registreDemarrer(); }
 addEventListener("pagehide", nuageToutVider);
-addEventListener("visibilitychange", ()=>{ if(document.hidden) nuageToutVider(); });
+addEventListener("visibilitychange", ()=>{ if(document.hidden) nuageToutVider(); else registreVerifier(); });
+setInterval(registreVerifier, 45000);
+addEventListener("online", ()=>{ registreEnvoyer(); });
+
 
 function majEtatNuage(){
   const el = document.getElementById("nuage-etat");
   if(!el) return;
-  const t = {repos:"à jour", "envoi":"envoi en cours…",
-             erreur:"envoi impossible, nouvel essai au prochain enregistrement",
-             "hors-ligne":"hors ligne, les parties sont gardées sur l'appareil"};
+  const t = {repos:"enregistrée sur le serveur", "envoi":"enregistrement…",
+             erreur:"serveur injoignable pour l'instant : nouvel essai automatique, rien n'est perdu",
+             "hors-ligne":"hors ligne : tout partira au retour de la connexion"};
   el.textContent = (t[nuageEtat] || "") + (nuageEtat === "erreur" && nuageErreur ? " — " + nuageErreur : "");
   el.className = "sub nuetat " + (nuageEtat === "repos" ? "ok" : nuageEtat === "envoi" ? "wip" : "ko");
 }
@@ -4221,32 +4554,6 @@ async function ecrireEspace(espace, cle, val){
 /* Les deux clés que le jeu enregistre. Tout passe par là. */
 const NUAGE_CLES = ["fm:profile", "fm:col"];
 
-/* Descend les sauvegardes du serveur dans le cache local, puis le jeu
-   démarre normalement : aucune lecture du jeu ne part sur le réseau. */
-async function nuageDescendre(forcer){
-  if(!nuageConfigure() || !nuageConnecte()) return false;
-  let eu = false;
-  const moi = acct();
-  for(const cle of NUAGE_CLES){
-    try{
-      if(forcer){
-        const r = await nuageLire(cle);
-        if(!r || r.valeur == null) continue;
-        if(!(await ecrireEspace(moi, cle, r.valeur))) throw new Error("place insuffisante dans le navigateur");
-        await ecrireEspace(moi, "base:" + cle, r.valeur);
-        await ecrireEspace(moi, "srvmaj:" + cle, r.maj);
-        eu = true;
-        continue;
-      }
-      const locale = await lireEspace(moi, cle);
-      const f = await nuageSynchroniser(cle, locale, false);
-      if(f != null) eu = true;
-    }catch(e){ diagLog("descente " + cle + " : " + (e && e.message)); return false; }
-  }
-  nuageAttentePose([]);
-  if(forcer && eu && moi !== "invite") await viderEspace("invite");
-  return eu;
-}
 
 /* ======================================================================
    Garde-fou contre la perte de cartes
@@ -4414,103 +4721,6 @@ function fusionner(cle, b, l, s){
   return cle === "fm:col" ? fusionCol(b, l, s) : fusionObjet(b, l, s);
 }
 
-/* Rapproche une clé de l'appareil et du serveur, écrit le résultat des
-   deux côtés, et le retient comme nouvelle base. */
-/* Une seule synchro à la fois par clé : deux synchros qui se chevauchent
-   compteraient deux fois les mêmes gains. Et l'état local est relevé au
-   moment où la synchro démarre vraiment, pas au moment où elle est demandée. */
-const nuageVerrous = new Map();
-function nuageSynchroniser(cle, locale, appliquer){
-  const prec = nuageVerrous.get(cle) || Promise.resolve();
-  const suite = prec.catch(()=>{}).then(()=>{
-    if(appliquer && state && state.profile && state.profile.pseudo)
-      locale = JSON.parse(JSON.stringify(cle === "fm:col" ? state.collection : state.profile));
-    return nuageSynchroInterne(cle, locale, appliquer);
-  });
-  nuageVerrous.set(cle, suite);
-  return suite;
-}
-async function nuageSynchroInterne(cle, locale, appliquer){
-  const moi = acct();
-  const ses = nuageSession(); if(!ses || !ses.user) return null;
-  const vue  = await lireEspace(moi, "srvmaj:" + cle);
-  const base = await lireEspace(moi, "base:" + cle);
-  /* La date seule d'abord (quelques octets) : la valeur complète ne descend
-     que si une autre session a écrit depuis notre dernier passage. */
-  const d = await nuageRest(NUAGE_TABLE + "?joueur=eq." + encodeURIComponent(ses.user.id) +
-                            "&cle=eq." + encodeURIComponent(cle) + "&select=maj");
-  const majSrv = d && d[0] ? d[0].maj : null;
-  const inchange = !!majSrv && base != null && memeMaj(majSrv, vue);
-  let retraits0 = null;
-  const instantane = locale;
-  if(cle === "fm:col" && base != null && Array.isArray(locale)){
-    retraits0 = (await lireEspace(moi, "retraits:fm:col")) || {};
-    const rep = reparerCol(base, locale, retraits0);
-    if(rep.perdues){
-      diagLog("garde-fou : " + rep.perdues + " cartes disparues sans raison, remises en place");
-      try{ toast("Collection protégée", rep.perdues + " cartes perdues par le navigateur ont été remises", "info"); }catch(e){}
-      locale = rep.col;
-    }
-  }
-  let fusion = locale, valSrv;
-  if(majSrv && !inchange){
-    const r = await nuageLire(cle);
-    valSrv = r ? r.valeur : undefined;
-    if(valSrv != null){
-      if(locale == null) fusion = valSrv;
-      else if(base != null) fusion = fusionner(cle, base, locale, valSrv);
-      else{
-        const lm = await lireEspace(moi, "maj:" + cle);
-        const localPlusRecent = !!(lm && Date.parse(lm) > Date.parse(majSrv));
-        /* sans ancêtre commun, la collection ne perd jamais rien : on garde,
-           carte par carte, le plus grand nombre d'exemplaires des deux côtés */
-        fusion = cle === "fm:col" ? fusionColMax(locale, valSrv)
-                                  : fusionDemarrage(locale, valSrv, localPlusRecent);
-      }
-      if(locale != null) diagLog("fusion " + cle + (base != null ? "" : " (première)"));
-    }
-  }else if(inchange) valSrv = base;
-  if(fusion == null) return null;
-  let maj = majSrv;
-  if(valSrv === undefined || !egalJ(fusion, valSrv)) maj = await nuageEcrire(cle, fusion);
-  await ecrireEspace(moi, "base:" + cle, fusion);
-  if(maj) await ecrireEspace(moi, "srvmaj:" + cle, maj);
-  if(cle === "fm:col"){
-    /* les retraits pris en compte par cette synchro sont soldés */
-    const r = (await lireEspace(moi, "retraits:fm:col")) || {};
-    for(const [id, n] of Object.entries(retraits0 || {})){ r[id] = (r[id] || 0) - n; if(r[id] <= 0) delete r[id]; }
-    await ecrireEspace(moi, "retraits:fm:col", r);
-    if(lectureEchouee["fm:col"] && fusion && fusion.length) lectureEchouee["fm:col"] = false;
-  }
-  if(instantane == null || !egalJ(fusion, instantane)){
-    await ecrireEspace(moi, cle, fusion);
-    if(appliquer) appliquerFusion(cle, fusion, instantane);
-  }
-  if(cle === "fm:profile" && typeof publierProfil === "function") publierProfil();
-  return fusion;
-}
-
-/* Le jeu tourne pendant la synchro : ce qui a bougé entre-temps est
-   recombiné avec le résultat avant d'être appliqué. */
-function appliquerFusion(cle, fusion, instantane){
-  if(!state || !state.profile) return;
-  let fin;
-  if(cle === "fm:profile"){
-    const cour = JSON.parse(JSON.stringify(state.profile));
-    fin = instantane ? fusionObjet(instantane, cour, fusion) : fusion;
-    for(const k of Object.keys(state.profile)) if(!(k in fin)) delete state.profile[k];
-    Object.assign(state.profile, fin);
-    persoInstantane(state.profile);
-  }else if(cle === "fm:col"){
-    fin = instantane ? fusionCol(instantane, state.collection, fusion) : fusion;
-    state.collection.length = 0;
-    for(const c of fin) state.collection.push(c);
-    colVueDepuis(state.collection);
-  }else return;
-  if(!egalJ(fin, fusion)) sset(cle, cle === "fm:col" ? state.collection : state.profile);
-  else ecrireEspace(acct(), cle, fin);
-  rafraichirApresSynchro();
-}
 function rafraichirApresSynchro(){
   try{
     if(typeof majJauges === "function") majJauges();
@@ -4519,87 +4729,7 @@ function rafraichirApresSynchro(){
   }catch(e){}
 }
 
-/* Toutes les 40 secondes, et au retour sur l'onglet : une autre session
-   a-t-elle écrit ? Une seule petite requête qui ne lit que les dates. */
-async function nuageVerifier(){
-  if(!nuageConfigure() || !nuageConnecte() || document.hidden || !state.profile || !state.profile.pseudo) return;
-  try{
-    const s = nuageSession();
-    const d = await nuageRest(NUAGE_TABLE + "?joueur=eq." + encodeURIComponent(s.user.id) + "&select=cle,maj");
-    for(const r of (d || [])){
-      if(NUAGE_CLES.indexOf(r.cle) < 0 || nuageEnAttente.has(r.cle)) continue;
-      const vue = await lireEspace(acct(), "srvmaj:" + r.cle);
-      if(memeMaj(vue, r.maj)) continue;
-      const locale = JSON.parse(JSON.stringify(r.cle === "fm:col" ? state.collection : state.profile));
-      await nuageSynchroniser(r.cle, locale, true);
-    }
-  }catch(e){}
-}
-setInterval(nuageVerifier, 60000);
-document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) nuageVerifier(); });
 
-/* Renvoie ce qui n'est pas encore parti (réseau coupé, page fermée trop tôt). */
-let nuageEssais = 0;
-async function nuageRepousser(){
-  if(!nuageConfigure() || !nuageConnecte()) return;
-  for(const cle of nuageAttente()){
-    const v = await lireEspace(acct(), cle);
-    if(v == null) continue;
-    try{
-      await nuageSynchroniser(cle, v, true);
-      nuageAttentePose(nuageAttente().filter(c => c !== cle));
-    }catch(e){
-      if(++nuageEssais < 6) setTimeout(nuageRepousser, 4000);
-      return;
-    }
-  }
-  nuageEssais = 0;
-}
-addEventListener("online", ()=>{ nuageRepousser(); });
-
-/* Envoie une partie de cet appareil vers le serveur, en une fois, et la
-   recopie dans l'espace du compte pour que le rechargement la retrouve.
-   « source » vaut « invite » à la connexion, l'identifiant du compte
-   quand le joueur renvoie sa partie depuis la page Compte. */
-async function nuageMonter(source){
-  const s = nuageSession();
-  const moi = s && s.user ? s.user.id : null;
-  const depuis = source || moi || "invite";
-  let n = 0;
-  for(const cle of NUAGE_CLES){
-    const v = await lireEspace(depuis, cle);
-    if(v == null) continue;
-    const maj = await nuageEcrire(cle, v);
-    n++;
-    if(moi && depuis !== moi) await ecrireEspace(moi, cle, v);
-    if(moi){ await ecrireEspace(moi, "base:" + cle, v); if(maj) await ecrireEspace(moi, "srvmaj:" + cle, maj); }
-  }
-  /* La partie est maintenant en ligne et dans l'espace du compte : on retire
-     la copie invitée, qui doublerait la place prise dans le navigateur. */
-  if(moi && depuis === "invite" && n) await viderEspace("invite");
-  return n;
-}
-
-/* À la première connexion sur un appareil, il peut y avoir une partie des
-   deux côtés. On ne tranche pas à la place du joueur : il choisit. */
-async function nuageCollision(){
-  if(!nuageConnecte()) return "aucune";
-  let distant = null;
-  try{ distant = await nuageLire("fm:profile"); }catch(e){ return "erreur"; }
-  const local = await lireEspace("invite", "fm:profile");
-  const aDistant = !!(distant && distant.valeur && distant.valeur.pseudo);
-  const aLocal   = !!(local && local.pseudo);
-  if(aDistant && aLocal) return "choix";
-  if(aDistant) return "distant";
-  if(aLocal){
-    /* un compte sans pseudo en ligne peut quand même avoir des cartes : on ne les écrase jamais */
-    try{ const c = await nuageLire("fm:col"); if(c && Array.isArray(c.valeur) && c.valeur.length) return "choix"; }catch(e){ return "erreur"; }
-    return "local";
-  }
-  /* ni pseudo en ligne ni partie sur l'appareil : on n'envoie rien, on
-     récupère ce que le compte a en ligne (cartes comprises) s'il a quelque chose */
-  return "vide";
-}
 
 /* ---------- stockage ---------- */
 /* L'espace de sauvegarde porte l'identifiant du joueur connecté. Hors
@@ -4651,6 +4781,7 @@ function assainirPartie(){
   for(const c of state.collection || []){
     if(!c || typeof c !== "object" || !c.id){ n++; continue; }
     const k = typeof c.count === "number" && isFinite(c.count) && c.count >= 1 ? Math.floor(c.count) : 1;
+    for(const s of ["atk", "def"]) if(typeof c[s] !== "number" || !isFinite(c[s])){ c[s] = Math.max(0, parseFloat(c[s]) || 0); n++; }
     if(k !== c.count){ c.count = k; n++; }
     const deja = vus.get(c.id);
     if(deja){ deja.count += c.count; n++; continue; }
@@ -5707,10 +5838,10 @@ function cardHTML(c, opts={}){
         </div>
         <div class="body"><div class="univ">${esc(c.univ||"")}</div></div>
         <div class="band">
-          <span class="atk"><span class="i">⚔️</span>${c.atk.toLocaleString("fr-FR")}${
+          <span class="atk"><span class="i">⚔️</span>${(+c.atk || 0).toLocaleString("fr-FR")}${
             opts.arm? `<b class="armup">+${item(opts.arm).val}</b>`:""}</span>
           <span class="role" title="${ROLES[roleOf(c)].name} — ${ROLES[roleOf(c)].txt}">${ROLES[roleOf(c)].emoji}</span>
-          <span class="def"><span class="i">🛡️</span>${c.def.toLocaleString("fr-FR")}</span>
+          <span class="def"><span class="i">🛡️</span>${(+c.def || 0).toLocaleString("fr-FR")}</span>
         </div>
         ${opts.arm? `<span class="armtag">${itemSVGMini(opts.arm)}</span>`:""}
       </div>
@@ -5734,10 +5865,10 @@ function cardHTML(c, opts={}){
         <div class="desc">${esc(c.desc||"")}</div>
       </div>
       <div class="band">
-        <span class="atk"><span class="i">⚔️</span>${c.atk.toLocaleString("fr-FR")}${
+        <span class="atk"><span class="i">⚔️</span>${(+c.atk || 0).toLocaleString("fr-FR")}${
           opts.arm? `<b class="armup">+${item(opts.arm).val}</b>`:""}</span>
         <span class="role" title="${ROLES[roleOf(c)].name} — ${ROLES[roleOf(c)].txt}">${ROLES[roleOf(c)].emoji}</span>
-        <span class="def"><span class="i">🛡️</span>${c.def.toLocaleString("fr-FR")}</span>
+        <span class="def"><span class="i">🛡️</span>${(+c.def || 0).toLocaleString("fr-FR")}</span>
       </div>
       ${opts.arm? `<span class="armtag">${itemSVGMini(opts.arm)}</span>`:""}
     </div>
@@ -6046,7 +6177,6 @@ function viewCompte(){
       </div>
       <p class="sub nuetat ok" id="nuage-etat">à jour</p>
       <div class="row" style="margin-top:.9rem">
-        ${admin ? `<button class="btn ghost" id="c-envoyer">Envoyer cette partie</button>` : ""}
         <button class="btn ghost" id="c-sortir">Se déconnecter</button>
       </div>
     </div>
@@ -6065,15 +6195,6 @@ function viewCompte(){
       <button class="btn small" id="m-ok">Changer le mot de passe</button>
     </div>
 
-    <div class="panel" style="margin-top:1rem">
-      <h3>Copies de secours</h3>
-      <div id="secours"><span class="sub">Recherche…</span></div>
-      <div class="row" style="margin-top:.8rem;gap:.5rem">
-        <button class="btn small ghost" id="c-export">Télécharger ma sauvegarde</button>
-        ${admin ? `<label class="btn small ghost" style="cursor:pointer">Importer une sauvegarde<input type="file" id="c-import" accept=".json,application/json" hidden></label>` : ""}
-      </div>
-      <p class="sub" style="margin:.5rem 0 0;font-size:.82rem">Un fichier avec votre profil et toutes vos cartes, à garder de votre côté. En cas de problème, envoyez-le au développeur : il pourra tout remettre.</p>
-    </div>
 
     ${admin ? `<details class="fold info" style="margin-top:1.2rem">
       <summary>Diagnostic</summary>
@@ -6081,52 +6202,10 @@ function viewCompte(){
     </details>` : ""}`;
 
   const dg = view.querySelector("#diag"); if(dg){ dg.textContent = diagnosticNuage(); idbMesurer(); }
-  afficherSecours();
-  view.querySelector("#c-export").onclick = ()=>{
-    try{
-      const data = {format:"fandomasters", v:1, build:BUILD, date:new Date().toISOString(), compte:moiId() || null,
-                    courriel:nuageCourriel() || null, profil:state.profile, collection:allegerCol(state.collection)};
-      const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "fandomasters-" + String(state.profile.pseudo || "partie").replace(/[^a-z0-9_-]+/gi, "_") + "-" + new Date().toISOString().slice(0, 10) + ".json";
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
-      toast("Sauvegarde téléchargée", state.collection.length + " cartes", "info");
-    }catch(e){ toast("Téléchargement impossible", String(e.message || e), "lose"); }
-  };
-  const imp = view.querySelector("#c-import");
-  if(imp) imp.onchange = async ()=>{
-    const f = imp.files && imp.files[0]; if(!f) return;
-    try{
-      const d = JSON.parse(await f.text());
-      if(!d || d.format !== "fandomasters" || !Array.isArray(d.collection)) throw new Error("ce fichier n'est pas une sauvegarde FandoMasters");
-      if(!confirm(`Fusionner la sauvegarde de « ${d.profil && d.profil.pseudo || "?"} » (${d.collection.length} cartes) avec cette partie ? Rien ne sera retiré.`)) return;
-      const avant = state.collection.length;
-      const fin = fusionColMax(state.collection, d.collection);
-      state.collection.length = 0; for(const x of fin) state.collection.push(x);
-      majCartesPerso(state.collection);
-      if(d.profil && typeof d.profil === "object") Object.assign(state.profile, fusionDemarrage(state.profile, d.profil, true));
-      colVueDepuis(state.collection);
-      await saveAll(); nuageToutVider();
-      toast("Sauvegarde fusionnée", (state.collection.length - avant) + " cartes ajoutées", "ach");
-      viewCompte();
-    }catch(e){ toast("Import impossible", String(e.message || e), "lose"); }
-  };
   view.querySelector("#c-sortir").onclick = async ()=>{
-    nuageToutVider();
+    try{ await registreEnvoyer(); }catch(e){}   // ce qui n'est pas encore parti part avant de fermer la session
     await nuageDeconnecter();
     location.reload();
-  };
-  const env = view.querySelector("#c-envoyer");
-  if(env) env.onclick = async (e)=>{
-    const b = e.currentTarget;
-    b.disabled = true; b.textContent = "Envoi…";
-    try{
-      const n = await nuageMonter(acct());
-      toast(n ? "Partie envoyée" : "Rien à envoyer", n ? "la sauvegarde en ligne est à jour" : "", n ? "info" : "lose");
-    }catch(err){ toast("Envoi impossible", String(err.message || err), "lose"); }
-    b.disabled = false; b.textContent = "Envoyer cette partie";
   };
   const merr = view.querySelector("#m-err");
   view.querySelector("#m-ok").onclick = async (e)=>{
@@ -6141,48 +6220,6 @@ function viewCompte(){
   majEtatNuage();
 }
 
-/* Copies de secours : celles du serveur (une par jour, et une avant toute
-   baisse brutale) et celles que cet appareil garde encore. Restaurer ne
-   retire jamais rien : chaque carte prend le plus grand nombre
-   d'exemplaires entre la collection actuelle et la copie. */
-async function afficherSecours(){
-  const el = document.getElementById("secours"); if(!el) return;
-  const copies = [];
-  try{
-    const r = await nuageRest("sauvegardes_secours?select=id,cartes,cree&joueur=eq." + moiId() + "&cle=eq.fm:col&order=cree.desc&limit=7");
-    for(const x of (r || [])) copies.push({src:"serveur", id:x.id, cartes:x.cartes, date:x.cree});
-  }catch(e){}
-  try{
-    for(const esp of [acct(), "invite"]) for(const k of ["fm:col", "base:fm:col"]){
-      const v = await lireEspace(esp, k);
-      if(Array.isArray(v) && v.length) copies.push({src:"appareil", esp, k, cartes:v.length, date:null});
-    }
-  }catch(e){}
-  const actuel = state.collection.length;
-  const utiles = copies.filter(c => c.cartes > actuel);
-  if(!utiles.length){ el.innerHTML = `<p class="sub" style="margin:0">Aucune copie plus complète que votre collection actuelle (${actuel} cartes).</p>`; return; }
-  el.innerHTML = utiles.map((c, i) => `<div class="row" style="justify-content:space-between;align-items:center;padding:.4rem 0;border-bottom:1px solid var(--line)">
-      <span class="sub" style="margin:0">${c.cartes} cartes · ${c.src === "serveur" ? "serveur, " + new Date(c.date).toLocaleString("fr-FR") : "copie gardée sur cet appareil"}</span>
-      <button class="btn small" data-restaurer="${i}">Restaurer</button></div>`).join("");
-  el.querySelectorAll("[data-restaurer]").forEach(b => b.onclick = async ()=>{
-    const c = utiles[+b.dataset.restaurer];
-    b.disabled = true;
-    try{
-      let v = null;
-      if(c.src === "serveur"){ const r = await nuageRest("sauvegardes_secours?select=valeur&id=eq." + c.id); v = r && r[0] && r[0].valeur; }
-      else v = await lireEspace(c.esp, c.k);
-      if(!Array.isArray(v)) throw new Error("copie illisible");
-      const avant = state.collection.length;
-      const fin = fusionColMax(state.collection, v);
-      state.collection.length = 0; for(const x of fin) state.collection.push(x);
-      colVueDepuis(state.collection);
-      await sset("fm:col", state.collection);
-      nuageToutVider();
-      toast("Collection restaurée", (state.collection.length - avant) + " cartes retrouvées", "ach");
-      afficherSecours();
-    }catch(e){ toast("Restauration impossible", String(e.message || e), "lose"); b.disabled = false; }
-  });
-}
 
 function dernierCourriel(){ try{ return localStorage.getItem("fm-local:dernier-courriel") || ""; }catch(e){ return ""; } }
 
@@ -6315,55 +6352,16 @@ function viewNouveauMdp(){
    des deux côtés : celle de l'appareil et celle du serveur. On lui montre
    les deux et il tranche. */
 async function apresConnexion(){
-  const cas = await nuageCollision();
-  diagLog("après connexion : cas " + cas);
-
-  if(cas === "aucune" || nuageRaisonLue().indexOf("refuse d'enregistrer") >= 0){
+  if(!nuageConnecte() || nuageRaisonLue().indexOf("refuse d'enregistrer") >= 0){
     view.innerHTML = `<h2 class="vuetitre">Compte</h2>
       <div class="panel"><p class="sub err" style="margin:0">Connexion acceptée par
       le serveur, mais la session n'a pas pu être gardée sur cet appareil.
       ${esc(nuageRaisonLue())}</p></div>`;
     return;
   }
-
-  if(cas === "distant" || cas === "vide"){
-    const ok = await nuageDescendre(true);
-    if(ok || cas === "vide"){ location.reload(); return; }
-    view.innerHTML = `<h2 class="vuetitre">Compte</h2>
-      <div class="panel"><p class="sub" style="margin:0">Votre partie en ligne n'a pas pu être
-      récupérée pour l'instant. Rien n'a été effacé. Réessayez dans un moment.</p>
-      <button class="btn small" style="margin-top:.8rem" onclick="location.reload()">Réessayer</button></div>`;
-    return;
-  }
-  if(cas === "local"){
-    await nuageMonter("invite");
-    location.reload();
-    return;
-  }
-  if(cas === "erreur"){
-    view.innerHTML = `<h2 class="vuetitre">Compte</h2>
-      <div class="panel"><p class="sub" style="margin:0">La base n'a pas répondu.
-      Vérifiez que la table <code>sauvegardes</code> existe et que la règle de
-      sécurité est posée.</p></div>`;
-    return;
-  }
-
-  /* Deux parties : le compte en ligne l'emporte toujours. Rien ne peut plus
-     l'écraser par erreur d'un clic. La partie invitée de l'appareil n'est
-     pas effacée pour autant : elle est mise de côté sur l'appareil. */
-  try{
-    const arch = "invite-archive-" + Date.now();
-    for(const cle of NUAGE_CLES){
-      const v = await lireEspace("invite", cle);
-      if(v != null) await ecrireEspace(arch, cle, v);
-    }
-    diagLog("partie invitée mise de côté : " + arch);
-  }catch(e){}
-  if(await nuageDescendre(true)){ location.reload(); return; }
-  view.innerHTML = `<h2 class="vuetitre">Compte</h2>
-    <div class="panel"><p class="sub" style="margin:0">Votre partie en ligne n'a pas pu être
-    récupérée pour l'instant. Rien n'a été effacé. Réessayez dans un moment.</p>
-    <button class="btn small" style="margin-top:.8rem" onclick="location.reload()">Réessayer</button></div>`;
+  /* Rien à trancher : le serveur fait foi. Au rechargement, le jeu lit l'état
+     du compte et y ajoute ce que cet appareil avait en plus. */
+  location.reload();
 }
 
 /* ======================================================================
@@ -6491,6 +6489,7 @@ function dejaRegle(cle){
   }
   p.regles = p.regles || {};
   if(p.regles[cle]) return true;
+  regGainUnique("r:" + cle);
   p.regles[cle] = 1;
   return false;
 }
@@ -6669,6 +6668,7 @@ async function amisRegler(){
   for(const e of amis.echanges){
     if(e.de !== moi || e.clos || e.statut === "proposee") continue;
     if(!dejaRegle("ede:" + e.id)){
+      change = true;
       if(e.statut === "acceptee"){
         p.echanges = (p.echanges || 0) + 1;
         ajouterCopies(e.demande || []);
@@ -6679,11 +6679,13 @@ async function amisRegler(){
         ajouterCopies(e.donne || []);
         if(e.statut === "refusee") toast("Échange refusé", "vos cartes vous reviennent", "info");
       }
-      change = true;
+      await sset("fm:col", state.collection); await sset("fm:profile", p); piecesAffichees();
+      /* l'échange n'est clos qu'une fois le crédit enregistré par le serveur */
+      if(!(await regConfirmer())) continue;
     }
     try{ await nuageRest("rpc/clore_echange", {method:"POST", body:JSON.stringify({eid:e.id})}); e.clos = true; }catch(err){}
   }
-  if(change){ await sset("fm:col", state.collection); await sset("fm:profile", p); piecesAffichees(); checkAch(); }
+  if(change) checkAch();
 }
 
 /* Coup d'œil régulier : nouvelles demandes, nouveaux échanges, réponses. */
@@ -7474,8 +7476,8 @@ async function composerEchange(id){
   const pr = amis.profils.get(id) || {pseudo:"votre ami"};
   let leurs = [];
   try{
-    const r = await nuageRest("sauvegardes?select=valeur&joueur=eq." + id + "&cle=eq.fm:col");
-    leurs = (r && r[0] && Array.isArray(r[0].valeur)) ? r[0].valeur : [];
+    const r = await regRpc("collection_ami", {p_ami:id});
+    leurs = Array.isArray(r) ? r : [];
   }catch(e){ toast("Collection illisible", String(e.message || e), "lose"); return; }
   const occupees = engagedIds();
   const miennes = state.collection.filter(c => !occupees.has(c.id));
@@ -9825,6 +9827,7 @@ function viewHub(){
     m.querySelector("#pw").focus();
   };
   view.querySelector("#dbg-cards").onclick = async ()=>{
+    REG.vidageAutorise = true;
     state.collection = [];
     state.reveal = null;
     await sset("fm:col", state.collection);
@@ -9952,6 +9955,7 @@ function viewHub(){
     }catch(e){ msg.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
   };
   view.querySelector("#dbg-wipe").onclick = async ()=>{
+    REG.vidageAutorise = true;
     state.collection = [];
     state.reveal = null; state.duel = null;
     state.profile = {pseudo:state.profile.pseudo, coins:START_COINS, duels:0, wins:0,
@@ -12300,6 +12304,7 @@ function paintDaily(){
     const id = b.dataset.claim;
     const m = MISSIONS.find(x=>x.id===id);
     if(d.claimed.includes(id)) return;
+    regGainUnique("d:" + d.day + ":" + id);
     d.claimed.push(id);
     state.profile.coins += m.gold;
     sfx.coin();
@@ -12310,6 +12315,8 @@ function paintDaily(){
   });
   const cc = box.querySelector("#chclaim");
   if(cc) cc.onclick = async ()=>{
+    if(d.chClaimed) return;
+    regGainUnique("d:" + d.day + ":ch");
     d.chClaimed = true;
     state.profile.univBoosters = (state.profile.univBoosters||[]).concat(d.chUniv);
     sfx.fanfare();
@@ -14565,6 +14572,7 @@ async function claimAch(ids){
   let total = 0, n = 0;
   ACHIEVEMENTS.forEach(a=>{
     if(!ids.includes(a.id) || paid.has(a.id)) return;
+    regGainUnique("a:" + a.id);
     paid.add(a.id); total += a.reward; n++;
   });
   if(!n) return;
@@ -16503,20 +16511,11 @@ function openSettings(){
     try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().then(p=>{ idbPersistant = p; }); }catch(e){}
   }
   if(nuageConfigure() && nuageConnecte()){
-    try{ const eu = await nuageDescendre(); diagLog("descente : " + eu); }catch(e){ diagLog("descente en erreur : " + e.message); }
-    setTimeout(nuageRepousser, 1500);
+    try{ const ok = await registreDemarrer(); diagLog("état du serveur : " + (ok ? "repris" : "injoignable, copie de l'appareil")); }
+    catch(e){ diagLog("démarrage du registre : " + e.message); }
   }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
-  if(!state.profile.pseudo && nuageConfigure() && nuageConnecte()){
-    try{
-      const r = await nuageLire("fm:profile");
-      if(r && r.valeur && r.valeur.pseudo && await nuageDescendre(true)){
-        const p2 = await sget("fm:profile"); if(p2) Object.assign(state.profile, p2);
-        diagLog("partie en ligne reprise au démarrage");
-      }
-    }catch(e){ diagLog("reprise en ligne impossible : " + (e && e.message)); }
-  }
   persoInstantane(state.profile);
   // les parties créées avant les Fandominus repartent avec la dotation complète
   if(!state.profile.v || state.profile.v < 3){
@@ -16578,6 +16577,15 @@ function openSettings(){
   const assaini = assainirPartie();
   if(assaini) diagLog("partie assainie : " + assaini + " correction(s)");
   if(appliquerCorrections(state.collection) || purge.n || assaini || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
+  if(REG.pret && (lectureEchouee["fm:col"] || lectureEchouee["fm:profile"])){
+    Object.assign(state.profile, REG.confirme.etat);
+    state.collection = [...REG.confirme.cartes.values()];
+    diagLog("lecture locale ratée : état du serveur utilisé");
+    /* la partie en mémoire est maintenant celle du serveur : elle est fiable */
+    lectureEchouee["fm:col"] = false; lectureEchouee["fm:profile"] = false;
+    await ecrireEspace(acct(), "fm:profile", state.profile);
+    await ecrireEspace(acct(), "fm:col", allegerCol(state.collection));
+  }
   fmPret = true;
   paintSound();
   render();
