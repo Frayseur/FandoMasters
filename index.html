@@ -3312,7 +3312,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.0.15";
+const BUILD = "V1.0.16";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -3833,6 +3833,7 @@ function nuageGarde(d){
   }
   const s = {jeton:d.access_token, refresh:d.refresh_token, exp, user};
   const garde = nuagePoseSession(s);
+  try{ if(user && user.email) localStorage.setItem("fm-local:dernier-courriel", user.email); }catch(e){}
   diagLog("session relue : " + (nuageSession() && nuageSession().user ? "oui" : "NON") + " · stockage " + (garde ? "ok" : "refusé"));
   if(!garde) nuageRaison("le navigateur refuse d'enregistrer la session (" + nuageStockage() + ")");
   return s;
@@ -3851,7 +3852,8 @@ async function nuageAuth(chemin, corps){
   diagLog("auth " + chemin.split("?")[0] + " → " + r.status + " [" + Object.keys(d).join(",") + "]");
   if(!r.ok){
     const msg = d.error_description || d.msg || d.message || d.error || "erreur " + r.status;
-    throw new Error(msg);
+    const err = new Error(msg); err.status = r.status;
+    throw err;
   }
   return d;
 }
@@ -3958,8 +3960,12 @@ async function nuageJeton(forcer){
         const d = await nuageAuth("token?grant_type=refresh_token", {refresh_token:s.refresh});
         return nuageGarde(d).jeton;
       }catch(e){
-        nuageRaison("renouvellement refusé : " + String(e && e.message || e));
-        nuagePoseSession(null);
+        /* Seul un refus explicite du serveur (jeton révoqué ou périmé) met fin à
+           la session. Une coupure réseau, un serveur lent : on garde la session
+           et on réessaiera, au lieu de déconnecter le joueur pour rien. */
+        const refus = e && e.status >= 400 && e.status < 500;
+        nuageRaison((refus ? "renouvellement refusé : " : "renouvellement impossible pour l'instant : ") + String(e && e.message || e));
+        if(refus) nuagePoseSession(null);
         return null;
       }finally{
         setTimeout(()=>{ nuageRenouvellement = null; }, 0);
@@ -4631,7 +4637,58 @@ async function sget(key, shared=false){
     return v ? JSON.parse(v) : (memStore[lsKey(key,shared)] || null);
   }catch(e){ return memStore[lsKey(key,shared)] || null; }
 }
+/* Contrôle d'intégrité au chargement : une valeur abîmée (nombre illisible,
+   carte sans identifiant, doublons) ne doit jamais se propager à la
+   sauvegarde en ligne. On répare sans rien retirer de légitime. */
+function assainirPartie(){
+  let n = 0;
+  const p = state.profile || {};
+  for(const k of ["coins", "mana", "free", "mythic", "demon", "foxOuv", "foxBonus", "packs"]){
+    if(p[k] != null && (typeof p[k] !== "number" || !isFinite(p[k]))){ p[k] = Math.max(0, parseFloat(p[k]) || 0); n++; }
+    else if(typeof p[k] === "number" && p[k] < 0){ p[k] = 0; n++; }
+  }
+  const vus = new Map(), propre = [];
+  for(const c of state.collection || []){
+    if(!c || typeof c !== "object" || !c.id){ n++; continue; }
+    const k = typeof c.count === "number" && isFinite(c.count) && c.count >= 1 ? Math.floor(c.count) : 1;
+    if(k !== c.count){ c.count = k; n++; }
+    const deja = vus.get(c.id);
+    if(deja){ deja.count += c.count; n++; continue; }
+    vus.set(c.id, c); propre.push(c);
+  }
+  if(propre.length !== (state.collection || []).length){ state.collection.length = 0; for(const c of propre) state.collection.push(c); }
+  if(n) sset("fm:profile", p);
+  return n;
+}
+
+/* ---- un seul onglet de jeu à la fois ----
+   Deux onglets ouverts sur la même partie s'écrasaient l'un l'autre : celui
+   qui écrivait en dernier remettait l'ancienne collection. Le dernier onglet
+   ouvert prend la main ; les autres se mettent en pause et n'écrivent plus. */
+const ONGLET_ID = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+let ongletFige = false, canalOnglets = null;
+try{
+  canalOnglets = new BroadcastChannel("fm-onglets");
+  canalOnglets.onmessage = ev => { const m = ev.data || {}; if(m.type === "actif" && m.id !== ONGLET_ID) figerOnglet(); };
+}catch(e){}
+function annoncerOnglet(){ try{ if(canalOnglets) canalOnglets.postMessage({type:"actif", id:ONGLET_ID}); }catch(e){} }
+function figerOnglet(){
+  if(ongletFige) return;
+  try{ nuageToutVider(); }catch(e){}   // ce qui attendait part avant la pause
+  ongletFige = true;
+  const d = document.createElement("div");
+  d.id = "onglet-fige";
+  d.style.cssText = "position:fixed;inset:0;z-index:100000;display:grid;place-items:center;padding:24px;background:color-mix(in srgb, var(--p1) 92%, transparent);backdrop-filter:blur(6px)";
+  d.innerHTML = `<div class="panel" style="max-width:420px;text-align:center">
+    <h3 style="margin-bottom:.6rem">Partie ouverte ailleurs</h3>
+    <p class="sub" style="margin:0 0 1rem">FandoMasters est ouvert dans un autre onglet ou une autre fenêtre. Pour protéger votre partie, celui-ci est en pause.</p>
+    <button class="btn" id="onglet-reprendre">Jouer ici</button></div>`;
+  document.body.appendChild(d);
+  d.querySelector("#onglet-reprendre").onclick = ()=>location.reload();
+}
+
 async function sset(key, val, shared=false){
+  if(ongletFige && !shared) return;   // onglet en pause : il ne doit plus rien écraser
   try{
     if(HAS_WS){ await window.storage.set(wsKey(key,shared), JSON.stringify(val), shared); return; }
     if(key === "fm:col" && !shared && Array.isArray(val)){
@@ -6011,6 +6068,11 @@ function viewCompte(){
     <div class="panel" style="margin-top:1rem">
       <h3>Copies de secours</h3>
       <div id="secours"><span class="sub">Recherche…</span></div>
+      <div class="row" style="margin-top:.8rem;gap:.5rem">
+        <button class="btn small ghost" id="c-export">Télécharger ma sauvegarde</button>
+        ${admin ? `<label class="btn small ghost" style="cursor:pointer">Importer une sauvegarde<input type="file" id="c-import" accept=".json,application/json" hidden></label>` : ""}
+      </div>
+      <p class="sub" style="margin:.5rem 0 0;font-size:.82rem">Un fichier avec votre profil et toutes vos cartes, à garder de votre côté. En cas de problème, envoyez-le au développeur : il pourra tout remettre.</p>
     </div>
 
     ${admin ? `<details class="fold info" style="margin-top:1.2rem">
@@ -6020,6 +6082,37 @@ function viewCompte(){
 
   const dg = view.querySelector("#diag"); if(dg){ dg.textContent = diagnosticNuage(); idbMesurer(); }
   afficherSecours();
+  view.querySelector("#c-export").onclick = ()=>{
+    try{
+      const data = {format:"fandomasters", v:1, build:BUILD, date:new Date().toISOString(), compte:moiId() || null,
+                    courriel:nuageCourriel() || null, profil:state.profile, collection:allegerCol(state.collection)};
+      const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "fandomasters-" + String(state.profile.pseudo || "partie").replace(/[^a-z0-9_-]+/gi, "_") + "-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+      toast("Sauvegarde téléchargée", state.collection.length + " cartes", "info");
+    }catch(e){ toast("Téléchargement impossible", String(e.message || e), "lose"); }
+  };
+  const imp = view.querySelector("#c-import");
+  if(imp) imp.onchange = async ()=>{
+    const f = imp.files && imp.files[0]; if(!f) return;
+    try{
+      const d = JSON.parse(await f.text());
+      if(!d || d.format !== "fandomasters" || !Array.isArray(d.collection)) throw new Error("ce fichier n'est pas une sauvegarde FandoMasters");
+      if(!confirm(`Fusionner la sauvegarde de « ${d.profil && d.profil.pseudo || "?"} » (${d.collection.length} cartes) avec cette partie ? Rien ne sera retiré.`)) return;
+      const avant = state.collection.length;
+      const fin = fusionColMax(state.collection, d.collection);
+      state.collection.length = 0; for(const x of fin) state.collection.push(x);
+      majCartesPerso(state.collection);
+      if(d.profil && typeof d.profil === "object") Object.assign(state.profile, fusionDemarrage(state.profile, d.profil, true));
+      colVueDepuis(state.collection);
+      await saveAll(); nuageToutVider();
+      toast("Sauvegarde fusionnée", (state.collection.length - avant) + " cartes ajoutées", "ach");
+      viewCompte();
+    }catch(e){ toast("Import impossible", String(e.message || e), "lose"); }
+  };
   view.querySelector("#c-sortir").onclick = async ()=>{
     nuageToutVider();
     await nuageDeconnecter();
@@ -6056,7 +6149,7 @@ async function afficherSecours(){
   const el = document.getElementById("secours"); if(!el) return;
   const copies = [];
   try{
-    const r = await nuageRest("sauvegardes_secours?select=id,cartes,cree&joueur=eq." + moiId() + "&order=cree.desc&limit=7");
+    const r = await nuageRest("sauvegardes_secours?select=id,cartes,cree&joueur=eq." + moiId() + "&cle=eq.fm:col&order=cree.desc&limit=7");
     for(const x of (r || [])) copies.push({src:"serveur", id:x.id, cartes:x.cartes, date:x.cree});
   }catch(e){}
   try{
@@ -6091,6 +6184,8 @@ async function afficherSecours(){
   });
 }
 
+function dernierCourriel(){ try{ return localStorage.getItem("fm-local:dernier-courriel") || ""; }catch(e){ return ""; } }
+
 /* ---------- accueil : se connecter ou créer un compte ---------- */
 function viewAccueil(){
   const mode = state.accueil || "entrer";
@@ -6113,8 +6208,9 @@ function viewAccueil(){
           </div>` : `
           <div class="champ">
             <label for="c-mail">Courriel</label>
-            <input type="email" id="c-mail" autocomplete="email" spellcheck="false" placeholder="vous@exemple.fr">
+            <input type="email" id="c-mail" autocomplete="email" spellcheck="false" placeholder="vous@exemple.fr" value="${esc(dernierCourriel())}">
           </div>
+          ${dernierCourriel() ? `<p class="sub" style="margin:-.3rem 0 .6rem;font-size:.84rem">Votre partie est en sécurité sur votre compte : reconnectez-vous pour la retrouver.</p>` : ""}
           <div class="champ">
             <label for="c-mdp">Mot de passe</label>
             <input type="password" id="c-mdp" autocomplete="current-password" placeholder="au moins 6 caractères">
@@ -16479,11 +16575,14 @@ function openSettings(){
     state.collection = purge.col;
     try{ toast("Cartes hors sujet retirées", purge.n + " carte" + (purge.n > 1 ? "s" : "") + " (éditions, versions…) retirées d'un univers restreint", "info"); }catch(e){}
   }
-  if(appliquerCorrections(state.collection) || purge.n || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
+  const assaini = assainirPartie();
+  if(assaini) diagLog("partie assainie : " + assaini + " correction(s)");
+  if(appliquerCorrections(state.collection) || purge.n || assaini || state.collection.some(c=>c && c.text)) await sset("fm:col", state.collection);
   fmPret = true;
   paintSound();
   render();
   installerHistorique();
+  annoncerOnglet();
   setTimeout(()=>{ try{ recompenserNiveaux(); }catch(e){} }, 2500);
   paintAchDot();
   tick();
