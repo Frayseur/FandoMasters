@@ -3312,92 +3312,240 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 .cbdecor{min-height:96px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:.3rem;cursor:pointer;text-align:left;font:inherit}
 .cbdecor.on{outline:3px solid var(--brass);outline-offset:2px}
 .cbdecor:disabled{cursor:not-allowed;opacity:.6}
-/* cartes */
-.cbcarte{position:relative;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--text);overflow:hidden;display:flex;flex-direction:column;min-width:0;transition:transform .15s ease, box-shadow .15s ease}
-.cbcarte[data-r="Peu commun"]{border-color:#9DB4C0}
-.cbcarte[data-r="Rare"]{border-color:#7FD0C2}
-.cbcarte[data-r="Super rare"]{border-color:#E8A8C6}
-.cbcarte[data-r="Ultra rare"]{border-color:#F09468}
-.cbcarte[data-r="Légendaire"],.cbcarte[data-r="Relique"]{border-color:#E8B44C}
-.cbcarte[data-r="Sort"]{border-color:#8FA7FF}
-.cbcarte.jouable{cursor:pointer;box-shadow:0 0 0 2px var(--teal),0 0 14px color-mix(in srgb,var(--teal) 55%,transparent)}
-.cbcarte.jouable:hover{transform:translateY(-6px)}
-.cbcarte.choisie{transform:translateY(-6px);box-shadow:0 0 0 3px var(--red)}
-.cbcout{position:absolute;top:4px;left:4px;z-index:2;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.85rem;background:#3d6fd6;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
-.cbart{aspect-ratio:4/3;background:color-mix(in srgb,var(--panel) 78%,var(--brass));display:grid;place-items:center;overflow:hidden}
-.cbart img{width:100%;height:100%;object-fit:cover}
-.cbvide{font-size:1.5rem;font-weight:800;opacity:.55}
-.cbnom{font-size:.72rem;font-weight:800;padding:.25rem .35rem 0;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.1em}
-.cbtexte{font-size:.64rem;padding:.1rem .35rem;opacity:.8;min-height:1.6em;line-height:1.2}
-.cbstats{display:flex;justify-content:space-between;padding:0 .3rem .3rem}
-.cbstats span{min-width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#fff}
-.cbstats .a{background:#d6a11f}
-.cbstats .p{background:#c4453a}
-.cbstats .d{background:#7a7f8a}
-/* partie */
-.cbpartie{display:flex;flex-direction:column;gap:.5rem}
-.cbmoitie{display:flex;flex-direction:column;gap:.45rem;padding:.55rem}
-.cbmoitie.adv{flex-direction:column}
-.cbhaut{display:flex;align-items:center;gap:.6rem}
-.cbinfo{display:flex;flex-direction:column;gap:.15rem;flex:1;min-width:0}
-.cbinfo .sub{font-size:.75rem}
-.cbheros{position:relative;width:62px;height:62px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.25);border:3px solid rgba(255,255,255,.35)}
-.cbav{font-size:1.6rem;font-weight:900}
-.cbpv{position:absolute;bottom:-6px;right:-6px;min-width:26px;height:26px;padding:0 4px;border-radius:13px;display:grid;place-items:center;background:#c4453a;color:#fff;font-weight:900;font-size:.85rem}
-.cbpv.blesse{background:#e0352a}
-.cbarme{position:absolute;bottom:-6px;left:-10px;padding:1px 5px;border-radius:8px;background:#d6a11f;color:#fff;font-weight:800;font-size:.72rem}
-.cbheros.pret{box-shadow:0 0 0 3px var(--teal);cursor:pointer}
-.cbmana{display:flex;align-items:center;gap:2px}
-.cbmana i{width:9px;height:12px;transform:rotate(45deg) scale(.8);border-radius:2px}
-.cbmana i.plein{background:#3d6fd6}
-.cbmana i.vide{background:rgba(61,111,214,.25);border:1px solid #3d6fd6}
-.cbmana i.absent{display:none}
-.cbmana b{font-size:.78rem;margin-left:.35rem}
-.cbdos{display:flex;gap:2px;flex-wrap:wrap;max-width:110px}
-.cbdos i{width:12px;height:17px;border-radius:2px;background:repeating-linear-gradient(45deg,var(--brass) 0 3px,color-mix(in srgb,var(--brass) 60%,#000) 3px 6px)}
-.cbrang{display:flex;gap:.3rem;justify-content:center;min-height:70px;align-items:center;flex-wrap:wrap}
-.cbrangvide{opacity:.6;font-size:.8rem}
-.cbserv{position:relative;width:48px;height:62px;border-radius:24px 24px 12px 12px;background:rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.4);overflow:visible}
-.cbsart{position:absolute;inset:0;border-radius:inherit;overflow:hidden;display:grid;place-items:center;font-weight:900}
-.cbsart img{width:100%;height:100%;object-fit:cover}
-.cbserv.provoc{border:4px double #c9c9c9;border-radius:8px}
-.cbserv.pret{box-shadow:0 0 0 3px var(--teal);cursor:pointer}
-.cbserv.choisi{box-shadow:0 0 0 3px var(--brass)}
-.cba,.cbp{position:absolute;bottom:-7px;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.78rem;color:#fff}
-.cba{left:-6px;background:#d6a11f}
-.cbp{right:-6px;background:#c4453a}
-.cbp.blesse{background:#ff2d1f}
-.cbkw{position:absolute;top:-6px;right:-4px;font-size:.85rem}
-.cibler .cible{cursor:crosshair;box-shadow:0 0 0 3px #ff5a3c,0 0 16px #ff5a3c;animation:cbvise 1s ease infinite}
-@keyframes cbvise{50%{box-shadow:0 0 0 3px #ff5a3c,0 0 4px #ff5a3c}}
-.cbcentre{display:flex;flex-direction:column;gap:.35rem}
-.cbjournal{display:flex;flex-direction:column;font-size:.76rem;opacity:.8;min-height:3.6em}
-.cbbarre{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-weight:700;font-size:.85rem}
-.cbchrono{padding:.1rem .55rem;border-radius:999px;background:#3d6fd6;color:#fff;font-weight:800}
-.cbchrono.urgent{background:var(--red)}
-.cbconsigne{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-radius:10px;background:color-mix(in srgb,#ff5a3c 18%,transparent);font-size:.85rem;font-weight:700}
-.cbpouvoir{position:relative;width:52px;height:52px;flex:none;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font:inherit}
-.cbpouvoir small{font-size:.55rem}
-.cbpouvoir:disabled{opacity:.45;cursor:default}
-.cbpouvoir .cbcout{top:-6px;left:-6px;width:20px;height:20px;font-size:.72rem}
-.cbmain{display:flex;gap:.35rem;overflow-x:auto;padding:.5rem .1rem .3rem}
-.cbmain .cbcarte{flex:0 0 92px}
-.cbmain.grande{justify-content:center;flex-wrap:wrap}
-.cbmain.grande .cbcarte{flex:0 0 120px;cursor:pointer}
-.cbfintitre{font-size:2rem;font-weight:900}
-.cbfintitre.r-victoire{color:var(--teal)}
+/* cartes de combat : cadre bronze, gemme de coût, boucliers d'attaque et de vie */
+.cbcarte{container-type:inline-size;position:relative;width:var(--hw,120px);aspect-ratio:5/7;flex:none;color:#2a1c10;transition:transform .16s ease, filter .16s ease;user-select:none;-webkit-user-select:none}
+.cbgrille .cbcarte,.cbcarte.petite{--hw:100%;width:100%}
+.cbcadre{position:absolute;inset:0;border-radius:7cqw;padding:4.5cqw;
+  background:linear-gradient(160deg,#e7c37a,#a8742f 30%,#6e451b 62%,#c99448);
+  box-shadow:0 .25em .7em rgba(0,0,0,.55),inset 0 0 0 1px rgba(255,235,190,.45);display:flex;flex-direction:column;overflow:hidden}
+.cbcarte[data-r="Légendaire"] .cbcadre,.cbcarte[data-r="Relique"] .cbcadre{background:linear-gradient(160deg,#fff0b8,#e2ae3c 28%,#9a6714 60%,#ffd76a);box-shadow:0 0 .9em rgba(255,200,80,.55),0 .25em .7em rgba(0,0,0,.55)}
+.cbcarte[data-r="Sort"] .cbcadre{background:linear-gradient(160deg,#c9b6ff,#6d55c9 35%,#35266e 65%,#9d86f0)}
+.cbbandeau{flex:none;background:linear-gradient(#2a211c,#151010);color:#f2e3c4;border-radius:3.5cqw 3.5cqw 0 0;
+  padding:3.5cqw 5cqw 3cqw 20cqw;min-height:20cqw;display:flex;align-items:center;
+  border-bottom:2px solid var(--cbrar,#8b6a3e)}
+.cbbandeau span{font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:max(7px, 8.5cqw);line-height:1.12;text-transform:uppercase;letter-spacing:.02em;
+  overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;text-align:center;width:100%}
+.cbart{flex:1;min-height:0;position:relative;overflow:hidden;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 35%,#6a5a7a,#2c2333 75%)}
+.cbart img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cbvide{font-family:"Cinzel",Georgia,serif;font-size:32cqw;font-weight:700;color:rgba(255,236,200,.75);text-shadow:0 2px 6px rgba(0,0,0,.6)}
+.cbtexte{flex:none;background:linear-gradient(#efe0bd,#d9c08e);color:#3b2a16;font-size:max(6.5px, 7.5cqw);line-height:1.18;text-align:center;
+  padding:3cqw 20cqw 10cqw;min-height:26cqw;display:flex;align-items:center;justify-content:center;font-weight:600;
+  border-radius:0 0 3.5cqw 3.5cqw}
+.cbtexte:empty{min-height:16cqw}
+.cbcarte[data-r="Peu commun"]{--cbrar:#9DB4C0}
+.cbcarte[data-r="Rare"]{--cbrar:#4fc2b0}
+.cbcarte[data-r="Super rare"]{--cbrar:#E8A8C6}
+.cbcarte[data-r="Ultra rare"]{--cbrar:#F09468}
+.cbcarte[data-r="Légendaire"],.cbcarte[data-r="Relique"]{--cbrar:#ffcc4d}
+.cbcarte[data-r="Sort"]{--cbrar:#a996ff}
+/* gemme de coût : hexagone bleu serti d'or */
+.cbcout{position:absolute;z-index:3;top:-6cqw;left:-7cqw;width:calc(27cqw * var(--k,1));aspect-ratio:1;
+  clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(#ffe7a3,#b98a2e);display:grid;place-items:center;
+  font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:calc(15cqw * var(--k,1));color:#fff;text-shadow:0 1px 2px #08123a,0 0 3px #08123a}
+.cbcout::before{content:"";position:absolute;inset:9%;clip-path:inherit;background:radial-gradient(circle at 40% 30%,#7fb2ff,#2a5fd6 45%,#123a9a);z-index:-1}
+.cbcout{isolation:isolate}
+/* boucliers : attaque (bronze) et vie (rouge) */
+.cbst{position:absolute;z-index:3;bottom:-5cqw;width:calc(27cqw * var(--k,1));aspect-ratio:.9;display:grid;place-items:center;isolation:isolate;
+  clip-path:polygon(50% 100%,6% 74%,0 10%,50% 0,100% 10%,94% 74%);background:linear-gradient(#ffe39a,#8a5a1c);
+  font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:calc(15cqw * var(--k,1));color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;padding-bottom:6%}
+.cbst::before{content:"";position:absolute;inset:8%;clip-path:inherit;z-index:-1}
+.cbst.a{left:-6cqw}
+.cbst.a::before{background:radial-gradient(circle at 40% 30%,#e0b464,#9c6a26 55%,#5e3b10)}
+.cbst.p,.cbst.d{right:-6cqw}
+.cbst.p::before{background:radial-gradient(circle at 40% 30%,#ff7a6a,#c3261c 55%,#6e0d08)}
+.cbst.d::before{background:radial-gradient(circle at 40% 30%,#c7ccd6,#6f7685 55%,#383d48)}
+.cbst.p.blesse{color:#ffd1cb}
+.cbst.p.blesse::before{background:radial-gradient(circle at 40% 30%,#ff3d2e,#a10d05 60%)}
+.cbcarte.jouable{cursor:pointer}
+.cbcarte.jouable .cbcadre{box-shadow:0 0 0 2px #7dff9a,0 0 1em rgba(110,255,140,.75),0 .25em .7em rgba(0,0,0,.55)}
+.cbcarte.choisie{transform:translateY(-8%)}
+.cbcarte.choisie::after{content:"✕";position:absolute;inset:0;z-index:4;display:grid;place-items:center;font-size:50cqw;color:#ff4a3a;
+  text-shadow:0 0 8px #000;background:rgba(40,0,0,.35);border-radius:7cqw}
+
+/* ---- la table ---- */
+body.cbjeu{overflow:hidden}
+body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
+.cbscene{position:fixed;inset:0;z-index:60;overflow:hidden;color:#f3e6cf;
+  --mw:min(11.6vw, 10.2vh, 128px);
+  display:grid;grid-template-columns:auto 1fr auto;
+  grid-template-areas:"ahero ahand amenu" "board board board" "moi . fin" "main main main";
+  grid-template-rows:auto 1fr auto auto;
+  padding:max(.5rem, env(safe-area-inset-top)) .6rem max(.4rem, env(safe-area-inset-bottom));gap:.35rem .5rem;
+  background:
+    radial-gradient(ellipse 34% 30% at 0% 0%,rgba(150,20,20,.85),transparent 70%),
+    radial-gradient(ellipse 30% 26% at 100% 100%,rgba(140,18,18,.8),transparent 70%),
+    radial-gradient(ellipse 60% 50% at 50% 48%,rgba(255,190,110,.08),transparent 70%),
+    repeating-linear-gradient(0deg,rgba(0,0,0,.28) 0 2px,transparent 2px 58px),
+    repeating-linear-gradient(90deg,rgba(0,0,0,.22) 0 2px,transparent 2px 92px),
+    linear-gradient(160deg,#3a312c,#231d1a 55%,#181311)}
+.cbbougie{position:absolute;width:46vmin;height:46vmin;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(255,170,70,.32),rgba(255,120,40,.1) 40%,transparent 70%);animation:cbflamme 3.2s ease-in-out infinite alternate}
+.cbbougie.g{top:-18vmin;left:-16vmin}
+.cbbougie.d{bottom:-16vmin;right:-18vmin;animation-delay:-1.6s}
+@keyframes cbflamme{0%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}100%{opacity:.85;transform:scale(.98)}}
+.cbz-ahero{grid-area:ahero;display:flex;align-items:flex-start;gap:.5rem;z-index:2}
+.cbz-ahand{grid-area:ahand;display:flex;flex-direction:column;align-items:center;gap:.3rem;min-width:0}
+.cbz-amenu{grid-area:amenu;display:flex;flex-direction:column;gap:.35rem;z-index:2}
+.cbz-board{grid-area:board;display:flex;flex-direction:column;justify-content:center;min-height:0;position:relative}
+.cbz-fin{grid-area:fin;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;z-index:3}
+.cbz-moi{grid-area:moi;display:flex;align-items:flex-end;gap:.55rem;z-index:3}
+.cbz-main{grid-area:main;display:flex;justify-content:center;min-width:0;z-index:4}
+/* héros */
+.cbheros{--hw:calc(var(--mw) * 1.25);container-type:inline-size;position:relative;width:var(--hw);aspect-ratio:4/5;flex:none;border-radius:calc(var(--hw) * .07);padding:calc(var(--hw) * .045);
+  background:linear-gradient(160deg,#e7c37a,#8e5f25 45%,#5a3814);box-shadow:0 .3em .9em rgba(0,0,0,.6),inset 0 0 0 1px rgba(255,235,190,.4);transition:box-shadow .2s}
+.cbportrait{width:100%;height:100%;border-radius:4.5cqw;overflow:hidden;display:grid;place-items:center;
+  background:radial-gradient(circle at 50% 30%,#8a6f5a,#3a2b22 70%)}
+.cbportrait img{width:100%;height:100%;object-fit:cover}
+.cbmono{font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:45cqw;color:#f6e2b8;text-shadow:0 3px 8px rgba(0,0,0,.7)}
+.cbst.heros{--k:1.3;right:auto;left:50%;transform:translateX(-50%);bottom:-12cqw}
+.cbheros.pret{cursor:pointer;box-shadow:0 0 0 3px #7dff9a,0 0 1.2em rgba(110,255,140,.7)}
+.cbarme{position:absolute;left:-12cqw;bottom:12cqw;display:flex;flex-direction:column;align-items:center;padding:.15em .4em;border-radius:8px;
+  background:linear-gradient(#5b4a3a,#2b211a);border:1px solid #c99448;font-size:max(10px, 12cqw);line-height:1.1;color:#ffe3a0}
+.cbarme i{font-style:normal;color:#c7ccd6;font-size:.85em}
+.cbnomjoueur{display:flex;flex-direction:column;gap:.1rem;font-size:.8rem;min-width:0;padding-top:.2rem}
+.cbnomjoueur b{font-family:"Cinzel",Georgia,serif;font-size:.92rem;color:#f6e2b8;max-width:28vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbnomjoueur small,.cbmoiinfo small{opacity:.75;font-size:.72rem}
+.cbnomjoueur em{color:#ff8a7a;font-style:normal;font-weight:700}
+.cbetiq{align-self:flex-start;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;padding:.05rem .4rem;border-radius:6px;background:rgba(255,255,255,.12)}
+/* mana : losanges dans une plaque sombre */
+.cbmana{display:inline-flex;align-items:center;gap:max(2px, .35vmin);padding:.32rem .7rem .32rem .55rem;border-radius:8px;
+  background:linear-gradient(#2c2622,#141110);border:1px solid #7a5a32;box-shadow:inset 0 1px 0 rgba(255,230,180,.15),0 3px 8px rgba(0,0,0,.5)}
+.cbmana i{width:clamp(8px, 1.7vmin, 15px);aspect-ratio:1;transform:rotate(45deg);border-radius:2px}
+.cbmana i.plein{background:radial-gradient(circle at 35% 35%,#d8f0ff,#3d8dff 45%,#123e9e);box-shadow:0 0 6px #4aa0ff}
+.cbmana i.vide{background:linear-gradient(#5a5754,#2f2d2b);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.cbmana b{font-family:"Cinzel",Georgia,serif;font-size:clamp(.78rem, 2vmin, 1.05rem);margin-left:.45rem;color:#f3e6cf}
+/* main adverse : dos de cartes */
+.cbdos{display:flex;justify-content:center;height:calc(var(--mw) * .95);margin-top:calc(var(--mw) * -.35)}
+.cbdos i{width:calc(var(--mw) * .62);aspect-ratio:5/7;flex:none;margin-left:calc(var(--mw) * -.2);border-radius:5px;transform:rotate(calc(var(--i) * 4deg)) translateY(calc(var(--i) * var(--i) * 1.2px));
+  background:radial-gradient(circle at 50% 45%,#ffd34d 0 7%,transparent 8%),
+    conic-gradient(from 30deg at 50% 45%,#d6303a 0 60deg,#b81f2a 60deg 120deg,#d6303a 120deg 180deg,#b81f2a 180deg 240deg,#d6303a 240deg 300deg,#b81f2a 300deg) 50% 45% / 46% 33% no-repeat,
+    linear-gradient(160deg,#4b2547,#26122b);
+  border:2px solid #b58a4a;box-shadow:0 3px 6px rgba(0,0,0,.6)}
+.cbdos i:first-child{margin-left:0}
+.cbrond{width:2.3rem;height:2.3rem;border-radius:50%;border:1px solid #9a7440;background:linear-gradient(#3a302a,#1b1513);color:#f3e6cf;font-size:1.05rem;cursor:pointer;display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.cbrond:hover{border-color:#e7c37a}
+/* plateau de parchemin */
+.cbtable{position:relative;margin:0 auto;width:min(100%, calc(var(--mw) * 7 + 6 * var(--mw) * .12 + 2.4rem));border-radius:clamp(14px, 3vmin, 34px);padding:clamp(.4rem, 1.6vmin, 1.1rem) clamp(.4rem, 1.4vmin, 1rem);
+  background:linear-gradient(#5f4425,#3d2a16);box-shadow:0 1.2em 2.5em rgba(0,0,0,.6),inset 0 0 0 2px #8b6a3e;display:flex;flex-direction:column}
+.cbcamp{border-radius:clamp(10px, 2.2vmin, 24px);padding:clamp(.45rem, 1.6vmin, 1.1rem) .3rem;position:relative;border:none;
+  box-shadow:inset 0 0 2.2em rgba(90,55,20,.55),inset 0 0 0 1px rgba(255,240,210,.3)}
+.cbcamp.adv{border-bottom-left-radius:6px;border-bottom-right-radius:6px}
+.cbcamp.moi{border-top-left-radius:6px;border-top-right-radius:6px}
+.cbrang{display:grid;grid-template-columns:repeat(7, var(--mw));justify-content:center;gap:calc(var(--mw) * .12)}
+.cbcase{width:var(--mw);aspect-ratio:3/4;border-radius:calc(var(--mw) * .09);position:relative;
+  box-shadow:inset 0 0 0 2px rgba(110,72,32,.32),inset 0 3px 8px rgba(80,50,20,.25);background:rgba(120,82,40,.08)}
+.cbcase.pleine{box-shadow:none;background:none}
+.cbligne-centre{position:relative;height:clamp(1.8rem, 5vmin, 3rem);display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(90deg,transparent,rgba(30,18,8,.35) 15%,rgba(30,18,8,.35) 85%,transparent)}
+.cblune{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:clamp(2rem, 6vmin, 3.4rem);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  font-size:clamp(1rem, 3vmin, 1.8rem);color:#6b4a26;background:radial-gradient(circle,#e6cc98,#b48b52 70%);box-shadow:0 0 0 2px #7a5a32,0 3px 8px rgba(0,0,0,.45);z-index:1}
+.cbjournal,.cbtourinfo{position:absolute;font-size:clamp(.66rem, 1.8vmin, .85rem);color:#f3e2bf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(50% - 2.4rem);text-shadow:0 1px 2px #000}
+.cbjournal{right:calc(50% + 2.2rem);text-align:right;font-style:italic}
+.cbtourinfo{left:calc(50% + 2.2rem);font-family:"Cinzel",Georgia,serif;opacity:.8}
+.cbconsigne{position:absolute;inset:0 0;display:flex;align-items:center;justify-content:center;gap:.6rem;z-index:2;padding:0 .4rem;
+  background:linear-gradient(90deg,transparent,rgba(160,40,20,.92) 12%,rgba(160,40,20,.92) 88%,transparent);color:#fff;font-weight:700;font-size:clamp(.7rem, 1.9vmin, .92rem)}
+.cbconsigne span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cbhors{position:absolute;top:0;left:50%;transform:translateX(-50%);margin:0;padding:.3rem .7rem;border-radius:8px;background:#7a1a12;color:#fff;font-size:.8rem;font-weight:700;z-index:5}
+/* serviteurs */
+.cbserv{container-type:inline-size;position:absolute;inset:0;border-radius:calc(var(--mw) * .09);padding:calc(var(--mw) * .045);cursor:default;
+  background:linear-gradient(160deg,#e7c37a,#8e5f25 45%,#5a3814);box-shadow:0 .3em .6em rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,235,190,.4);transition:transform .15s, box-shadow .2s}
+.cbserv[data-r="Légendaire"]{background:linear-gradient(160deg,#fff0b8,#e2ae3c 35%,#9a6714 70%,#ffd76a)}
+.cbsart{width:100%;height:100%;border-radius:calc(var(--mw) * .06);overflow:hidden;position:relative;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#6a5a7a,#2c2333 75%)}
+.cbsart img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cbserv .cbst{--k:1.25}
+.cbsart .cbvide{font-size:calc(var(--mw) * .42)}
+.cbserv.provoc{padding:calc(var(--mw) * .075);background:linear-gradient(160deg,#eef1f5,#8c96a6 40%,#4a5160 70%,#c5ccd8);border-radius:calc(var(--mw) * .09) calc(var(--mw) * .09) calc(var(--mw) * .32) calc(var(--mw) * .32)}
+.cbserv.provoc .cbsart{border-radius:calc(var(--mw) * .06) calc(var(--mw) * .06) calc(var(--mw) * .28) calc(var(--mw) * .28)}
+.cbkw{position:absolute;top:calc(var(--mw) * -.08);right:calc(var(--mw) * -.08);width:calc(var(--mw) * .3);aspect-ratio:1;border-radius:50%;display:grid;place-items:center;
+  font-size:calc(var(--mw) * .16);background:radial-gradient(circle,#3b2a1a,#140d08);border:1px solid #e7c37a;z-index:3}
+.cbserv.pret{cursor:pointer;box-shadow:0 0 0 3px #7dff9a,0 0 1em rgba(110,255,140,.75)}
+.cbserv.pret:hover{transform:translateY(-4px)}
+.cbserv.choisi{transform:translateY(-6px) scale(1.04);box-shadow:0 0 0 3px #ffcc4d,0 0 1.2em rgba(255,200,80,.8)}
+.cibler .cible{cursor:crosshair;box-shadow:0 0 0 3px #ff5a3c,0 0 1.2em #ff5a3c;animation:cbvise 1s ease infinite}
+@keyframes cbvise{50%{box-shadow:0 0 0 3px #ff5a3c,0 0 .3em #ff5a3c}}
+/* pouvoir de héros */
+.cbmoiinfo{display:flex;flex-direction:column;align-items:flex-start;gap:.35rem;padding-bottom:.2rem}
+.cbpouvoir{container-type:inline-size;position:relative;width:calc(var(--mw) * .62);min-width:40px;aspect-ratio:1;border-radius:50%;cursor:pointer;
+  border:2px solid #c99448;background:radial-gradient(circle at 40% 35%,#9a5bd6,#4a1f7a 65%,#24103d);color:#ffe9b0;font-size:clamp(1rem, 2.8vmin, 1.6rem);
+  display:grid;place-items:center;box-shadow:0 0 .8em rgba(170,110,255,.55),0 3px 8px rgba(0,0,0,.5)}
+.cbpouvoir .cbcout{--k:1.6;top:-12cqw;left:-16cqw}
+.cbpouvoir:disabled{filter:grayscale(.85) brightness(.6);cursor:default;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+/* fin du tour : médaillon */
+.cbfintour{position:relative;width:clamp(78px, 15vmin, 128px);aspect-ratio:1;border-radius:50%;cursor:pointer;padding:0;
+  border:none;background:radial-gradient(circle,#2c3140 0 58%,transparent 59%),conic-gradient(from 0deg,#f2d38a,#8a5a1c,#f2d38a,#8a5a1c,#f2d38a);
+  box-shadow:0 0 0 2px #3a2610,0 6px 14px rgba(0,0,0,.6);color:#f3e6cf;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;
+  font-family:"Cinzel",Georgia,serif;font-size:clamp(.72rem, 2.2vmin, 1.05rem);line-height:1.05;font-weight:600}
+.cbfintour i{font-style:normal;color:#ff9a3c;font-size:.75em}
+.cbfintour.actif{background:radial-gradient(circle,#3a3220 0 58%,transparent 59%),conic-gradient(from 0deg,#fff0b8,#a87420,#fff0b8,#a87420,#fff0b8)}
+.cbfintour.pulse{animation:cbpulse 1.4s ease-in-out infinite}
+@keyframes cbpulse{50%{box-shadow:0 0 0 2px #3a2610,0 0 1.6em rgba(255,200,80,.85)}}
+.cbfintour:disabled{cursor:default;filter:saturate(.4) brightness(.8)}
+.cbchrono{font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:.82rem;padding:.08rem .55rem;border-radius:999px;background:rgba(0,0,0,.45);border:1px solid #7a5a32;color:#f3e6cf}
+.cbchrono:empty{display:none}
+.cbchrono.urgent{background:#a3241a;border-color:#ff8a7a}
+/* main du joueur, en éventail */
+.cbmainjeu{display:flex;justify-content:center;align-items:flex-end;padding:calc(var(--hw) * .12) 0 0;max-width:100%}
+.cbmainjeu .cbcarte{margin-left:calc(var(--chev) * -1);transform:rotate(calc(var(--i) * 2.2deg)) translateY(calc(var(--i) * var(--i) * 1.1px))}
+.cbmainjeu .cbcarte:first-child{margin-left:0}
+.cbmainjeu .cbcarte:hover,.cbmainjeu .cbcarte.jouable:active{z-index:5;transform:translateY(-14%) scale(1.06)}
+.cbmainjeu.attente .cbcarte{filter:brightness(.82)}
+.cbmainjeu.grande{flex-wrap:nowrap}
+.cbmainjeu.grande .cbcarte{cursor:pointer}
+.cbmainjeu.grande .cbcarte.choisie{transform:translateY(-8%)}
+/* mulligan */
+.cbscene.cbmull{grid-template-columns:1fr;grid-template-rows:1fr auto auto 1fr;grid-template-areas:"." "tete" "mainm" "pied";gap:1rem;justify-items:center}
+.cbmulltete{grid-area:tete;text-align:center;max-width:34rem;padding:0 1rem}
+.cbmulltete h2{font-family:"Cinzel",Georgia,serif;font-size:clamp(1.5rem, 4.5vmin, 2.4rem);margin:0 0 .4rem;color:#f6e2b8;text-shadow:0 3px 10px rgba(0,0,0,.6)}
+.cbmulltete p{margin:0;opacity:.85;font-size:.9rem}
+.cbmull .cbmainjeu{grid-area:mainm}
+.cbmullpied{grid-area:pied;display:flex;flex-direction:column;align-items:center;gap:.5rem;align-self:start}
+.cbmullpied p{margin:0}
+.cbbtn{font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:1rem;padding:.65rem 1.6rem;border-radius:10px;cursor:pointer;color:#2a1a08;
+  border:1px solid #fff0b8;background:linear-gradient(#ffe7a3,#d6a04a 55%,#a8742f);box-shadow:0 4px 12px rgba(0,0,0,.55)}
+.cbbtn:disabled{filter:grayscale(.6) brightness(.7);cursor:default}
+.cbbtn.petit{font-size:.75rem;padding:.25rem .7rem;flex:none}
+/* agrandissement d'une carte */
+.cbzoom{position:fixed;inset:0;z-index:80;background:rgba(10,6,4,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;cursor:pointer;animation:cbapparait .15s ease}
+.cbzoom .cbcarte{--hw:min(62vw, 42vh, 280px)}
+.cbzoom p{margin:0;color:#e9d9bb;opacity:.7;font-size:.8rem}
+@keyframes cbapparait{from{opacity:0}}
+.cbfintitre{font-family:"Cinzel",Georgia,serif;font-size:2.2rem;font-weight:700}
+.cbfintitre.r-victoire{color:#e2ae3c}
 .cbfintitre.r-defaite{color:var(--red)}
-/* décors de plateau (cosmétiques) */
-.plateau{border-radius:16px;border:1px solid var(--line);position:relative;overflow:hidden;color:var(--text)}
+/* grand écran paysage : héros et main en bas, « Fin du tour » sur le côté */
+@media (min-width:900px) and (min-aspect-ratio:5/4){
+  .cbscene{--mw:min(7.5vw, 14.5vh, 136px);grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+    grid-template-areas:"ahero ahand amenu" ". board fin" "moi main ." ;grid-template-rows:auto 1fr auto;padding:.6rem 1.2rem .5rem}
+  .cbz-amenu{flex-direction:row;justify-self:end}
+  .cbz-fin{justify-self:start;padding-left:1rem}
+  .cbz-moi{align-self:end}
+  .cbz-main{align-self:end}
+  .cbheros{--hw:calc(var(--mw) * 1.15)}
+}
+/* téléphone en portrait : un peu plus d'espace pour les serviteurs */
+@media (max-width:899px), (max-aspect-ratio:5/4){
+  .cbscene{--mw:min(12.3vw, 9.6vh, 118px)}
+  .cbheros{--hw:calc(var(--mw) * 1.5)}
+  .cbz-main{padding-bottom:.25rem}
+  .cbz-moi{align-self:center}
+  .cbz-fin{align-self:center}
+}
+@media (prefers-reduced-motion:reduce){.cbbougie,.cbfintour.pulse,.cibler .cible{animation:none}}
+/* décors de plateau (cosmétiques) : la surface de chaque camp */
+.plateau{border-radius:16px;border:1px solid var(--line);position:relative;overflow:hidden;color:#3a2a18}
 .plateau .sub{color:inherit;opacity:.75}
 .plateau .tag{background:rgba(0,0,0,.4);color:#fff;border-color:transparent}
-.plateau-classique{background:linear-gradient(160deg,var(--panel),color-mix(in srgb,var(--panel) 82%,var(--brass)))}
-.plateau-ebene{background:repeating-linear-gradient(100deg,#2b1d14 0 14px,#33241a 14px 30px);color:#f3e6d4;border-color:#5a3f2a}
+.plateau-classique{background:radial-gradient(ellipse at 50% 50%,#ecd6a6,#d6b57c 60%,#b48b52),#d6b57c;color:#3a2a18}
+.plateau-ebene{background:repeating-linear-gradient(100deg,#2b1d14 0 14px,#33241a 14px 30px);color:#f3e6d4}
 .plateau-aurore{background:linear-gradient(160deg,#ffd6e8,#c9e7ff 55%,#e3ffd6);color:#1f1a17}
-.plateau-braise{background:radial-gradient(circle at 30% 130%,#ff8a3d,#8a210f 55%,#2a0905);color:#ffeadb;border-color:#a33a1c}
-.plateau-abysse{background:radial-gradient(circle at 70% -30%,#3cc6d6,#0b2c4d 55%,#050f1f);color:#e2f6ff;border-color:#1d5f7a}
+.plateau-braise{background:radial-gradient(circle at 30% 130%,#ff8a3d,#8a210f 55%,#2a0905);color:#ffeadb}
+.plateau-abysse{background:radial-gradient(circle at 70% -30%,#3cc6d6,#0b2c4d 55%,#050f1f);color:#e2f6ff}
 .plateau-sakura{background:radial-gradient(circle at 15% 15%,#fff 0 6%,transparent 7%),radial-gradient(circle at 80% 30%,#fff7 0 4%,transparent 5%),linear-gradient(160deg,#fff0f5,#f5bcd3);color:#3a1f2a}
+.cbcamp.plateau-ebene .cbcase,.cbcamp.plateau-braise .cbcase,.cbcamp.plateau-abysse .cbcase{box-shadow:inset 0 0 0 2px rgba(255,255,255,.18);background:rgba(255,255,255,.04)}
+.cbcamp.plateau-ebene .cbcase.pleine,.cbcamp.plateau-braise .cbcase.pleine,.cbcamp.plateau-abysse .cbcase.pleine{box-shadow:none;background:none}
 .cbdecor{padding:.75rem}
+.cbligne .cbcout{position:relative;top:auto;left:auto;width:26px;font-size:.8rem}
 </style>
 </head>
 <body>
@@ -3452,7 +3600,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.0.1";
+const BUILD = "V2.0.2";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -6196,6 +6344,7 @@ var navPret = false;   // l'historique du jeu est en place
 function go(v){
   if(v!=="pack"){ flushReveal(); state.reveal=null; }
   if(v!=="duel" && state.duel){ clearTimer(); state.duel=null; }
+  if(v!=="duel") document.body.classList.remove("cbjeu");
   const autre = state.view !== v;
   state.view=v; render();
   if(autre){ try{ window.scrollTo({top:0, behavior:"instant"}); }catch(e){ window.scrollTo(0, 0); } }
@@ -12784,37 +12933,66 @@ function cbImage(p){
   const vrai = p.id && state.collection.find(x => x.id === p.id);
   return (vrai && vrai.img) || p.img || null;
 }
-function cbCarteHTML(p, opts = {}){
+/* illustration d'une carte, ou à défaut un monogramme sur fond travaillé */
+function cbArtHTML(p, cadre){
   const img = cbImage(p);
+  if(img && !artRefusee(img)) return `<img src="${cbEsc(img)}" alt="" loading="lazy" draggable="false" ${cadre ? `style="${cadre}"` : ""} onerror="this.remove()">`;
+  return `<span class="cbvide">${p.type === "sort" ? "✦" : p.type === "arme" ? "⚔" : cbEsc((p.nom || "?").slice(0, 1).toUpperCase())}</span>`;
+}
+/* carte complète : main, mulligan, deck, agrandissement */
+function cbCarteHTML(p, opts = {}){
   const vrai = p.id && state.collection.find(x => x.id === p.id);
   const cadre = vrai ? styleCadrage(cadrageDe(vrai)) : "";
-  return `<div class="cbcarte t-${p.type} ${opts.jouable ? "jouable" : ""} ${opts.choisie ? "choisie" : ""} ${opts.petite ? "petite" : ""}" data-r="${cbEsc(p.r || "")}" ${opts.data || ""}>
-    <span class="cbcout">${p.cout}</span>
-    <div class="cbart">${img && !artRefusee(img) ? `<img src="${cbEsc(img)}" alt="" loading="lazy" ${cadre ? `style="${cadre}"` : ""} onerror="this.remove()">` : `<span class="cbvide">${p.type === "sort" ? "✦" : p.type === "arme" ? "⚒" : cbEsc((p.nom || "?").slice(0, 1))}</span>`}</div>
-    <div class="cbnom">${cbEsc(p.nom || "")}</div>
-    <div class="cbtexte">${cbEsc(p.texte || "")}</div>
-    ${p.type === "serviteur" ? `<div class="cbstats"><span class="a">${p.atq}</span><span class="p">${p.pv}</span></div>` : p.type === "arme" ? `<div class="cbstats"><span class="a">${p.atq}</span><span class="d">${p.dur}</span></div>` : ""}
+  const stats = p.type === "serviteur" ? `<span class="cbst a">${p.atq}</span><span class="cbst p">${p.pv}</span>`
+              : p.type === "arme" ? `<span class="cbst a">${p.atq}</span><span class="cbst d">${p.dur}</span>` : "";
+  return `<div class="cbcarte t-${p.type} ${opts.jouable ? "jouable" : ""} ${opts.choisie ? "choisie" : ""} ${opts.petite ? "petite" : ""}" data-r="${cbEsc(p.r || "")}" ${opts.style ? `style="${opts.style}"` : ""} ${opts.data || ""} title="${cbEsc((p.nom || "") + (p.texte ? " — " + p.texte : ""))}">
+    <div class="cbcadre">
+      <div class="cbbandeau"><span>${cbEsc(p.nom || "")}</span></div>
+      <div class="cbart">${cbArtHTML(p, cadre)}</div>
+      <div class="cbtexte">${cbEsc(p.texte || "")}</div>
+    </div>
+    ${p.cout != null ? `<span class="cbcout">${p.cout}</span>` : ""}
+    ${stats}
   </div>`;
 }
+/* serviteur sur le plateau */
 function cbServHTML(m, k, opts = {}){
-  const img = cbImage(m);
-  return `<div class="cbserv ${m.provocation ? "provoc" : ""} ${opts.pret ? "pret" : ""} ${opts.cible ? "cible" : ""} ${opts.choisi ? "choisi" : ""}" data-cible="${k}:${cbEsc(m.iid)}" ${opts.clic ? `data-serv="${cbEsc(m.iid)}"` : ""} title="${cbEsc(m.nom + " — " + (m.texte || ""))}">
-    <div class="cbsart">${img && !artRefusee(img) ? `<img src="${cbEsc(img)}" alt="" loading="lazy" onerror="this.remove()">` : `<span>${cbEsc((m.nom || "?").slice(0, 1))}</span>`}</div>
-    ${m.charge ? `<span class="cbkw">⚡</span>` : ""}
-    <span class="cba">${m.atq}</span><span class="cbp ${m.pv < m.pvmax ? "blesse" : ""}">${m.pv}</span>
+  return `<div class="cbserv ${m.provocation ? "provoc" : ""} ${opts.pret ? "pret" : ""} ${opts.cible ? "cible" : ""} ${opts.choisi ? "choisi" : ""}" data-r="${cbEsc(m.r || "")}" data-cible="${k}:${cbEsc(m.iid)}" ${opts.clic ? `data-serv="${cbEsc(m.iid)}"` : ""} data-zoom="${k}:${cbEsc(m.iid)}" title="${cbEsc(m.nom + " — " + (m.texte || ""))}">
+    <div class="cbsart">${cbArtHTML(m)}</div>
+    ${m.provocation ? `<span class="cbkw provoc" title="Provocation">🛡</span>` : m.charge ? `<span class="cbkw" title="Charge">⚡</span>` : ""}
+    <span class="cbst a">${m.atq}</span><span class="cbst p ${m.pv < m.pvmax ? "blesse" : ""}">${m.pv}</span>
   </div>`;
+}
+/* portrait du héros : la photo du joueur, sinon un monogramme */
+function cbPortrait(moi, cote){
+  if(moi){
+    let img = state.profile.avatarImg || null;
+    if(!img && state.profile.avatar){ const c = state.collection.find(x => x.id === state.profile.avatar); img = c && c.img; }
+    if(img && !artRefusee(img)) return `<img src="${cbEsc(img)}" alt="" draggable="false" onerror="this.remove()">`;
+  }
+  const nom = cote.pseudo || (moi ? "Vous" : "Adversaire");
+  return `<span class="cbmono">${cote.bot ? "⚙" : cbEsc(nom.replace(/^Bot\s*/i, "").slice(0, 1).toUpperCase() || "?")}</span>`;
 }
 function cbHerosHTML(cote, k, moi, opts = {}){
   const nom = cote.pseudo || (moi ? "Vous" : "Adversaire");
-  return `<div class="cbheros ${opts.cible ? "cible" : ""} ${opts.pret ? "pret" : ""}" data-cible="${k}:heros" ${opts.clic ? `data-herosatt="1"` : ""}>
-    <span class="cbav">${cbEsc(nom.slice(0, 1).toUpperCase())}</span>
-    <span class="cbpv ${cote.pv < cote.pvmax ? "blesse" : ""}">${cote.pv}</span>
-    ${cote.arme ? `<span class="cbarme" title="${cbEsc(cote.arme.nom)}">⚒ ${cote.arme.atq}/${cote.arme.dur}</span>` : ""}
+  return `<div class="cbheros ${moi ? "moi" : "adv"} ${opts.cible ? "cible" : ""} ${opts.pret ? "pret" : ""}" data-cible="${k}:heros" ${opts.clic ? `data-herosatt="1"` : ""} title="${cbEsc(nom)}">
+    <div class="cbportrait">${cbPortrait(moi, cote)}</div>
+    <span class="cbst p heros ${cote.pv < cote.pvmax ? "blesse" : ""}">${cote.pv}</span>
+    ${cote.arme ? `<span class="cbarme" title="${cbEsc(cote.arme.nom)}"><b>⚔ ${cote.arme.atq}</b><i>${cote.arme.dur}</i></span>` : ""}
   </div>`;
 }
 function cbMana(cote){
   const n = cote.manamax || 0, m = cote.mana || 0;
-  return `<span class="cbmana" title="mana">${[...Array(10)].map((_, i) => `<i class="${i < m ? "plein" : i < n ? "vide" : "absent"}"></i>`).join("")}<b>${m}/${n}</b></span>`;
+  return `<span class="cbmana" title="Mana : ${m} sur ${n}">${[...Array(Math.max(n, 1))].map((_, i) => `<i class="${i < m ? "plein" : "vide"}"></i>`).join("")}<b>${m}/${n}</b></span>`;
+}
+/* agrandissement d'une carte (plateau ou main) : utile sur téléphone */
+function cbZoom(p){
+  document.querySelectorAll(".cbzoom").forEach(x => x.remove());
+  const d = document.createElement("div");
+  d.className = "cbzoom";
+  d.innerHTML = cbCarteHTML(p) + `<p>Touchez pour fermer</p>`;
+  d.onclick = ()=>d.remove();
+  document.body.appendChild(d);
 }
 
 /* ---- cibles légales (aide à l'affichage ; le serveur revalide) ---- */
@@ -12923,6 +13101,7 @@ function viewDuel(){
     cbProfilCharger(); cbSorts();
   }
   if(CB.id && CB.v) return cbPeindre(true);
+  cbPleinEcran(false);
   const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ["plateau", "Plateau"], ["classement", "Classement"]];
   view.innerHTML = `
     <h2 class="vuetitre">Combat</h2>
@@ -13057,7 +13236,7 @@ function cbJournalTexte(e, v){
     case "joue": return qui(e.j) + " joue " + (e.carte ? e.carte.nom : "une carte");
     case "attaque": return qui(e.j) + " attaque " + nomCible(e.cible);
     case "degats": return nomCible(e.cible) + " subit " + e.n + " dégât" + (e.n > 1 ? "s" : "");
-    case "soin": return nomCible(e.cible) + " récupère " + e.n + " PV";
+    case "soin": return e.n > 0 ? nomCible(e.cible) + " récupère " + e.n + " PV" : "";
     case "mort": return e.nom + " est détruit";
     case "pouvoir": return qui(e.j) + " utilise son pouvoir";
     case "brulee": return (e.j === v.moi_k ? "Main pleine : " : "Main adverse pleine : ") + (e.carte ? e.carte.nom : "une carte") + " brûle";
@@ -13075,72 +13254,115 @@ function cbChrono(){
   el.textContent = s + " s"; el.classList.toggle("urgent", s <= 10);
   const h = document.getElementById("cbhors"); if(h) h.hidden = CB.hors < 3;
 }
+/* la table de jeu occupe tout l'écran ; on la quitte en sortant de Combat */
+function cbPleinEcran(on){ document.body.classList.toggle("cbjeu", !!on); if(!on) document.querySelectorAll(".cbzoom").forEach(x => x.remove()); }
+/* la main s'étale ou se chevauche selon la largeur disponible */
+function cbMainStyle(n, grande){
+  const W = Math.min(window.innerWidth, 1400) - 24;
+  const paysage = window.innerWidth >= 900 && window.innerWidth / window.innerHeight >= 1.25;
+  const hw = grande ? Math.min(window.innerWidth * 0.28, window.innerHeight * 0.3, 190)
+                    : Math.min(window.innerWidth * (paysage ? 0.1 : 0.2), window.innerHeight * (paysage ? 0.2 : 0.15), 150);
+  const place = paysage && !grande ? W * 0.58 : W;
+  const chev = n > 1 ? Math.max(-hw * 0.06, (n * hw - place) / (n - 1)) : 0;
+  return `--hw:${Math.round(hw)}px;--chev:${Math.round(chev)}px`;
+}
+function cbFond(contenu, classe){
+  return `<div class="cbpartie cbscene ${classe || ""}">
+    <div class="cbbougie g"></div><div class="cbbougie d"></div>
+    ${contenu}
+  </div>`;
+}
 function cbPeindre(force){
   if(state.view !== "duel") return;
   const v = CB.v; if(!v){ viewDuel(); return; }
-  const sig = JSON.stringify([v.version, CB.mode, CB.envoi, [...CB.mull]]);
+  const sig = JSON.stringify([v.version, CB.mode, CB.envoi, [...CB.mull], window.innerWidth, window.innerHeight]);
   if(!force && sig === CB.sig && document.querySelector(".cbpartie")){ cbChrono(); return; }
   CB.sig = sig;
+  cbPleinEcran(true);
   const mk = v.moi_k, ak = 3 - mk, fini = v.statut !== "ACTIVE";
   const monTour = v.mon_tour && !fini;
   const cibles = CB.mode ? cbCibles(CB.mode.regle) : new Set();
   // mulligan
   if(v.phase === "MULLIGAN" && !fini){
-    view.innerHTML = `<div class="cbpartie cbmull">
-      <h2 class="vuetitre">Main de départ</h2>
-      <p class="sub">${v.premier ? "Vous commencez : 3 cartes." : "Vous jouez en second : 4 cartes, et « Élan » (+1 mana une fois)."} Touchez les cartes à remplacer, puis validez. Les cartes écartées retournent dans le deck après le remplacement.</p>
-      ${v.moi.mulligan ? `<p><b>Main validée.</b> En attente de l'adversaire… <span id="cbchrono" class="cbchrono"></span></p>` : ""}
-      <div class="cbmain grande">${v.moi.main.map(p => cbCarteHTML(p, {choisie:CB.mull.has(p.iid), data:v.moi.mulligan ? "" : `data-mull="${cbEsc(p.iid)}"`})).join("")}</div>
-      ${v.moi.mulligan ? "" : `<div class="row" style="justify-content:center;gap:.5rem;margin-top:1rem"><span id="cbchrono" class="cbchrono"></span>
-        <button class="btn" id="cbmullok" ${CB.envoi ? "disabled" : ""}>${CB.mull.size ? "Remplacer " + CB.mull.size + " carte" + (CB.mull.size > 1 ? "s" : "") : "Garder ma main"}</button></div>`}
-    </div>`;
+    view.innerHTML = cbFond(`<div class="cbmulltete">
+        <h2>Main de départ</h2>
+        <p>${v.premier ? "Vous commencez : 3 cartes." : "Vous jouez en second : 4 cartes, et « Élan » (+1 mana une fois)."}<br>Touchez les cartes à remplacer, puis validez.</p>
+      </div>
+      <div class="cbmainjeu grande" style="${cbMainStyle(v.moi.main.length, true)}">${v.moi.main.map((p, i) => cbCarteHTML(p, {choisie:CB.mull.has(p.iid), style:`--i:${i - (v.moi.main.length - 1) / 2}`, data:v.moi.mulligan ? "" : `data-mull="${cbEsc(p.iid)}"`})).join("")}</div>
+      <div class="cbmullpied">
+        ${v.moi.mulligan ? `<p><b>Main validée.</b> En attente de l'adversaire…</p>` : `<button class="cbbtn" id="cbmullok" ${CB.envoi ? "disabled" : ""}>${CB.mull.size ? "Remplacer " + CB.mull.size + " carte" + (CB.mull.size > 1 ? "s" : "") : "Garder ma main"}</button>`}
+        <span id="cbchrono" class="cbchrono"></span>
+      </div>`, "cbmull");
     view.querySelectorAll("[data-mull]").forEach(el => el.onclick = ()=>{ const i = el.dataset.mull; CB.mull.has(i) ? CB.mull.delete(i) : CB.mull.add(i); cbPeindre(true); });
     const ok = view.querySelector("#cbmullok"); if(ok) ok.onclick = ()=>cbAgir({type:"mulligan", remplacer:[...CB.mull]});
     cbChrono();
     return;
   }
-  const journal = (v.journal || []).map(e => cbJournalTexte(e, v)).filter(Boolean).slice(-4);
+  const journal = (v.journal || []).map(e => cbJournalTexte(e, v)).filter(Boolean);
   const peutAttaquer = m => monTour && m.pret && m.attaques === 0 && m.atq > 0;
   const herosPeut = monTour && v.moi.arme && !v.moi.heros_attaque;
   const pouvoirOk = monTour && !v.moi.pouvoir_utilise && v.moi.mana >= v.pouvoir.cout;
-  view.innerHTML = `
-    <div class="cbpartie ${CB.mode ? "cibler" : ""}">
-      <div class="plateau plateau-${cbEsc(v.adv.decor || "classique")} cbmoitie adv">
-        <div class="cbhaut">
-          ${cbHerosHTML(v.adv, ak, false, {cible:cibles.has(ak + ":heros")})}
-          <div class="cbinfo"><b>${cbEsc(v.adv.pseudo || "Adversaire")}${v.adv.bot ? ` <span class="tag">bot</span>` : ""}</b>
-            ${cbMana(v.adv)}
-            <span class="sub">Main ${v.adv.main_n} · Deck ${v.adv.deck_n}${v.adv.fatigue ? " · Fatigue " + v.adv.fatigue : ""}${v.adv.present ? "" : " · <b>déconnecté</b>"}</span></div>
-          <div class="cbdos">${[...Array(Math.min(10, v.adv.main_n))].map(() => `<i></i>`).join("")}</div>
-        </div>
-        <div class="cbrang">${v.adv.plateau.map(m => cbServHTML(m, ak, {cible:cibles.has(ak + ":" + m.iid)})).join("") || `<span class="sub cbrangvide">aucun serviteur</span>`}</div>
+  const jouable = p => monTour && !CB.mode && p.cout <= v.moi.mana && !(p.type === "serviteur" && v.moi.plateau.length >= 7);
+  const resteAJouer = monTour && (v.moi.main.some(jouable) || v.moi.plateau.some(peutAttaquer) || pouvoirOk || herosPeut);
+  // sept emplacements par camp, les serviteurs au centre
+  const rang = (cote, k, moi) => {
+    const n = cote.plateau.length, debut = Math.floor((7 - n) / 2);
+    return `<div class="cbrang">${[...Array(7)].map((_, i) => {
+      const m = i >= debut && i < debut + n ? cote.plateau[i - debut] : null;
+      if(!m) return `<div class="cbcase"></div>`;
+      return `<div class="cbcase pleine">${moi
+        ? cbServHTML(m, k, {pret:peutAttaquer(m), clic:peutAttaquer(m) && !CB.mode, cible:cibles.has(k + ":" + m.iid), choisi:CB.mode && CB.mode.attaquant === m.iid})
+        : cbServHTML(m, k, {cible:cibles.has(k + ":" + m.iid)})}</div>`;
+    }).join("")}</div>`;
+  };
+  const nAdv = Math.min(10, v.adv.main_n || 0);
+  view.innerHTML = cbFond(`
+      <div class="cbz-ahero">
+        ${cbHerosHTML(v.adv, ak, false, {cible:cibles.has(ak + ":heros")})}
+        <div class="cbnomjoueur"><b>${cbEsc(v.adv.pseudo || "Adversaire")}</b>${v.adv.bot ? `<span class="cbetiq">bot</span>` : ""}
+          <small>Deck ${v.adv.deck_n}${v.adv.fatigue ? " · fatigue " + v.adv.fatigue : ""}${v.adv.present ? "" : " · <em>déconnecté</em>"}</small></div>
       </div>
-      <div class="cbcentre">
-        <div class="cbjournal">${journal.map(t => `<span>${cbEsc(t)}</span>`).join("")}</div>
-        <div class="cbbarre">
-          <span>${MODES_COMBAT[v.mode]} · tour ${v.tour || 0}</span>
-          ${fini ? "" : `<span id="cbchrono" class="cbchrono"></span>`}
-          ${fini ? "" : `<button class="btn small" id="cbfin" ${!monTour || CB.envoi ? "disabled" : ""}>${monTour ? "Terminer le tour" : "Tour adverse"}</button>`}
-        </div>
-        ${CB.mode ? `<div class="cbconsigne">${cbEsc(CB.mode.consigne)} <button class="btn small ghost" id="cbstop">Annuler</button></div>` : ""}
-        <p class="sub" id="cbhors" ${CB.hors >= 3 ? "" : "hidden"} style="color:var(--red)">Connexion perdue : reconnexion en cours (la partie vous attend 60 s).</p>
+      <div class="cbz-ahand">
+        <div class="cbdos" style="--n:${nAdv}">${[...Array(nAdv)].map((_, i) => `<i style="--i:${i - (nAdv - 1) / 2}"></i>`).join("")}</div>
+        ${cbMana(v.adv)}
       </div>
-      <div class="plateau plateau-${cbEsc(v.moi.decor || "classique")} cbmoitie moi">
-        <div class="cbrang">${v.moi.plateau.map(m => cbServHTML(m, mk, {pret:peutAttaquer(m), clic:peutAttaquer(m) && !CB.mode, cible:cibles.has(mk + ":" + m.iid), choisi:CB.mode && CB.mode.attaquant === m.iid})).join("") || `<span class="sub cbrangvide">aucun serviteur</span>`}</div>
-        <div class="cbhaut">
-          ${cbHerosHTML(v.moi, mk, true, {cible:cibles.has(mk + ":heros"), pret:herosPeut, clic:herosPeut && !CB.mode})}
-          <div class="cbinfo"><b>${cbEsc(v.moi.pseudo || "Vous")}</b>${cbMana(v.moi)}
-            <span class="sub">Deck ${v.moi.deck_n}${v.moi.fatigue ? " · Fatigue " + v.moi.fatigue : ""}</span></div>
-          <button class="cbpouvoir" id="cbpouvoir" ${pouvoirOk && !CB.mode ? "" : "disabled"} title="Pouvoir de héros : ${v.pouvoir.degats} dégât">
-            <span class="cbcout">${v.pouvoir.cout}</span><b>✶</b><small>${v.pouvoir.degats} dégât</small></button>
+      <div class="cbz-amenu">
+        <button class="cbrond" id="cbmenu" title="Revenir au menu (la partie continue)">☰</button>
+        ${fini ? "" : `<button class="cbrond" id="cbabandon" title="Abandonner">⚑</button>`}
+      </div>
+      <div class="cbz-board">
+        <div class="cbtable">
+          <div class="cbcamp adv plateau-${cbEsc(v.adv.decor || "classique")}">${rang(v.adv, ak, false)}</div>
+          <div class="cbligne-centre">
+            ${CB.mode ? `<div class="cbconsigne"><span>${cbEsc(CB.mode.consigne)}</span><button class="cbbtn petit" id="cbstop">Annuler</button></div>`
+              : `<div class="cbjournal" title="${cbEsc(journal.slice(-6).join("\n"))}">${cbEsc(journal[journal.length - 1] || MODES_COMBAT[v.mode] + " · tour " + (v.tour || 0))}</div>`}
+            <span class="cblune">☾</span>
+            <div class="cbtourinfo">${MODES_COMBAT[v.mode]} · tour ${v.tour || 0}</div>
+          </div>
+          <div class="cbcamp moi plateau-${cbEsc(v.moi.decor || "classique")}">${rang(v.moi, mk, true)}</div>
+        </div>
+        <p class="cbhors" id="cbhors" ${CB.hors >= 3 ? "" : "hidden"}>Connexion perdue : reconnexion en cours (la partie vous attend 60 s).</p>
+      </div>
+      <div class="cbz-fin">
+        ${fini ? "" : `<button class="cbfintour ${monTour ? "actif" : ""} ${monTour && !resteAJouer ? "pulse" : ""}" id="cbfin" ${!monTour || CB.envoi ? "disabled" : ""}>
+          <span>${monTour ? "Fin<br>du tour" : "Tour<br>adverse"}</span><i>◆</i></button>
+        <span id="cbchrono" class="cbchrono"></span>`}
+      </div>
+      <div class="cbz-moi">
+        ${cbHerosHTML(v.moi, mk, true, {cible:cibles.has(mk + ":heros"), pret:herosPeut, clic:herosPeut && !CB.mode})}
+        <div class="cbmoiinfo">
+          <button class="cbpouvoir" id="cbpouvoir" ${pouvoirOk && !CB.mode ? "" : "disabled"} title="Pouvoir de héros : ${v.pouvoir.cout} mana, ${v.pouvoir.degats} dégât à un personnage">
+            <span class="cbcout">${v.pouvoir.cout}</span><b>✶</b></button>
+          ${cbMana(v.moi)}
+          <small>Deck ${v.moi.deck_n}${v.moi.fatigue ? " · fatigue " + v.moi.fatigue : ""}</small>
         </div>
       </div>
-      <div class="cbmain">${v.moi.main.map(p => {
-        const ok = monTour && !CB.mode && p.cout <= v.moi.mana && !(p.type === "serviteur" && v.moi.plateau.length >= 7);
-        return cbCarteHTML(p, {jouable:ok, data:ok ? `data-jouer="${cbEsc(p.iid)}"` : ""});
-      }).join("")}</div>
-      ${fini ? "" : `<div class="row" style="justify-content:flex-end;margin-top:.5rem"><button class="btn small ghost" id="cbabandon">Abandonner</button></div>`}
-    </div>`;
+      <div class="cbz-main">
+        <div class="cbmainjeu ${monTour ? "" : "attente"}" style="${cbMainStyle(v.moi.main.length, false)}">${v.moi.main.map((p, i) => {
+          const ok = jouable(p);
+          return cbCarteHTML(p, {jouable:ok, style:`--i:${i - (v.moi.main.length - 1) / 2}`, data:ok ? `data-jouer="${cbEsc(p.iid)}"` : `data-zoommain="${cbEsc(p.iid)}"`});
+        }).join("")}</div>
+      </div>`, CB.mode ? "cibler" : "");
   // jouer une carte
   view.querySelectorAll("[data-jouer]").forEach(el => el.onclick = ()=>{
     const p = v.moi.main.find(x => x.iid === el.dataset.jouer); if(!p) return;
@@ -13154,6 +13376,12 @@ function cbPeindre(force){
     CB.mode = {action:"jouer", iid:p.iid, regle, consigne:"Choisissez la cible de « " + p.nom + " »."};
     cbPeindre(true);
   });
+  // une carte qu'on ne peut pas jouer s'agrandit pour être lue
+  view.querySelectorAll("[data-zoommain]").forEach(el => el.onclick = ()=>{ const p = v.moi.main.find(x => x.iid === el.dataset.zoommain); if(p) cbZoom(p); });
+  view.querySelectorAll("[data-zoom]").forEach(el => { if(!el.dataset.serv && !(CB.mode && cibles.has(el.dataset.cible))) el.onclick = ()=>{
+    const [k, iid] = el.dataset.zoom.split(/:(.+)/); const cote = +k === mk ? v.moi : v.adv;
+    const m = cote.plateau.find(x => x.iid === iid); if(m) cbZoom(Object.assign({type:"serviteur"}, m, {cout:null}));
+  }; });
   view.querySelectorAll("[data-serv]").forEach(el => el.onclick = ()=>{
     CB.mode = {action:"attaquer", attaquant:el.dataset.serv, regle:"attaque", consigne:"Choisissez la cible de l'attaque."};
     cbPeindre(true);
@@ -13169,6 +13397,7 @@ function cbPeindre(force){
   }; });
   const st = view.querySelector("#cbstop"); if(st) st.onclick = ()=>{ CB.mode = null; cbPeindre(true); };
   const fin = view.querySelector("#cbfin"); if(fin) fin.onclick = ()=>cbAgir({type:"fin_tour"});
+  const menu = view.querySelector("#cbmenu"); if(menu) menu.onclick = ()=>{ CB.mode = null; cbPleinEcran(false); go("hub"); };
   const ab = view.querySelector("#cbabandon"); if(ab) ab.onclick = async ()=>{
     if(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner")) cbAgir({type:"abandon"});
   };
@@ -13192,6 +13421,8 @@ function cbPeindre(force){
     const rj = d.querySelector("#cbrejouer"); if(rj) rj.onclick = ()=>{ const t = CB.dernierType; cbQuitter(); cbLancer(t); };
   }
 }
+/* rotation ou redimensionnement : la table se recompose */
+window.addEventListener("resize", ()=>{ clearTimeout(CB.redim); CB.redim = setTimeout(()=>{ if(state.view === "duel" && CB.id && CB.v) cbPeindre(true); }, 150); });
 /* Partie en cours hors de l'écran Combat : un rappel */
 setInterval(()=>{
   if(CB.id && CB.v && CB.v.statut === "ACTIVE" && state.view !== "duel" && fmPret && CB.v.mon_tour){
