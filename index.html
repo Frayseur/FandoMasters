@@ -3282,54 +3282,113 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 .admcarte input{width:auto;min-width:0;flex:1 1 110px;padding:.4rem .55rem}
 .admbloque{color:var(--red);font-weight:700}
 
-/* ---- duels ---- */
-.derr{margin-bottom:.8rem;color:var(--red)}
-.ddeckbilan{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
-.ddeckbilan > div{display:flex;flex-direction:column;flex:1;min-width:180px}
-.dmodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem;margin-top:.8rem}
-.dmode{display:flex;flex-direction:column;gap:.5rem}
-.dmode h3{font-size:1.05rem;margin:0;display:flex;gap:.4rem;align-items:center}
-.dmode .sub{margin:0;flex:1}
-.dmode.verrou{opacity:.75}
-.dniv{gap:.3rem;flex-wrap:wrap}
-.dattente{display:flex;flex-direction:column;align-items:center;gap:.45rem;text-align:center;margin-bottom:.8rem}
-.dcode{font-size:2.2rem;font-weight:800;letter-spacing:.35em;color:var(--brass)}
-.dspin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brass);animation:dtour 1s linear infinite}
-@keyframes dtour{to{transform:rotate(360deg)}}
-.dtab{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.88rem}
-.dtab th,.dtab td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line)}
-.ddeck,.dcoll{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:.5rem}
-.ddeckcase{position:relative}
-.dretirer{position:absolute;top:-6px;right:-6px;width:24px;height:24px;border-radius:50%;border:none;background:var(--red);color:#fff;font-weight:700;cursor:pointer;line-height:1}
-.dcollcase.pleine{opacity:.5}
-.dcarte{position:relative;border-radius:10px;border:2px solid var(--line);background:var(--panel);overflow:hidden;display:flex;flex-direction:column;cursor:default;min-width:0;color:var(--text);transition:transform .15s ease, box-shadow .15s ease}
-.dcarte[role=button]{cursor:pointer}
-.dcarte[data-r="Peu commun"]{border-color:#9DB4C0}
-.dcarte[data-r="Rare"]{border-color:#7FD0C2}
-.dcarte[data-r="Super rare"]{border-color:#E8A8C6}
-.dcarte[data-r="Ultra rare"]{border-color:#F09468}
-.dcarte[data-r="Légendaire"],.dcarte[data-r="Relique"]{border-color:#E8B44C;box-shadow:0 0 0 1px #E8B44C55}
-.dcarte.choisie{transform:translateY(-8px);box-shadow:0 0 0 3px var(--brass),0 8px 18px rgba(0,0,0,.25)}
-.dart{aspect-ratio:4/3;background:color-mix(in srgb,var(--panel) 80%,var(--brass));overflow:hidden;display:grid;place-items:center}
-.dart img{width:100%;height:100%;object-fit:cover}
-.dvide{font-size:1.6rem;font-weight:800;opacity:.5}
-.dnom{font-size:.74rem;font-weight:700;padding:.25rem .35rem 0;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.1em}
-.drar{font-size:.64rem;padding:0 .35rem;opacity:.7}
-.dstats{display:flex;justify-content:space-between;font-size:.7rem;font-weight:700;padding:.2rem .35rem .3rem}
-.dcarte.blessee{border-style:dashed}
-.dstats small{opacity:.6;font-weight:400}
-.dvie{height:4px;margin:0 .35rem .3rem;border-radius:3px;background:color-mix(in srgb,var(--red) 30%,transparent);overflow:hidden}
-.dvie i{display:block;height:100%;background:var(--red)}
-.dprec{margin-top:.35rem;font-size:.82rem;padding:.3rem .55rem;border-radius:8px;background:rgba(0,0,0,.18);display:inline-block}
-.drdeg{font-size:.78rem;font-weight:800;color:var(--red)}
-.drdeg.elim{padding:.1rem .45rem;border-radius:6px;background:var(--red);color:#fff}
-.dpost{font-size:.72rem;font-weight:800;text-align:center;padding:.2rem;background:var(--brass);color:#fff}
-.dcarte.petite .dnom{font-size:.68rem}
-.dplats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem;margin:.8rem 0}
-.dplat{min-height:96px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:.3rem;cursor:pointer;text-align:left;font:inherit}
-.dplat.on{outline:3px solid var(--brass);outline-offset:2px}
-.dplat:disabled{cursor:not-allowed;opacity:.6}
-.plateau{border-radius:16px;padding:.75rem;border:1px solid var(--line);position:relative;overflow:hidden;color:var(--text)}
+/* ---- combat (mode classique) ---- */
+.cberr{margin-bottom:.8rem;color:var(--red)}
+.cbbilan{display:flex;gap:.8rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
+.cbbilan > div{display:flex;flex-direction:column;flex:1;min-width:180px}
+.cbmodes{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:.8rem;margin-top:.8rem}
+.cbmodecarte{display:flex;flex-direction:column;gap:.5rem}
+.cbmodecarte h3{font-size:1.05rem;margin:0;display:flex;gap:.4rem;align-items:center}
+.cbmodecarte .sub{margin:0;flex:1}
+.cbmodecarte.verrou{opacity:.75}
+.cbattente{display:flex;flex-direction:column;align-items:center;gap:.45rem;text-align:center;margin-bottom:.8rem}
+.cbcode{font-size:2.2rem;font-weight:800;letter-spacing:.35em;color:var(--brass)}
+.cbspin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brass);animation:cbtour 1s linear infinite}
+@keyframes cbtour{to{transform:rotate(360deg)}}
+.cbtab{width:100%;border-collapse:collapse;margin-top:.5rem;font-size:.88rem}
+.cbtab th,.cbtab td{text-align:left;padding:.35rem .3rem;border-bottom:1px solid var(--line)}
+.cbcourbe{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;height:84px;align-items:end;margin:.4rem 0}
+.cbcourbe div{display:flex;flex-direction:column-reverse;align-items:center;height:100%;position:relative}
+.cbcourbe i{display:block;width:70%;background:var(--brass);border-radius:4px 4px 0 0;min-height:2px}
+.cbcourbe span{font-size:.72rem;opacity:.7}
+.cbcourbe b{position:absolute;top:0;font-size:.72rem}
+.cblistedeck{display:flex;flex-direction:column;gap:3px}
+.cbligne{display:grid;grid-template-columns:28px 1fr auto 34px 20px;gap:.4rem;align-items:center;padding:.3rem .45rem;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:.86rem}
+.cbligne .cbcout{position:static}
+.cbmoins{color:var(--red);font-weight:800;text-align:center}
+.cbgrille{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:.5rem}
+.cbcase.plein{opacity:.5}
+.cbdecors{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.7rem;margin:.8rem 0}
+.cbdecor{min-height:96px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:.3rem;cursor:pointer;text-align:left;font:inherit}
+.cbdecor.on{outline:3px solid var(--brass);outline-offset:2px}
+.cbdecor:disabled{cursor:not-allowed;opacity:.6}
+/* cartes */
+.cbcarte{position:relative;border-radius:10px;border:2px solid var(--line);background:var(--panel);color:var(--text);overflow:hidden;display:flex;flex-direction:column;min-width:0;transition:transform .15s ease, box-shadow .15s ease}
+.cbcarte[data-r="Peu commun"]{border-color:#9DB4C0}
+.cbcarte[data-r="Rare"]{border-color:#7FD0C2}
+.cbcarte[data-r="Super rare"]{border-color:#E8A8C6}
+.cbcarte[data-r="Ultra rare"]{border-color:#F09468}
+.cbcarte[data-r="Légendaire"],.cbcarte[data-r="Relique"]{border-color:#E8B44C}
+.cbcarte[data-r="Sort"]{border-color:#8FA7FF}
+.cbcarte.jouable{cursor:pointer;box-shadow:0 0 0 2px var(--teal),0 0 14px color-mix(in srgb,var(--teal) 55%,transparent)}
+.cbcarte.jouable:hover{transform:translateY(-6px)}
+.cbcarte.choisie{transform:translateY(-6px);box-shadow:0 0 0 3px var(--red)}
+.cbcout{position:absolute;top:4px;left:4px;z-index:2;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.85rem;background:#3d6fd6;color:#fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.cbart{aspect-ratio:4/3;background:color-mix(in srgb,var(--panel) 78%,var(--brass));display:grid;place-items:center;overflow:hidden}
+.cbart img{width:100%;height:100%;object-fit:cover}
+.cbvide{font-size:1.5rem;font-weight:800;opacity:.55}
+.cbnom{font-size:.72rem;font-weight:800;padding:.25rem .35rem 0;line-height:1.15;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;min-height:2.1em}
+.cbtexte{font-size:.64rem;padding:.1rem .35rem;opacity:.8;min-height:1.6em;line-height:1.2}
+.cbstats{display:flex;justify-content:space-between;padding:0 .3rem .3rem}
+.cbstats span{min-width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.82rem;color:#fff}
+.cbstats .a{background:#d6a11f}
+.cbstats .p{background:#c4453a}
+.cbstats .d{background:#7a7f8a}
+/* partie */
+.cbpartie{display:flex;flex-direction:column;gap:.5rem}
+.cbmoitie{display:flex;flex-direction:column;gap:.45rem;padding:.55rem}
+.cbmoitie.adv{flex-direction:column}
+.cbhaut{display:flex;align-items:center;gap:.6rem}
+.cbinfo{display:flex;flex-direction:column;gap:.15rem;flex:1;min-width:0}
+.cbinfo .sub{font-size:.75rem}
+.cbheros{position:relative;width:62px;height:62px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.25);border:3px solid rgba(255,255,255,.35)}
+.cbav{font-size:1.6rem;font-weight:900}
+.cbpv{position:absolute;bottom:-6px;right:-6px;min-width:26px;height:26px;padding:0 4px;border-radius:13px;display:grid;place-items:center;background:#c4453a;color:#fff;font-weight:900;font-size:.85rem}
+.cbpv.blesse{background:#e0352a}
+.cbarme{position:absolute;bottom:-6px;left:-10px;padding:1px 5px;border-radius:8px;background:#d6a11f;color:#fff;font-weight:800;font-size:.72rem}
+.cbheros.pret{box-shadow:0 0 0 3px var(--teal);cursor:pointer}
+.cbmana{display:flex;align-items:center;gap:2px}
+.cbmana i{width:9px;height:12px;transform:rotate(45deg) scale(.8);border-radius:2px}
+.cbmana i.plein{background:#3d6fd6}
+.cbmana i.vide{background:rgba(61,111,214,.25);border:1px solid #3d6fd6}
+.cbmana i.absent{display:none}
+.cbmana b{font-size:.78rem;margin-left:.35rem}
+.cbdos{display:flex;gap:2px;flex-wrap:wrap;max-width:110px}
+.cbdos i{width:12px;height:17px;border-radius:2px;background:repeating-linear-gradient(45deg,var(--brass) 0 3px,color-mix(in srgb,var(--brass) 60%,#000) 3px 6px)}
+.cbrang{display:flex;gap:.3rem;justify-content:center;min-height:70px;align-items:center;flex-wrap:wrap}
+.cbrangvide{opacity:.6;font-size:.8rem}
+.cbserv{position:relative;width:48px;height:62px;border-radius:24px 24px 12px 12px;background:rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.4);overflow:visible}
+.cbsart{position:absolute;inset:0;border-radius:inherit;overflow:hidden;display:grid;place-items:center;font-weight:900}
+.cbsart img{width:100%;height:100%;object-fit:cover}
+.cbserv.provoc{border:4px double #c9c9c9;border-radius:8px}
+.cbserv.pret{box-shadow:0 0 0 3px var(--teal);cursor:pointer}
+.cbserv.choisi{box-shadow:0 0 0 3px var(--brass)}
+.cba,.cbp{position:absolute;bottom:-7px;width:21px;height:21px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:.78rem;color:#fff}
+.cba{left:-6px;background:#d6a11f}
+.cbp{right:-6px;background:#c4453a}
+.cbp.blesse{background:#ff2d1f}
+.cbkw{position:absolute;top:-6px;right:-4px;font-size:.85rem}
+.cibler .cible{cursor:crosshair;box-shadow:0 0 0 3px #ff5a3c,0 0 16px #ff5a3c;animation:cbvise 1s ease infinite}
+@keyframes cbvise{50%{box-shadow:0 0 0 3px #ff5a3c,0 0 4px #ff5a3c}}
+.cbcentre{display:flex;flex-direction:column;gap:.35rem}
+.cbjournal{display:flex;flex-direction:column;font-size:.76rem;opacity:.8;min-height:3.6em}
+.cbbarre{display:flex;align-items:center;justify-content:space-between;gap:.5rem;font-weight:700;font-size:.85rem}
+.cbchrono{padding:.1rem .55rem;border-radius:999px;background:#3d6fd6;color:#fff;font-weight:800}
+.cbchrono.urgent{background:var(--red)}
+.cbconsigne{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.4rem .6rem;border-radius:10px;background:color-mix(in srgb,#ff5a3c 18%,transparent);font-size:.85rem;font-weight:700}
+.cbpouvoir{position:relative;width:52px;height:52px;flex:none;border-radius:50%;border:2px solid var(--line);background:var(--panel);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font:inherit}
+.cbpouvoir small{font-size:.55rem}
+.cbpouvoir:disabled{opacity:.45;cursor:default}
+.cbpouvoir .cbcout{top:-6px;left:-6px;width:20px;height:20px;font-size:.72rem}
+.cbmain{display:flex;gap:.35rem;overflow-x:auto;padding:.5rem .1rem .3rem}
+.cbmain .cbcarte{flex:0 0 92px}
+.cbmain.grande{justify-content:center;flex-wrap:wrap}
+.cbmain.grande .cbcarte{flex:0 0 120px;cursor:pointer}
+.cbfintitre{font-size:2rem;font-weight:900}
+.cbfintitre.r-victoire{color:var(--teal)}
+.cbfintitre.r-defaite{color:var(--red)}
+/* décors de plateau (cosmétiques) */
+.plateau{border-radius:16px;border:1px solid var(--line);position:relative;overflow:hidden;color:var(--text)}
 .plateau .sub{color:inherit;opacity:.75}
 .plateau .tag{background:rgba(0,0,0,.4);color:#fff;border-color:transparent}
 .plateau-classique{background:linear-gradient(160deg,var(--panel),color-mix(in srgb,var(--panel) 82%,var(--brass)))}
@@ -3338,46 +3397,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 .plateau-braise{background:radial-gradient(circle at 30% 130%,#ff8a3d,#8a210f 55%,#2a0905);color:#ffeadb;border-color:#a33a1c}
 .plateau-abysse{background:radial-gradient(circle at 70% -30%,#3cc6d6,#0b2c4d 55%,#050f1f);color:#e2f6ff;border-color:#1d5f7a}
 .plateau-sakura{background:radial-gradient(circle at 15% 15%,#fff 0 6%,transparent 7%),radial-gradient(circle at 80% 30%,#fff7 0 4%,transparent 5%),linear-gradient(160deg,#fff0f5,#f5bcd3);color:#3a1f2a}
-.dpartie{display:flex;flex-direction:column;gap:.7rem}
-.ptete{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
-.ppseudo{font-weight:800;flex:1;min-width:0}
-.dpips{display:inline-flex;gap:4px}
-.dpips i{width:12px;height:12px;border-radius:50%;border:2px solid currentColor;opacity:.6}
-.dpips i.on{background:currentColor;opacity:1}
-.dpres{width:10px;height:10px;border-radius:50%;background:var(--red)}
-.dpres.on{background:var(--teal)}
-.dmainadv{display:flex;gap:6px;margin:.55rem 0 .35rem;min-height:48px}
-.ddos{width:34px;height:48px;border-radius:6px;border:1px solid rgba(255,255,255,.4);background:repeating-linear-gradient(45deg,var(--brass) 0 4px,color-mix(in srgb,var(--brass) 60%,#000) 4px 8px)}
-.pinfo{font-size:.8rem}
-.dcentre{min-height:120px;display:flex;flex-direction:column;gap:.4rem;align-items:stretch}
-.dbandeau{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.9rem}
-.dchrono{min-width:58px;text-align:center;padding:.15rem .5rem;border-radius:999px;background:var(--brass);color:#fff}
-.dchrono.urgent{background:var(--red);animation:dpouls 1s ease infinite}
-@keyframes dpouls{50%{transform:scale(1.08)}}
-.drevel{min-height:60px;display:grid;place-items:center;text-align:center}
-.drevelation{width:100%;animation:drv .35s ease}
-@keyframes drv{from{opacity:0;transform:scale(.92)}}
-.drduo{display:grid;grid-template-columns:1fr auto 1fr;gap:.5rem;align-items:center}
-.drcote{display:flex;flex-direction:column;align-items:center;gap:.3rem;max-width:150px;justify-self:center;width:100%}
-.drcote .dcarte{width:100%}
-.drcote.gagne .dcarte{box-shadow:0 0 0 3px var(--teal),0 0 18px color-mix(in srgb,var(--teal) 60%,transparent)}
-.drcalc{font-size:.78rem;text-align:center}
-.drvs{font-size:.8rem;opacity:.7}
-.drverdict{font-weight:800;font-size:1.1rem;margin-top:.4rem}
-.drverdict.v1{color:var(--teal)}
-.drverdict.v2{color:var(--red)}
-.dposts{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin:.55rem 0 .2rem}
-.dpbtn{display:flex;flex-direction:column;align-items:center;gap:.05rem;padding:.45rem .2rem;border-radius:12px;border:2px solid currentColor;background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.85}
-.dpbtn .ic{font-size:1.15rem}
-.dpbtn small{font-size:.72rem;opacity:.85}
-.dpbtn.on{background:var(--brass);border-color:var(--brass);color:#fff;opacity:1}
-.dpbtn:disabled{cursor:default}
-.dcycle{font-size:.72rem;margin:.1rem 0 .4rem}
-.dmain{display:grid;grid-template-columns:repeat(5,1fr);gap:.35rem;padding-top:.6rem}
-.dfinmodal .inner{animation:drv .4s ease}
-.dfintitre{font-size:2rem;font-weight:900}
-.dfintitre.r-victoire{color:var(--teal)}
-.dfintitre.r-defaite{color:var(--red)}
+.cbdecor{padding:.75rem}
 </style>
 </head>
 <body>
@@ -3408,7 +3428,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
       <button data-view="decks"><span class="ic">▤</span><b>Decks</b><small>Vos escouades toutes prêtes</small></button>
       <button data-view="inv"><span class="ic">▦</span><b>Inventaire</b><small>Potions et armements</small></button>
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
-      <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Duels tactiques en ligne</small></button>
+      <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Héros, serviteurs et sorts</small></button>
       <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
       <button data-view="shop"><span class="ic">⬢</span><b>Boutique</b><small>Cristaux et boosters</small></button>
       <button data-view="camp"><span class="ic">⚑</span><b>Campagnes</b><small>Expéditions et boss d'univers</small></button>
@@ -3432,7 +3452,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V1.4.0";
+const BUILD = "V2.0.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -12641,29 +12661,38 @@ const SOON = {
               "Échanges directs entre collectionneurs"]}
 };
 
+/* Profil de combat dérivé : copie exacte de fm_combat_profil (serveur), pour
+   l'affichage dans l'éditeur de deck. Le serveur reste la seule référence. */
+const COMBAT_REG = {atq_base:1, atq_palier:0.8, atq_echelle:3, pv_base:1, pv_palier:1, pv_echelle:4, cout_charge:0.5, cout_provoc:0, cout_cri:0.5};
+const COMBAT_BANDES = {"Commun":[900,2800], "Peu commun":[2400,4200], "Rare":[4000,5800], "Super rare":[5600,7000], "Ultra rare":[6900,8300], "Légendaire":[8400,9700]};
+const COMBAT_PALIER = {"Commun":0, "Peu commun":1, "Rare":2, "Super rare":3, "Ultra rare":4, "Légendaire":5};
+const COMBAT_TEXTE = {tank:"Provocation", ninja:"Charge", magicien:"Cri d'arrivée : inflige 1 dégât", soigneur:"Cri d'arrivée : rend 2 PV"};
+const arrondiSql = x => Math.sign(x) * Math.round(Math.abs(x));      // round() de Postgres : demi vers l'extérieur
+function combatProfil(c){
+  const r = c.rarity || "Commun";
+  if(r === "Relique") return {id:c.id, type:"arme", nom:c.title, r, img:c.img, u:c.univ, cout:3, atq:3, dur:2, texte:"Arme : votre héros attaque avec 3 ATQ (2 utilisations)."};
+  const [lo, hi] = COMBAT_BANDES[r] || COMBAT_BANDES["Commun"];
+  const pal = COMBAT_PALIER[r] || 0;
+  const atk = +c.atk || 0, def = +c.def || 0;
+  const ta = Math.min(1, Math.max(0, (atk - lo) / (hi - lo))), td = Math.min(1, Math.max(0, (def - lo) / (hi - lo)));
+  const a = arrondiSql(COMBAT_REG.atq_base + COMBAT_REG.atq_palier * pal + COMBAT_REG.atq_echelle * ta);
+  const p = arrondiSql(COMBAT_REG.pv_base + COMBAT_REG.pv_palier * pal + COMBAT_REG.pv_echelle * td);
+  const role = roleOf({id:c.id, atk, def});
+  const extra = role === "ninja" ? COMBAT_REG.cout_charge : role === "tank" ? COMBAT_REG.cout_provoc : COMBAT_REG.cout_cri;
+  const cout = Math.min(10, Math.max(1, arrondiSql((a + p - 1) / 2 + extra)));
+  return {id:c.id, type:"serviteur", nom:c.title, r, img:c.img, u:c.univ, cout, atq:a, pv:p, role, texte:COMBAT_TEXTE[role]};
+}
+
 /* ======================================================================
-   Duels — le serveur arbitre tout
+   Combat — mode classique à tours alternés
    ----------------------------------------------------------------------
-   Chaque manche, les deux joueurs choisissent en secret une carte de leur
-   main et une posture. Le serveur garde les choix, les révèle ensemble et
-   calcule le résultat ; le jeu n'envoie que des intentions et affiche ce
-   que le serveur répond. Les calculs ci-dessous ne servent qu'à l'affichage.
+   Héros à 30 PV, deck de 30 cartes, mulligan, mana de 1 à 10, plateau de
+   7 serviteurs, attaques, Provocation, Charge, cris d'arrivée, sorts, armes
+   et pouvoir de héros. Le serveur décide de tout : ce module affiche son
+   état et envoie des intentions (« jouer cette carte », « attaquer cette
+   cible »). Les cibles mises en évidence ne sont qu'une aide : le serveur
+   revalide chaque action.
    ====================================================================== */
-const DUEL_RAR = {
-  "Commun":     {lo:900,  hi:2800, br:0,  cout:0, groupe:null},
-  "Peu commun": {lo:2400, hi:4200, br:20, cout:1, groupe:null},
-  "Rare":       {lo:4000, hi:5800, br:40, cout:2, groupe:null},
-  "Super rare": {lo:5600, hi:7000, br:50, cout:2, groupe:null},
-  "Ultra rare": {lo:6900, hi:8300, br:60, cout:3, groupe:"ultra"},
-  "Légendaire": {lo:8400, hi:9700, br:80, cout:5, groupe:"legende"},
-  "Relique":    {lo:8400, hi:9999, br:80, cout:5, groupe:"legende"}
-};
-const DUEL_BUDGET = 20, DUEL_TAILLE = 15;
-const POSTURES = {
-  ASSAULT:{nom:"Assaut", ic:"⚔", stat:"ATQ", bat:"FEINT"},
-  GUARD:  {nom:"Garde",  ic:"⛨", stat:"DÉF", bat:"ASSAULT"},
-  FEINT:  {nom:"Feinte", ic:"✦", stat:"moyenne", bat:"GUARD"}
-};
 const PLATEAUX = [
   {id:"classique", nom:"Classique", vip:false},
   {id:"ebene",  nom:"Ébène",  vip:true},
@@ -12672,489 +12701,500 @@ const PLATEAUX = [
   {id:"abysse", nom:"Abysse", vip:true},
   {id:"sakura", nom:"Sakura", vip:true}
 ];
-const MODES_DUEL = {TRAINING:"Entraînement", ONLINE:"En ligne", RANKED:"Classé", FRIENDS:"Entre amis"};
-function duelNorm(s, r){
-  const x = DUEL_RAR[r] || DUEL_RAR["Commun"];
-  return 1000 + 500 * Math.min(1, Math.max(0, ((+s || 0) - x.lo) / (x.hi - x.lo))) + x.br;
-}
-/* Blessures persistantes : « dmg » = dégâts reçus pendant ce duel (calculés
-   par le serveur). La Garde et la Feinte utilisent la DÉF restante. */
-function duelPv(c){ return duelNorm(c.d, c.r); }
-function duelRestante(c){ return Math.max(0, duelPv(c) - Math.min(duelPv(c), Math.max(0, +c.dmg || 0))); }
-function duelBase(c, p){
-  const a = duelNorm(c.a, c.r), d = duelRestante(c);
-  return p === "ASSAULT" ? a : p === "GUARD" ? d : (a + d) / 2;
-}
-function duelMult(p, q){ return POSTURES[p].bat === q ? 1.35 : POSTURES[q].bat === p ? 0.85 : 1; }
-const duelArrondi = v => Math.round(v).toLocaleString("fr-FR");
+const MODES_COMBAT = {TRAINING:"Entraînement", ONLINE:"En ligne", RANKED:"Classé", FRIENDS:"Entre amis"};
+const SORTS_DEFAUT = [
+  {id:"sort:eclair", nom:"Éclair de révision", texte:"Inflige 2 dégâts à un personnage.", cout:1, effet:{type:"degats", n:2, cible:"personnage"}},
+  {id:"sort:purge", nom:"Purge du cache", texte:"Inflige 1 dégât à tous les serviteurs adverses.", cout:2, effet:{type:"zone", n:1}},
+  {id:"sort:soin", nom:"Restauration", texte:"Rend 4 PV à un personnage.", cout:2, effet:{type:"soin", n:4, cible:"personnage"}},
+  {id:"sort:une", nom:"Mise à la une", texte:"Donne +2/+2 à un de vos serviteurs.", cout:2, effet:{type:"bonus", atq:2, pv:2, cible:"allie"}},
+  {id:"sort:recherche", nom:"Recherche approfondie", texte:"Piochez 2 cartes.", cout:3, effet:{type:"pioche", n:2}},
+  {id:"sort:suppression", nom:"Suppression de page", texte:"Inflige 5 dégâts à un serviteur.", cout:4, effet:{type:"degats", n:5, cible:"serviteur"}}
+];
+const CB = {onglet:"jouer", profil:null, id:null, v:null, attente:null, erreur:"", envoi:false, mode:null, mull:new Set(),
+            niveau:"normal", code:"", dernierType:null, demarre:false, sorts:null, sig:"", recu:0, hors:0, cle:null, filtre:"", filtreT:""};
 
-/* ---- état de l'écran de combat (séparé de l'ancien state.duel) ---- */
-const DUEL = {onglet:"jouer", profil:null, classement:null, id:null, etat:null, attente:null, erreur:"",
-              choix:{i:null, p:null}, cle:null, envoi:false, vus:0, revel:null, revelJusqua:0,
-              niveau:"normal", code:"", dernierMode:null, signature:"", recu:0, hors:0, demarre:false};
-
-/* ---- deck : 15 exemplaires « carte#k » ---- */
-function duelCarteDe(c, k){ return {i:c.id + "#" + k, c:c.id, t:c.title, r:c.rarity, a:+c.atk || 0, d:+c.def || 0, img:c.img, u:c.univ}; }
-function duelExemplaires(){
+/* ---- outils ---- */
+const cbEsc = esc;
+async function cbAppel(nom, corps){ const r = await regRpc(nom, corps); CB.recu = Date.now(); CB.hors = 0; return r; }
+function cbSorts(){
+  if(!CB.sorts){
+    CB.sorts = SORTS_DEFAUT;
+    nuageRest("combat_sorts?select=id,nom,texte,cout,effet&order=ordre.asc").then(l => { if(Array.isArray(l) && l.length) CB.sorts = l; }).catch(()=>{});
+  }
+  return CB.sorts;
+}
+function cbProfilSort(s){ return {id:s.id, type:"sort", nom:s.nom, r:"Sort", cout:s.cout, eff:s.effet, texte:s.texte}; }
+function cbMaxCopies(p, possedes){ return p.type === "sort" ? 2 : Math.min(possedes, (p.r === "Légendaire" || p.r === "Relique") ? 1 : 2); }
+/* Toutes les cartes utilisables : collection (profil dérivé) + sorts communs */
+function cbCatalogue(){
   const out = [];
-  for(const c of state.collection){ for(let k = 1; k <= Math.max(1, c.count || 1); k++) out.push(duelCarteDe(c, k)); }
+  for(const c of state.collection){
+    const p = combatProfil(c);
+    out.push({p, max:cbMaxCopies(p, Math.max(1, c.count || 1)), carte:c});
+  }
+  for(const s of cbSorts()) out.push({p:cbProfilSort(s), max:2, carte:null});
   return out;
 }
-function duelDeck(){ return Array.isArray(state.profile.deckDuel) ? state.profile.deckDuel.slice() : []; }
-function duelValider(ids){
-  const exs = new Map(duelExemplaires().map(x => [x.i, x]));
-  const cartes = [], erreurs = [];
-  let points = 0, ultra = 0, leg = 0;
-  for(const i of ids){
-    const x = exs.get(i);
+function cbDeck(){ return Array.isArray(state.profile.deckCombat) ? state.profile.deckCombat.slice() : []; }
+function cbValider(ids){
+  const cat = new Map(cbCatalogue().map(x => [x.p.id, x]));
+  const n = {}; ids.forEach(i => n[i] = (n[i] || 0) + 1);
+  const erreurs = []; const cartes = [];
+  for(const [id, k] of Object.entries(n)){
+    const x = cat.get(id);
     if(!x){ erreurs.push("une carte n'est plus dans votre collection"); continue; }
-    const r = DUEL_RAR[x.r];
-    if(!r){ erreurs.push("rareté inconnue : " + x.t); continue; }
-    points += r.cout; if(r.groupe === "ultra") ultra++; if(r.groupe === "legende") leg++;
-    cartes.push(x);
+    if(k > x.max) erreurs.push(x.p.nom + " : " + x.max + " exemplaire" + (x.max > 1 ? "s" : "") + " au plus");
+    for(let i = 0; i < k; i++) cartes.push(x.p);
   }
-  if(new Set(ids).size !== ids.length) erreurs.push("un exemplaire est utilisé deux fois");
-  if(ids.length !== DUEL_TAILLE) erreurs.push(ids.length < DUEL_TAILLE ? "il manque " + (DUEL_TAILLE - ids.length) + " carte" + (DUEL_TAILLE - ids.length > 1 ? "s" : "") : "il y a " + (ids.length - DUEL_TAILLE) + " carte(s) de trop");
-  if(leg > 1) erreurs.push("une seule Légendaire (ou Relique)");
-  if(ultra > 2) erreurs.push("deux Ultra rares au maximum");
-  if(points > DUEL_BUDGET) erreurs.push("budget dépassé : " + points + " points sur " + DUEL_BUDGET);
-  return {ok:!erreurs.length, erreurs:[...new Set(erreurs)], points, ultra, leg, cartes};
+  if(ids.length !== 30) erreurs.unshift(ids.length < 30 ? "il manque " + (30 - ids.length) + " carte" + (30 - ids.length > 1 ? "s" : "") : (ids.length - 30) + " carte(s) de trop");
+  const courbe = [0, 0, 0, 0, 0, 0, 0, 0]; cartes.forEach(p => courbe[Math.min(7, p.cout)]++);
+  return {ok:!erreurs.length, erreurs:[...new Set(erreurs)], cartes, courbe};
 }
-/* Deck conseillé : les meilleures cartes qui respectent toutes les règles */
-function duelDeckAuto(){
-  const val = x => Math.max(duelBase(x, "ASSAULT"), duelBase(x, "GUARD"), duelBase(x, "FEINT"));
-  const tous = duelExemplaires().filter(x => DUEL_RAR[x.r]).sort((a, b) => val(b) - val(a));
-  const gratuits = tous.filter(x => DUEL_RAR[x.r].cout === 0);
-  const deck = [];
-  let points = 0, ultra = 0, leg = 0;
-  for(const x of tous){
-    if(deck.length >= DUEL_TAILLE) break;
-    const r = DUEL_RAR[x.r];
-    if(points + r.cout > DUEL_BUDGET) continue;
-    if(r.groupe === "ultra" && ultra >= 2) continue;
-    if(r.groupe === "legende" && leg >= 1) continue;
-    // garder assez de cartes gratuites pour compléter le deck
-    const libres = gratuits.filter(g => !deck.includes(g) && g !== x).length;
-    if(r.cout > 0 && deck.length + 1 + libres < DUEL_TAILLE) continue;
-    deck.push(x); points += r.cout;
-    if(r.groupe === "ultra") ultra++; if(r.groupe === "legende") leg++;
+/* Deck conseillé : les cartes les plus efficaces pour leur coût, avec une courbe de mana jouable */
+function cbDeckAuto(){
+  const val = p => p.type === "sort" ? 1.5 : p.type === "arme" ? 2.2 : (p.atq + p.pv + (p.role === "ninja" ? 1 : 0.6)) / (p.cout + 0.6);
+  const cat = cbCatalogue().sort((a, b) => val(b.p) - val(a.p));
+  const deck = [], parCout = {};
+  const quota = c => c <= 2 ? 8 : c <= 4 ? 12 : c <= 6 ? 8 : 4;
+  const tranche = c => c <= 2 ? 2 : c <= 4 ? 4 : c <= 6 ? 6 : 10;
+  for(const passe of [true, false]) for(const x of cat){
+    for(let i = deck.filter(d => d === x.p.id).length; i < x.max && deck.length < 30; i++){
+      const t = tranche(x.p.cout);
+      if(passe && (parCout[t] || 0) >= quota(x.p.cout)) break;
+      if(passe && x.p.type === "sort" && deck.filter(d => d.startsWith("sort:")).length >= 6) break;   // 6 sorts au plus
+      deck.push(x.p.id); parCout[t] = (parCout[t] || 0) + 1;
+    }
   }
-  return deck.map(x => x.i);
+  return deck.slice(0, 30);
 }
-async function duelDeckEnregistrer(ids){
-  state.profile.deckDuel = ids;
-  await sset("fm:profile", state.profile);
-}
-/* La rareté affichée (corrections comprises) est celle que le serveur arbitre */
-async function duelAlignerRaretes(){
+async function cbDeckEnregistrer(ids){ state.profile.deckCombat = ids; await sset("fm:profile", state.profile); }
+async function cbAlignerRaretes(){
   let n = 0;
-  for(const c of state.collection){
-    const r = rareteEffective(c);
-    if(r && r !== c.rarity){ c.rarity = r; n++; }
-  }
+  for(const c of state.collection){ const r = rareteEffective(c); if(r && r !== c.rarity){ c.rarity = r; n++; } }
   if(n) await sset("fm:col", state.collection);
-  return n;
 }
-function duelPlateauChoisi(){ return state.profile.plateauDuel || "classique"; }
+function cbDecor(){ return state.profile.plateauDuel || "classique"; }
 
-/* ---- appels au serveur ---- */
-async function duelAppel(nom, corps){
-  const r = await regRpc(nom, corps);
-  DUEL.recu = Date.now(); DUEL.hors = 0;
-  return r;
+/* ---- affichage d'une carte ---- */
+function cbImage(p){
+  const vrai = p.id && state.collection.find(x => x.id === p.id);
+  return (vrai && vrai.img) || p.img || null;
 }
-function duelAppliquer(r){
-  if(!r) return;
-  if(r.id){
-    if(DUEL.id !== r.id){ DUEL.vus = (r.historique || []).length; DUEL.choix = {i:null, p:null}; DUEL.cle = null; DUEL.revel = null; }
-    DUEL.id = r.id; DUEL.etat = r; DUEL.attente = null; DUEL.dernierMode = r.mode;
-    // une nouvelle manche révélée : on la montre quelques secondes
-    const h = r.historique || [];
-    if(h.length > DUEL.vus){
-      DUEL.revel = h[h.length - 1]; DUEL.vus = h.length; DUEL.revelJusqua = Date.now() + 3800;
-      DUEL.choix = {i:null, p:null}; DUEL.cle = null;
-      try{ (DUEL.revel.gagnant === 1 ? sfx.coin : sfx.flip || sfx.coin)(); }catch(e){}
-    }
-    if(r.statut !== "ACTIVE"){ duelProfilCharger(); setTimeout(()=>registreVerifier(), 500); }
-  }else if(r.recherche){ DUEL.attente = {type:"recherche", mode:r.recherche, depuis:Date.now() - (r.depuis_ms || 0)}; DUEL.id = null; DUEL.etat = null; }
-  else if(r.salon){ DUEL.attente = {type:"salon", code:r.salon}; DUEL.id = null; DUEL.etat = null; }
-  else if(r.libre){ DUEL.attente = null; if(DUEL.etat && DUEL.etat.statut === "ACTIVE"){ DUEL.id = null; DUEL.etat = null; } }
-}
-async function duelProfilCharger(){
-  try{ DUEL.profil = await duelAppel("duel_profil", {}); }catch(e){}
-  if(state.view === "duel" && !DUEL.id) viewDuel();
-}
-let duelBoucle = null;
-/* Chaque seconde pendant une partie ou une recherche : c'est aussi ce qui dit
-   au serveur que le joueur est toujours là. */
-async function duelVeille(){
-  const actif = (DUEL.id && DUEL.etat && DUEL.etat.statut === "ACTIVE") || DUEL.attente;
-  if(!actif || ongletFige || !nuageConnecte()) return;
-  if(DUEL.envoi) return;
-  const avant = JSON.stringify([DUEL.attente && DUEL.attente.type, DUEL.attente && DUEL.attente.code, DUEL.id, DUEL.erreur]);
-  try{
-    const r = await duelAppel("duel_etat", {p_match:DUEL.id || null});
-    duelAppliquer(r);
-  }catch(e){
-    DUEL.hors++;
-    if(regRefus(e)){ DUEL.erreur = regRaison(e); DUEL.attente = null; }
-  }
-  if(state.view !== "duel") return;
-  if(DUEL.etat) duelPeindre();
-  else if(avant !== JSON.stringify([DUEL.attente && DUEL.attente.type, DUEL.attente && DUEL.attente.code, DUEL.id, DUEL.erreur])) viewDuel();
-}
-function duelDemarrerVeille(){ if(!duelBoucle) duelBoucle = setInterval(duelVeille, 1000); }
-
-/* ---- actions ---- */
-async function duelPreparer(){
-  const ids = duelDeck();
-  const v = duelValider(ids);
-  if(!v.ok){ toast("Deck incomplet", v.erreurs[0], "lose"); DUEL.onglet = "deck"; viewDuel(); return null; }
-  await duelAlignerRaretes();
-  await regConfirmer();                    // le serveur a bien les dernières cartes
-  return ids;
-}
-async function duelLancer(type){
-  if(DUEL.envoi) return;
-  DUEL.erreur = "";
-  const ids = await duelPreparer(); if(!ids) return;
-  DUEL.envoi = true; viewDuel();
-  try{
-    let r;
-    const plateau = duelPlateauChoisi();
-    if(type === "TRAINING") r = await duelAppel("duel_entrainement", {p_deck:ids, p_plateau:plateau, p_difficulte:DUEL.niveau});
-    else if(type === "ONLINE" || type === "RANKED") r = await duelAppel("duel_chercher", {p_mode:type, p_deck:ids, p_plateau:plateau});
-    else if(type === "SALON") r = await duelAppel("duel_salon_creer", {p_deck:ids, p_plateau:plateau});
-    else if(type === "REJOINDRE") r = await duelAppel("duel_salon_rejoindre", {p_code:DUEL.code, p_deck:ids, p_plateau:plateau});
-    DUEL.dernierType = type;
-    duelAppliquer(r);
-    duelDemarrerVeille();
-  }catch(e){ DUEL.erreur = regRaison(e); }
-  DUEL.envoi = false;
-  viewDuel();
-}
-async function duelAnnulerAttente(){
-  try{ await duelAppel("duel_annuler", {}); }catch(e){}
-  DUEL.attente = null; viewDuel();
-}
-async function duelConfirmer(){
-  const e = DUEL.etat;
-  if(!e || DUEL.envoi || !DUEL.choix.i || !DUEL.choix.p) return;
-  DUEL.envoi = true;
-  DUEL.cle = DUEL.cle || regUid();         // même clé si on doit renvoyer : jamais deux choix
-  duelPeindre();
-  for(let essai = 1; essai <= 3; essai++){
-    try{
-      const r = await duelAppel("duel_choisir", {p_match:e.id, p_manche:e.manche, p_carte:DUEL.choix.i, p_posture:DUEL.choix.p, p_cle:DUEL.cle});
-      duelAppliquer(r);
-      break;
-    }catch(err){
-      if(regRefus(err)){ toast("Choix refusé", regRaison(err), "lose"); DUEL.choix = {i:null, p:null}; DUEL.cle = null; break; }
-      if(essai === 3) toast("Connexion instable", "votre choix sera renvoyé", "lose");
-      else await new Promise(res => setTimeout(res, 600 * essai));
-    }
-  }
-  DUEL.envoi = false;
-  duelPeindre();
-}
-async function duelAbandonner(){
-  if(!DUEL.id) return;
-  if(!(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner"))) return;
-  try{ duelAppliquer(await duelAppel("duel_abandonner", {p_match:DUEL.id})); }catch(e){ toast("Abandon impossible", regRaison(e), "lose"); }
-  duelPeindre();
-}
-function duelQuitter(){
-  document.querySelectorAll(".dfinmodal").forEach(x => x.remove());
-  DUEL.id = null; DUEL.etat = null; DUEL.revel = null; DUEL.vus = 0; DUEL.signature = "";
-  viewDuel();
-}
-
-/* ---- affichage ---- */
-function duelMini(c, opts = {}){
-  if(!c) return "";
-  const vrai = state.collection.find(x => x.id === c.c);
-  const img = c.img || (vrai && vrai.img);
+function cbCarteHTML(p, opts = {}){
+  const img = cbImage(p);
+  const vrai = p.id && state.collection.find(x => x.id === p.id);
   const cadre = vrai ? styleCadrage(cadrageDe(vrai)) : "";
-  const p = opts.posture;
-  const blesse = (+c.dmg || 0) > 0;
-  const part = Math.round(100 * duelRestante(c) / duelPv(c));
-  return `<div class="dcarte ${opts.choisie ? "choisie" : ""} ${opts.petite ? "petite" : ""} ${blesse ? "blessee" : ""}" data-r="${esc(c.r || "")}" ${opts.clic ? `data-dcarte="${esc(c.i)}" role="button" tabindex="0"` : ""}>
-    <div class="dart">${img && !artRefusee(img) ? `<img src="${esc(img)}" alt="" loading="lazy" ${cadre ? `style="${cadre}"` : ""} onerror="this.remove()">` : `<span class="dvide">${esc((c.t || "?").slice(0, 1))}</span>`}</div>
-    <div class="dnom">${esc(c.t || "")}</div>
-    <div class="drar">${esc(c.r || "")}</div>
-    <div class="dstats"><span>⚔ ${duelArrondi(duelNorm(c.a, c.r))}</span><span title="DÉF restante">⛨ ${duelArrondi(duelRestante(c))}${blesse ? `<small>/${duelArrondi(duelPv(c))}</small>` : ""}</span></div>
-    ${blesse ? `<div class="dvie" title="DÉF restante"><i style="width:${part}%"></i></div>` : ""}
-    ${p ? `<div class="dpost">${POSTURES[p].ic} ${POSTURES[p].nom}</div>` : ""}
+  return `<div class="cbcarte t-${p.type} ${opts.jouable ? "jouable" : ""} ${opts.choisie ? "choisie" : ""} ${opts.petite ? "petite" : ""}" data-r="${cbEsc(p.r || "")}" ${opts.data || ""}>
+    <span class="cbcout">${p.cout}</span>
+    <div class="cbart">${img && !artRefusee(img) ? `<img src="${cbEsc(img)}" alt="" loading="lazy" ${cadre ? `style="${cadre}"` : ""} onerror="this.remove()">` : `<span class="cbvide">${p.type === "sort" ? "✦" : p.type === "arme" ? "⚒" : cbEsc((p.nom || "?").slice(0, 1))}</span>`}</div>
+    <div class="cbnom">${cbEsc(p.nom || "")}</div>
+    <div class="cbtexte">${cbEsc(p.texte || "")}</div>
+    ${p.type === "serviteur" ? `<div class="cbstats"><span class="a">${p.atq}</span><span class="p">${p.pv}</span></div>` : p.type === "arme" ? `<div class="cbstats"><span class="a">${p.atq}</span><span class="d">${p.dur}</span></div>` : ""}
   </div>`;
 }
-function duelPips(n){ return `<span class="dpips">${[0, 1, 2].map(i => `<i class="${i < n ? "on" : ""}"></i>`).join("")}</span>`; }
-function duelAide(){
-  return info("Règles du duel", `<p class='sub' style='margin:0 0 .5rem'>Deck de 15 cartes, 5 en main. À chaque manche, chacun choisit en secret une carte et une posture ; tout est révélé en même temps. Premier à 3 manches gagnées (5 manches au plus).</p>
-    <p class='sub' style='margin:0 0 .5rem'><b>Blessures</b> : la carte qui perd une manche encaisse l'écart entre les deux valeurs × 2, retiré de sa DÉF. Elle revient en main blessée ; à DÉF 0, elle est éliminée et remplacée par la pioche. Les blessures s'effacent à la fin du duel et ne touchent jamais votre collection. Une égalité ne blesse personne.</p>
-    <p class='sub' style='margin:0 0 .5rem'>Vous voyez la posture jouée par l'adversaire au tour précédent : un indice, pas une promesse.</p>
-    <p class='sub' style='margin:0 0 .5rem'><b>Assaut</b> utilise l'ATQ, <b>Garde</b> la DÉF restante, <b>Feinte</b> la moyenne des deux. Assaut bat Feinte, Feinte bat Garde, Garde bat Assaut : la posture gagnante compte ×1,35, la posture battue ×0,85.</p>
-    <p class='sub' style='margin:0'>Les statistiques sont ramenées sur une même échelle par rareté (de 1 000 à 1 580) : une Commune bien jouée peut battre une Légendaire. Budget du deck : 20 points (Peu commune 1, Rare et Super rare 2, Ultra rare 3 — deux au plus, Légendaire 5 — une seule). 20 secondes par manche.</p>`);
+function cbServHTML(m, k, opts = {}){
+  const img = cbImage(m);
+  return `<div class="cbserv ${m.provocation ? "provoc" : ""} ${opts.pret ? "pret" : ""} ${opts.cible ? "cible" : ""} ${opts.choisi ? "choisi" : ""}" data-cible="${k}:${cbEsc(m.iid)}" ${opts.clic ? `data-serv="${cbEsc(m.iid)}"` : ""} title="${cbEsc(m.nom + " — " + (m.texte || ""))}">
+    <div class="cbsart">${img && !artRefusee(img) ? `<img src="${cbEsc(img)}" alt="" loading="lazy" onerror="this.remove()">` : `<span>${cbEsc((m.nom || "?").slice(0, 1))}</span>`}</div>
+    ${m.charge ? `<span class="cbkw">⚡</span>` : ""}
+    <span class="cba">${m.atq}</span><span class="cbp ${m.pv < m.pvmax ? "blesse" : ""}">${m.pv}</span>
+  </div>`;
+}
+function cbHerosHTML(cote, k, moi, opts = {}){
+  const nom = cote.pseudo || (moi ? "Vous" : "Adversaire");
+  return `<div class="cbheros ${opts.cible ? "cible" : ""} ${opts.pret ? "pret" : ""}" data-cible="${k}:heros" ${opts.clic ? `data-herosatt="1"` : ""}>
+    <span class="cbav">${cbEsc(nom.slice(0, 1).toUpperCase())}</span>
+    <span class="cbpv ${cote.pv < cote.pvmax ? "blesse" : ""}">${cote.pv}</span>
+    ${cote.arme ? `<span class="cbarme" title="${cbEsc(cote.arme.nom)}">⚒ ${cote.arme.atq}/${cote.arme.dur}</span>` : ""}
+  </div>`;
+}
+function cbMana(cote){
+  const n = cote.manamax || 0, m = cote.mana || 0;
+  return `<span class="cbmana" title="mana">${[...Array(10)].map((_, i) => `<i class="${i < m ? "plein" : i < n ? "vide" : "absent"}"></i>`).join("")}<b>${m}/${n}</b></span>`;
 }
 
-function viewDuel(){
-  duelDemarrerVeille();
-  if(!DUEL.demarre){
-    DUEL.demarre = true;
-    // une partie en cours (après un rechargement ou sur un autre appareil) reprend
-    duelAppel("duel_etat", {p_match:null}).then(r => { duelAppliquer(r); if(state.view === "duel") viewDuel(); }).catch(()=>{});
-    duelProfilCharger();
+/* ---- cibles légales (aide à l'affichage ; le serveur revalide) ---- */
+function cbCibles(regle){
+  const v = CB.v; if(!v) return new Set();
+  const mk = v.moi_k, ak = 3 - mk, out = new Set();
+  const ajouter = (k, cote, heros, servs) => { if(heros) out.add(k + ":heros"); if(servs) cote.plateau.forEach(m => out.add(k + ":" + m.iid)); };
+  if(regle === "personnage"){ ajouter(mk, v.moi, true, true); ajouter(ak, v.adv, true, true); }
+  else if(regle === "serviteur"){ ajouter(mk, v.moi, false, true); ajouter(ak, v.adv, false, true); }
+  else if(regle === "ennemi") ajouter(ak, v.adv, true, true);
+  else if(regle === "allie") ajouter(mk, v.moi, true, true);
+  else if(regle === "allie_serviteur") ajouter(mk, v.moi, false, true);
+  else if(regle === "attaque"){
+    const prov = v.adv.plateau.filter(m => m.provocation);
+    if(prov.length) prov.forEach(m => out.add(ak + ":" + m.iid)); else ajouter(ak, v.adv, true, true);
   }
-  if(DUEL.id && DUEL.etat) return duelPeindre(true);
-  DUEL.signature = "";
+  return out;
+}
+function cbRegleCarte(p){
+  if(p.type === "sort"){ const t = p.eff.type; return t === "degats" ? (p.eff.cible || "personnage") : t === "soin" ? "personnage" : t === "bonus" ? "allie_serviteur" : null; }
+  if(p.type === "serviteur" && p.eff && p.eff.cri) return p.eff.cri.type === "degats" ? "ennemi" : "allie";
+  return null;
+}
+
+/* ---- serveur ---- */
+function cbAppliquer(r){
+  if(!r) return;
+  if(r.id){
+    if(CB.id !== r.id){ CB.mode = null; CB.mull = new Set(); CB.vuJournal = 0; }
+    CB.id = r.id; CB.v = r; CB.attente = null; CB.dernierMode = r.mode;
+    if(r.statut !== "ACTIVE"){ cbProfilCharger(); setTimeout(()=>registreVerifier(), 500); }
+  }else if(r.recherche){ CB.attente = {type:"recherche", mode:r.recherche, depuis:Date.now() - (r.depuis_ms || 0)}; CB.id = null; CB.v = null; }
+  else if(r.salon){ CB.attente = {type:"salon", code:r.salon}; CB.id = null; CB.v = null; }
+  else if(r.libre){ CB.attente = null; if(CB.v && CB.v.statut === "ACTIVE"){ CB.id = null; CB.v = null; } }
+}
+async function cbProfilCharger(){
+  try{ CB.profil = await cbAppel("combat_profil", {}); }catch(e){}
+  if(state.view === "duel" && !CB.id) viewDuel();
+}
+let cbBoucle = null;
+async function cbVeille(){
+  const actif = (CB.id && CB.v && CB.v.statut === "ACTIVE") || CB.attente;
+  if(!actif || ongletFige || !nuageConnecte() || CB.envoi) return;
+  const avant = JSON.stringify([CB.attente && CB.attente.type, CB.attente && CB.attente.code, CB.id, CB.erreur, CB.v && CB.v.version]);
+  try{ cbAppliquer(await cbAppel("combat_etat", {p_combat:CB.id || null})); }
+  catch(e){ CB.hors++; if(regRefus(e)){ CB.erreur = regRaison(e); CB.attente = null; } }
+  if(state.view !== "duel") return;
+  if(avant !== JSON.stringify([CB.attente && CB.attente.type, CB.attente && CB.attente.code, CB.id, CB.erreur, CB.v && CB.v.version])) viewDuel();
+  else cbChrono();
+}
+function cbDemarrerVeille(){ if(!cbBoucle) cbBoucle = setInterval(cbVeille, 1000); }
+
+async function cbLancer(type){
+  if(CB.envoi) return;
+  CB.erreur = "";
+  const ids = cbDeck(), val = cbValider(ids);
+  if(!val.ok){ toast("Deck incomplet", val.erreurs[0], "lose"); CB.onglet = "deck"; viewDuel(); return; }
+  await cbAlignerRaretes();
+  await regConfirmer();
+  CB.envoi = true; viewDuel();
+  try{
+    let r; const decor = cbDecor();
+    if(type === "TRAINING") r = await cbAppel("combat_entrainement", {p_deck:ids, p_plateau:decor, p_difficulte:CB.niveau});
+    else if(type === "ONLINE" || type === "RANKED") r = await cbAppel("combat_chercher", {p_mode:type, p_deck:ids, p_plateau:decor});
+    else if(type === "SALON") r = await cbAppel("combat_salon_creer", {p_deck:ids, p_plateau:decor});
+    else if(type === "REJOINDRE") r = await cbAppel("combat_salon_rejoindre", {p_code:CB.code, p_deck:ids, p_plateau:decor});
+    CB.dernierType = type;
+    cbAppliquer(r);
+    cbDemarrerVeille();
+  }catch(e){ CB.erreur = regRaison(e); }
+  CB.envoi = false;
+  viewDuel();
+}
+async function cbAnnuler(){ try{ await cbAppel("combat_annuler", {}); }catch(e){} CB.attente = null; viewDuel(); }
+/* Une intention : la même clé si elle doit être renvoyée (jamais deux fois) */
+async function cbAgir(action){
+  if(!CB.v || CB.envoi) return;
+  CB.envoi = true; CB.mode = null;
+  const cle = regUid();
+  cbPeindre(true);
+  for(let essai = 1; essai <= 3; essai++){
+    try{
+      cbAppliquer(await cbAppel("combat_agir", {p_combat:CB.v.id, p_action:action, p_version:CB.v.version, p_cle:cle}));
+      break;
+    }catch(e){
+      if(regRefus(e)){
+        toast("Action refusée", regRaison(e), "lose");
+        if(/périmé/.test(regRaison(e))){ try{ cbAppliquer(await cbAppel("combat_etat", {p_combat:CB.v.id})); }catch(e2){} }
+        break;
+      }
+      if(essai === 3) toast("Connexion instable", "l'action sera vérifiée à la reconnexion", "lose");
+      else await new Promise(r => setTimeout(r, 500 * essai));
+    }
+  }
+  CB.envoi = false;
+  cbPeindre(true);
+}
+function cbQuitter(){ document.querySelectorAll(".cbfinmodal").forEach(x => x.remove()); CB.id = null; CB.v = null; CB.mode = null; viewDuel(); }
+
+/* ---- écran Combat ---- */
+function viewDuel(){
+  cbDemarrerVeille();
+  if(!CB.demarre){
+    CB.demarre = true;
+    cbAppel("combat_etat", {p_combat:null}).then(r => { cbAppliquer(r); if(state.view === "duel") viewDuel(); }).catch(()=>{});
+    cbProfilCharger(); cbSorts();
+  }
+  if(CB.id && CB.v) return cbPeindre(true);
   const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ["plateau", "Plateau"], ["classement", "Classement"]];
   view.innerHTML = `
     <h2 class="vuetitre">Combat</h2>
-    <div class="admtabs dongl">${onglets.map(([k, n]) => `<button class="btn small ${DUEL.onglet === k ? "" : "ghost"}" data-dong="${k}">${n}</button>`).join("")}</div>
-    ${DUEL.erreur ? `<div class="panel derr"><b>${esc(DUEL.erreur)}</b></div>` : ""}
-    <div id="dcorps"></div>`;
-  view.querySelectorAll("[data-dong]").forEach(b => b.onclick = ()=>{ DUEL.onglet = b.dataset.dong; DUEL.erreur = ""; viewDuel(); });
-  const corps = view.querySelector("#dcorps");
-  if(DUEL.onglet === "deck") return duelVueDeck(corps);
-  if(DUEL.onglet === "plateau") return duelVuePlateau(corps);
-  if(DUEL.onglet === "classement") return duelVueClassement(corps);
-  duelVueJouer(corps);
+    <div class="admtabs">${onglets.map(([k, n]) => `<button class="btn small ${CB.onglet === k ? "" : "ghost"}" data-cbong="${k}">${n}</button>`).join("")}</div>
+    ${CB.erreur ? `<div class="panel cberr"><b>${cbEsc(CB.erreur)}</b></div>` : ""}
+    <div id="cbcorps"></div>`;
+  view.querySelectorAll("[data-cbong]").forEach(b => b.onclick = ()=>{ CB.onglet = b.dataset.cbong; CB.erreur = ""; viewDuel(); });
+  const corps = view.querySelector("#cbcorps");
+  if(CB.onglet === "deck") return cbVueDeck(corps);
+  if(CB.onglet === "plateau") return cbVuePlateau(corps);
+  if(CB.onglet === "classement") return cbVueClassement(corps);
+  cbVueJouer(corps);
 }
-
-function duelVueJouer(corps){
-  const v = duelValider(duelDeck());
-  const pr = DUEL.profil || {};
-  const at = DUEL.attente;
+function cbRegles(){
+  return info("Règles du combat", `<p class='sub' style='margin:0 0 .5rem'>Chaque joueur a un héros à 30 PV et un deck de 30 cartes. À votre tour, votre mana maximum augmente de 1 (jusqu'à 10) et se remplit ; vous piochez une carte. Jouez des serviteurs et des sorts, attaquez, puis terminez votre tour. Le premier héros à 0 PV perd.</p>
+    <p class='sub' style='margin:0 0 .5rem'>Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Entre serviteurs, les dégâts sont simultanés.</p>
+    <p class='sub' style='margin:0'>Pouvoir de héros : 2 mana, 1 dégât, une fois par tour. Main de 10 cartes au plus (au-delà, la carte piochée brûle) ; deck vide : fatigue de 1, puis 2, puis 3… Le second joueur reçoit « Élan » (+1 mana une fois).</p>`);
+}
+function cbVueJouer(corps){
+  const val = cbValider(cbDeck());
+  const pr = CB.profil || {};
+  const at = CB.attente;
   const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
-  const occupe = DUEL.envoi || !!at || !enLigne;
+  const occupe = CB.envoi || !!at || !enLigne;
   corps.innerHTML = `
-    ${duelAide()}
-    <div class="panel ddeckbilan">
-      <div><b>Votre deck</b><span class="sub">${v.cartes.length} / 15 cartes · ${v.points} / 20 points</span></div>
-      ${v.ok ? `<span class="tag ok">prêt</span>` : `<span class="sub" style="color:var(--red)">${esc(v.erreurs[0] || "")}</span>`}
-      <button class="btn small ghost" data-dong2="deck">${v.ok ? "Modifier" : "Composer"}</button>
+    ${cbRegles()}
+    <div class="panel cbbilan">
+      <div><b>Votre deck</b><span class="sub">${cbDeck().length} / 30 cartes</span></div>
+      ${val.ok ? `<span class="tag ok">prêt</span>` : `<span class="sub" style="color:var(--red)">${cbEsc(val.erreurs[0] || "")}</span>`}
+      <button class="btn small ghost" data-cbong2="deck">${val.ok ? "Modifier" : "Composer"}</button>
     </div>
-    ${!enLigne ? `<p class="sub">Les duels demandent une connexion au serveur.</p>` : ""}
-    ${at ? `<div class="panel dattente">
+    ${!enLigne ? `<p class="sub">Le combat demande une connexion au serveur.</p>` : ""}
+    ${at ? `<div class="panel cbattente">
         ${at.type === "recherche"
-          ? `<div class="dspin"></div><b>Recherche d'un adversaire ${at.mode === "RANKED" ? "classé" : "en ligne"}…</b><span class="sub" id="dattente-t">${Math.floor((Date.now() - at.depuis) / 1000)} s</span>`
-          : `<b>Votre salon</b><div class="dcode">${esc(at.code)}</div><span class="sub">Donnez ce code à votre ami : la partie démarre dès qu'il le saisit.</span>`}
-        <button class="btn small ghost" id="dannuler">Annuler</button></div>` : ""}
-    <div class="dmodes">
-      <div class="panel dmode">
-        <h3>Entraînement</h3><p class="sub">Contre un bot qui ne voit jamais votre main.</p>
-        <div class="row dniv">${[["facile", "Facile"], ["normal", "Normal"], ["difficile", "Difficile"]].map(([k, n]) => `<button class="btn small ${DUEL.niveau === k ? "" : "ghost"}" data-dniv="${k}">${n}</button>`).join("")}</div>
-        <button class="btn" data-dlancer="TRAINING" ${occupe || !v.ok ? "disabled" : ""}>Lancer</button>
-      </div>
-      <div class="panel dmode">
-        <h3>En ligne</h3><p class="sub">Un adversaire au hasard, en temps réel. Sans effet sur la cote.</p>
-        <button class="btn" data-dlancer="ONLINE" ${occupe || !v.ok ? "disabled" : ""}>Chercher un adversaire</button>
-      </div>
-      <div class="panel dmode ${pr.vip ? "" : "verrou"}">
-        <h3>Classé <span class="tag">VIP</span></h3>
-        <p class="sub">${pr.vip ? `Votre cote : <b>${pr.cote}</b> · rang ${pr.rang}` : "Réservé aux comptes VIP. Le VIP ne donne aucun bonus de combat : il ouvre l'accès au classement."}</p>
-        <button class="btn" data-dlancer="RANKED" ${occupe || !v.ok || !pr.vip ? "disabled" : ""}>${pr.vip ? "Partie classée" : "Réservé aux VIP"}</button>
-      </div>
-      <div class="panel dmode">
-        <h3>Entre amis</h3><p class="sub">Un salon privé et un code à 5 caractères.</p>
-        <button class="btn" data-dlancer="SALON" ${occupe || !v.ok ? "disabled" : ""}>Créer un salon</button>
-        <div class="row" style="gap:.4rem;margin-top:.5rem"><input id="dcodein" maxlength="5" placeholder="CODE" value="${esc(DUEL.code)}" style="flex:1;text-transform:uppercase;letter-spacing:.2em">
-          <button class="btn small" data-dlancer="REJOINDRE" ${occupe || !v.ok ? "disabled" : ""}>Rejoindre</button></div>
-      </div>
+          ? `<div class="cbspin"></div><b>Recherche d'un adversaire ${at.mode === "RANKED" ? "classé" : "en ligne"}…</b><span class="sub" id="cbattente-t">${Math.floor((Date.now() - at.depuis) / 1000)} s</span>`
+          : `<b>Votre salon</b><div class="cbcode">${cbEsc(at.code)}</div><span class="sub">Donnez ce code à votre ami : la partie démarre dès qu'il le saisit.</span>`}
+        <button class="btn small ghost" id="cbannuler">Annuler</button></div>` : ""}
+    <div class="cbmodes">
+      <div class="panel cbmodecarte"><h3>Entraînement</h3><p class="sub">Contre un bot qui joue le même deck que vous et ne voit jamais votre main.</p>
+        <div class="row" style="gap:.3rem;flex-wrap:wrap">${[["facile", "Facile"], ["normal", "Normal"], ["difficile", "Difficile"]].map(([k, n]) => `<button class="btn small ${CB.niveau === k ? "" : "ghost"}" data-cbniv="${k}">${n}</button>`).join("")}</div>
+        <button class="btn" data-cblancer="TRAINING" ${occupe || !val.ok ? "disabled" : ""}>Lancer</button></div>
+      <div class="panel cbmodecarte"><h3>En ligne</h3><p class="sub">Un adversaire au hasard. Sans effet sur la cote.</p>
+        <button class="btn" data-cblancer="ONLINE" ${occupe || !val.ok ? "disabled" : ""}>Chercher un adversaire</button></div>
+      <div class="panel cbmodecarte ${pr.vip ? "" : "verrou"}"><h3>Classé <span class="tag">VIP</span></h3>
+        <p class="sub">${pr.vip ? `Votre cote : <b>${pr.cote}</b> · rang ${pr.rang}` : "Réservé aux comptes VIP (vérifié par le serveur). Le VIP ne donne aucun avantage en jeu."}</p>
+        <button class="btn" data-cblancer="RANKED" ${occupe || !val.ok || !pr.vip ? "disabled" : ""}>${pr.vip ? "Partie classée" : "Réservé aux VIP"}</button></div>
+      <div class="panel cbmodecarte"><h3>Entre amis</h3><p class="sub">Un salon privé et un code à 5 caractères.</p>
+        <button class="btn" data-cblancer="SALON" ${occupe || !val.ok ? "disabled" : ""}>Créer un salon</button>
+        <div class="row" style="gap:.4rem;margin-top:.5rem"><input id="cbcodein" maxlength="5" placeholder="CODE" value="${cbEsc(CB.code)}" style="flex:1;text-transform:uppercase;letter-spacing:.2em">
+          <button class="btn small" data-cblancer="REJOINDRE" ${occupe || !val.ok ? "disabled" : ""}>Rejoindre</button></div></div>
     </div>`;
-  corps.querySelectorAll("[data-dong2]").forEach(b => b.onclick = ()=>{ DUEL.onglet = b.dataset.dong2; viewDuel(); });
-  corps.querySelectorAll("[data-dniv]").forEach(b => b.onclick = ()=>{ DUEL.niveau = b.dataset.dniv; viewDuel(); });
-  const ci = corps.querySelector("#dcodein"); if(ci) ci.oninput = ()=>{ DUEL.code = ci.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5); };
-  corps.querySelectorAll("[data-dlancer]").forEach(b => b.onclick = ()=>{
-    if(b.dataset.dlancer === "REJOINDRE" && DUEL.code.length !== 5) return toast("Code incomplet", "5 caractères", "lose");
-    duelLancer(b.dataset.dlancer);
+  corps.querySelectorAll("[data-cbong2]").forEach(b => b.onclick = ()=>{ CB.onglet = b.dataset.cbong2; viewDuel(); });
+  corps.querySelectorAll("[data-cbniv]").forEach(b => b.onclick = ()=>{ CB.niveau = b.dataset.cbniv; viewDuel(); });
+  const ci = corps.querySelector("#cbcodein"); if(ci) ci.oninput = ()=>{ CB.code = ci.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5); };
+  corps.querySelectorAll("[data-cblancer]").forEach(b => b.onclick = ()=>{
+    if(b.dataset.cblancer === "REJOINDRE" && CB.code.length !== 5) return toast("Code incomplet", "5 caractères", "lose");
+    cbLancer(b.dataset.cblancer);
   });
-  const an = corps.querySelector("#dannuler"); if(an) an.onclick = duelAnnulerAttente;
+  const an = corps.querySelector("#cbannuler"); if(an) an.onclick = cbAnnuler;
 }
-
-function duelVueDeck(corps){
-  duelAlignerRaretes().then(n => { if(n && state.view === "duel" && DUEL.onglet === "deck") duelVueDeck(corps); });
-  const ids = duelDeck();
-  const v = duelValider(ids);
-  const dans = new Set(ids);
-  const q = (DUEL.filtre || "").toLowerCase();
-  const rf = DUEL.filtreR || "";
-  // une ligne par carte : les exemplaires libres et ceux déjà dans le deck
-  const cartes = state.collection.filter(c => DUEL_RAR[c.rarity])
-    .filter(c => (!q || (c.title + " " + c.univ).toLowerCase().includes(q)) && (!rf || c.rarity === rf))
-    .map(c => { const ex = duelCarteDe(c, 1); return {c, ex, val:Math.max(duelBase(ex, "ASSAULT"), duelBase(ex, "GUARD"), duelBase(ex, "FEINT"))}; })
-    .sort((a, b) => b.val - a.val).slice(0, 120);
+function cbVueDeck(corps){
+  cbAlignerRaretes();
+  const ids = cbDeck(), val = cbValider(ids);
+  const n = {}; ids.forEach(i => n[i] = (n[i] || 0) + 1);
+  const q = (CB.filtre || "").toLowerCase();
+  const cat = cbCatalogue().filter(x => (!q || (x.p.nom + " " + (x.carte ? x.carte.univ : "")).toLowerCase().includes(q)) && (!CB.filtreT || x.p.type === CB.filtreT))
+    .sort((a, b) => a.p.cout - b.p.cout || (b.p.atq || 0) + (b.p.pv || 0) - (a.p.atq || 0) - (a.p.pv || 0)).slice(0, 200);
+  const dansDeck = Object.keys(n).map(id => cbCatalogue().find(x => x.p.id === id)).filter(Boolean).sort((a, b) => a.p.cout - b.p.cout);
+  const haut = Math.max(1, ...val.courbe);
   corps.innerHTML = `
-    <div class="panel ddeckbilan">
-      <div><b>${v.cartes.length} / 15 cartes · ${v.points} / 20 points</b>
-        <span class="sub">Ultra rares ${v.ultra} / 2 · Légendaire ${v.leg} / 1</span></div>
-      ${v.ok ? `<span class="tag ok">deck valide</span>` : `<span class="sub" style="color:var(--red)">${esc(v.erreurs.join(" · "))}</span>`}
+    <div class="panel cbbilan">
+      <div><b>${ids.length} / 30 cartes</b><span class="sub">2 exemplaires au plus par carte, 1 pour une Légendaire ou une Relique</span></div>
+      ${val.ok ? `<span class="tag ok">deck valide</span>` : `<span class="sub" style="color:var(--red)">${cbEsc(val.erreurs.join(" · "))}</span>`}
     </div>
+    <div class="cbcourbe">${val.courbe.map((x, i) => `<div><i style="height:${Math.round(100 * x / haut)}%"></i><span>${i === 7 ? "7+" : i}</span><b>${x || ""}</b></div>`).join("")}</div>
     <div class="row" style="gap:.4rem;margin:.6rem 0;flex-wrap:wrap">
-      <button class="btn small" id="dauto">Deck conseillé</button>
-      <button class="btn small ghost" id="dvider">Vider</button>
+      <button class="btn small" id="cbauto">Deck conseillé</button>
+      <button class="btn small ghost" id="cbvider">Vider</button>
     </div>
-    <div class="ddeck">${v.cartes.length ? v.cartes.map(x => `<div class="ddeckcase">${duelMini(x, {petite:true})}<button class="dretirer" data-dretirer="${esc(x.i)}" aria-label="Retirer">×</button></div>`).join("") : `<p class="sub">Choisissez 15 cartes ci-dessous, ou prenez le deck conseillé.</p>`}</div>
-    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Votre collection</h3>
+    <div class="cblistedeck">${dansDeck.length ? dansDeck.map(x => `<div class="cbligne" data-cbretirer="${cbEsc(x.p.id)}"><span class="cbcout">${x.p.cout}</span><b>${cbEsc(x.p.nom)}</b><span class="sub">${x.p.type === "serviteur" ? x.p.atq + "/" + x.p.pv : x.p.type}</span><span>×${n[x.p.id]}</span><span class="cbmoins">−</span></div>`).join("") : `<p class="sub">Ajoutez 30 cartes ci-dessous, ou prenez le deck conseillé.</p>`}</div>
+    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Cartes disponibles</h3>
     <div class="row" style="gap:.4rem;flex-wrap:wrap;margin-bottom:.5rem">
-      <input id="dfiltre" placeholder="Rechercher…" value="${esc(DUEL.filtre || "")}" style="flex:1;min-width:140px">
-      <select id="dfiltrer" style="width:auto">${["", ...Object.keys(DUEL_RAR)].map(r => `<option value="${esc(r)}" ${r === rf ? "selected" : ""}>${r || "Toutes raretés"}</option>`).join("")}</select>
+      <input id="cbfiltre" placeholder="Rechercher…" value="${cbEsc(CB.filtre || "")}" style="flex:1;min-width:140px">
+      <select id="cbfiltret" style="width:auto">${[["", "Tous types"], ["serviteur", "Serviteurs"], ["sort", "Sorts"], ["arme", "Armes"]].map(([k, l]) => `<option value="${k}" ${k === CB.filtreT ? "selected" : ""}>${l}</option>`).join("")}</select>
     </div>
-    <div class="dcoll">${cartes.map(({c}) => {
-      const n = Math.max(1, c.count || 1);
-      const pris = [...Array(n)].filter((_, k) => dans.has(c.id + "#" + (k + 1))).length;
-      return `<div class="dcollcase ${pris >= n ? "pleine" : ""}">${duelMini(duelCarteDe(c, 1), {petite:true})}
-        <div class="row" style="justify-content:space-between;align-items:center;margin-top:.25rem">
-          <span class="sub" style="font-size:.75rem">${pris} / ${n} · ${DUEL_RAR[c.rarity].cout} pt</span>
-          <button class="btn small" data-dajout="${esc(c.id)}" ${pris >= n || ids.length >= 15 ? "disabled" : ""}>+</button></div></div>`;
-    }).join("")}</div>`;
-  const maj = async nouveaux => { await duelDeckEnregistrer(nouveaux); duelVueDeck(corps); };
-  corps.querySelector("#dauto").onclick = ()=>maj(duelDeckAuto());
-  corps.querySelector("#dvider").onclick = ()=>maj([]);
-  corps.querySelectorAll("[data-dretirer]").forEach(b => b.onclick = ()=>maj(ids.filter(i => i !== b.dataset.dretirer)));
-  corps.querySelectorAll("[data-dajout]").forEach(b => b.onclick = ()=>{
-    const c = state.collection.find(x => x.id === b.dataset.dajout); if(!c) return;
-    for(let k = 1; k <= Math.max(1, c.count || 1); k++){ const i = c.id + "#" + k; if(!dans.has(i)) return maj([...ids, i]); }
-  });
-  const f = corps.querySelector("#dfiltre");
-  f.oninput = ()=>{ DUEL.filtre = f.value; clearTimeout(DUEL.tf); DUEL.tf = setTimeout(()=>{ duelVueDeck(corps); const g = corps.querySelector("#dfiltre"); if(g){ g.focus(); g.setSelectionRange(g.value.length, g.value.length); } }, 250); };
-  corps.querySelector("#dfiltrer").onchange = e => { DUEL.filtreR = e.target.value; duelVueDeck(corps); };
+    <div class="cbgrille">${cat.map(x => { const pris = n[x.p.id] || 0; return `<div class="cbcase ${pris >= x.max ? "plein" : ""}">${cbCarteHTML(x.p, {petite:true})}
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:.25rem"><span class="sub" style="font-size:.74rem">${pris} / ${x.max}</span>
+      <button class="btn small" data-cbajout="${cbEsc(x.p.id)}" ${pris >= x.max || ids.length >= 30 ? "disabled" : ""}>+</button></div></div>`; }).join("")}</div>`;
+  const maj = async nv => { await cbDeckEnregistrer(nv); cbVueDeck(corps); };
+  corps.querySelector("#cbauto").onclick = ()=>maj(cbDeckAuto());
+  corps.querySelector("#cbvider").onclick = ()=>maj([]);
+  corps.querySelectorAll("[data-cbretirer]").forEach(b => b.onclick = ()=>{ const i = ids.lastIndexOf(b.dataset.cbretirer); if(i >= 0){ ids.splice(i, 1); maj(ids); } });
+  corps.querySelectorAll("[data-cbajout]").forEach(b => b.onclick = ()=>maj([...ids, b.dataset.cbajout]));
+  const f = corps.querySelector("#cbfiltre");
+  f.oninput = ()=>{ CB.filtre = f.value; clearTimeout(CB.tf); CB.tf = setTimeout(()=>{ cbVueDeck(corps); const g = corps.querySelector("#cbfiltre"); if(g){ g.focus(); g.setSelectionRange(g.value.length, g.value.length); } }, 250); };
+  corps.querySelector("#cbfiltret").onchange = e => { CB.filtreT = e.target.value; cbVueDeck(corps); };
 }
-
-function duelVuePlateau(corps){
-  const vip = !!(DUEL.profil && DUEL.profil.vip);
-  const choisi = duelPlateauChoisi();
+function cbVuePlateau(corps){
+  const vip = !!(CB.profil && CB.profil.vip);
+  const choisi = cbDecor();
   corps.innerHTML = `
-    <p class="sub">Votre plateau s'affiche dans votre moitié de l'écran, et votre adversaire le voit aussi. Purement décoratif : il ne change jamais le combat.</p>
-    <div class="dplats">${PLATEAUX.map(p => {
+    <p class="sub">Votre plateau s'affiche dans votre moitié de l'écran, et votre adversaire le voit aussi. Purement décoratif : il ne change jamais les règles.</p>
+    <div class="cbdecors">${PLATEAUX.map(p => {
       const ok = !p.vip || vip;
-      return `<button class="dplat plateau plateau-${p.id} ${choisi === p.id ? "on" : ""}" data-dplat="${p.id}" ${ok ? "" : "disabled"}>
-        <b>${esc(p.nom)}</b>${p.vip ? `<span class="tag">VIP</span>` : ""}${choisi === p.id ? `<span class="tag ok">choisi</span>` : ""}</button>`;
-    }).join("")}</div>
-    ${vip ? "" : `<p class="sub">Les plateaux alternatifs sont réservés aux comptes VIP. Le serveur vérifie le droit au plateau à chaque partie.</p>`}`;
-  corps.querySelectorAll("[data-dplat]").forEach(b => b.onclick = async ()=>{
-    state.profile.plateauDuel = b.dataset.dplat; await sset("fm:profile", state.profile); duelVuePlateau(corps);
-  });
+      return `<button class="cbdecor plateau plateau-${p.id} ${choisi === p.id ? "on" : ""}" data-cbdecor="${p.id}" ${ok ? "" : "disabled"}>
+        <b>${cbEsc(p.nom)}</b>${p.vip ? `<span class="tag">VIP</span>` : ""}${choisi === p.id ? `<span class="tag ok">choisi</span>` : ""}</button>`;
+    }).join("")}</div>`;
+  corps.querySelectorAll("[data-cbdecor]").forEach(b => b.onclick = async ()=>{ state.profile.plateauDuel = b.dataset.cbdecor; await sset("fm:profile", state.profile); cbVuePlateau(corps); });
 }
-
-function duelVueClassement(corps){
-  const pr = DUEL.profil;
-  const bil = (pr && pr.bilan) || {};
-  const ligne = m => { const b = bil[m] || {}; return `<tr><td>${MODES_DUEL[m]}</td><td>${b.parties || 0}</td><td>${b.victoires || 0}</td><td>${b.nuls || 0}</td><td>${b.defaites || 0}</td></tr>`; };
+function cbVueClassement(corps){
+  const pr = CB.profil, bil = (pr && pr.bilan) || {};
+  const ligne = m => { const b = bil[m] || {}; return `<tr><td>${MODES_COMBAT[m]}</td><td>${b.parties || 0}</td><td>${b.victoires || 0}</td><td>${b.nuls || 0}</td><td>${b.defaites || 0}</td></tr>`; };
   corps.innerHTML = `
-    <div class="panel">
-      <b>Cote classée : ${pr ? pr.cote : "…"}</b>${pr && pr.bilan && pr.bilan.RANKED ? ` <span class="sub">· rang ${pr.rang}</span>` : ""}
-      <table class="dtab"><tr><th>Mode</th><th>Parties</th><th>Victoires</th><th>Nuls</th><th>Défaites</th></tr>
-        ${["TRAINING", "ONLINE", "RANKED", "FRIENDS"].map(ligne).join("")}</table>
-    </div>
+    <div class="panel"><b>Cote classée : ${pr ? pr.cote : "…"}</b>${pr && pr.bilan && pr.bilan.RANKED ? ` <span class="sub">· rang ${pr.rang}</span>` : ""}
+      <table class="cbtab"><tr><th>Mode</th><th>Parties</th><th>Victoires</th><th>Nuls</th><th>Défaites</th></tr>${["TRAINING", "ONLINE", "RANKED", "FRIENDS"].map(ligne).join("")}</table></div>
     <h3 style="font-size:1rem;margin:1rem 0 .4rem">Dernières parties</h3>
-    ${pr && pr.parties && pr.parties.length ? `<ul class="btqhist">${pr.parties.map(p => `<li><span>${MODES_DUEL[p.mode]} · ${esc(p.adv || "")} <span class="sub">${p.score}</span></span>
+    ${pr && pr.parties && pr.parties.length ? `<ul class="btqhist">${pr.parties.map(p => `<li><span>${MODES_COMBAT[p.mode]} · ${cbEsc(p.adv || "")}</span>
       <span class="${p.resultat === "victoire" ? "plus" : p.resultat === "defaite" ? "moins" : ""}">${p.resultat === "victoire" ? "Victoire" : p.resultat === "defaite" ? "Défaite" : "Nul"}${p.delta ? " · " + (p.delta > 0 ? "+" : "") + p.delta : ""}</span></li>`).join("")}</ul>` : `<p class="sub">Aucune partie pour l'instant.</p>`}
-    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Classement</h3>
-    <div id="dclass"><p class="sub">Chargement…</p></div>`;
-  duelAppel("duel_classement", {}).then(l => {
-    const el = corps.querySelector("#dclass"); if(!el) return;
-    el.innerHTML = l && l.length ? `<table class="dtab"><tr><th>#</th><th>Joueur</th><th>Cote</th><th>Victoires</th></tr>${l.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.pseudo || "—")}</td><td>${x.cote}</td><td>${x.victoires} / ${x.parties}</td></tr>`).join("")}</table>` : `<p class="sub">Personne n'a encore joué en classé.</p>`;
+    <h3 style="font-size:1rem;margin:1rem 0 .4rem">Classement</h3><div id="cbclass"><p class="sub">Chargement…</p></div>`;
+  cbAppel("combat_classement", {}).then(l => {
+    const el = corps.querySelector("#cbclass"); if(!el) return;
+    el.innerHTML = l && l.length ? `<table class="cbtab"><tr><th>#</th><th>Joueur</th><th>Cote</th><th>Victoires</th></tr>${l.map((x, i) => `<tr><td>${i + 1}</td><td>${cbEsc(x.pseudo || "—")}</td><td>${x.cote}</td><td>${x.victoires} / ${x.parties}</td></tr>`).join("")}</table>` : `<p class="sub">Personne n'a encore joué en classé.</p>`;
   }).catch(()=>{});
 }
 
-/* ---- la partie : deux plateaux, la révélation au centre ---- */
-function duelPeindre(force){
+/* ---- la partie ---- */
+function cbJournalTexte(e, v){
+  const qui = j => j === v.moi_k ? "Vous" : (v.adv.pseudo || "L'adversaire");
+  const nomCible = c => { if(!c) return ""; const [k, x] = c.split(/:(.+)/); const cote = +k === v.moi_k ? v.moi : v.adv;
+    if(x === "heros") return +k === v.moi_k ? "votre héros" : "le héros adverse"; const m = cote.plateau.find(m => m.iid === x); return m ? m.nom : "un serviteur"; };
+  switch(e.type){
+    case "joue": return qui(e.j) + " joue " + (e.carte ? e.carte.nom : "une carte");
+    case "attaque": return qui(e.j) + " attaque " + nomCible(e.cible);
+    case "degats": return nomCible(e.cible) + " subit " + e.n + " dégât" + (e.n > 1 ? "s" : "");
+    case "soin": return nomCible(e.cible) + " récupère " + e.n + " PV";
+    case "mort": return e.nom + " est détruit";
+    case "pouvoir": return qui(e.j) + " utilise son pouvoir";
+    case "brulee": return (e.j === v.moi_k ? "Main pleine : " : "Main adverse pleine : ") + (e.carte ? e.carte.nom : "une carte") + " brûle";
+    case "fatigue": return qui(e.j) + " subit " + e.n + " de fatigue";
+    case "tour": return e.j === v.moi_k ? "À vous de jouer" : "Tour de " + (v.adv.pseudo || "l'adversaire");
+    case "temps": return "Temps écoulé pour " + qui(e.j).toLowerCase();
+    case "arme_brisee": return e.nom + " se brise";
+    case "bonus": return nomCible(e.cible) + " reçoit +" + e.atq + "/+" + e.pv;
+    default: return "";
+  }
+}
+function cbChrono(){
+  const el = document.getElementById("cbchrono"); if(!el || !CB.v || CB.v.reste_ms == null) return;
+  const s = Math.max(0, Math.ceil((CB.v.reste_ms - (Date.now() - CB.recu)) / 1000));
+  el.textContent = s + " s"; el.classList.toggle("urgent", s <= 10);
+  const h = document.getElementById("cbhors"); if(h) h.hidden = CB.hors < 3;
+}
+function cbPeindre(force){
   if(state.view !== "duel") return;
-  const e = DUEL.etat;
-  if(!e){ if(force !== true) viewDuel(); return; }
-  const revel = DUEL.revel && Date.now() < DUEL.revelJusqua ? DUEL.revel : null;
-  const fini = e.statut !== "ACTIVE";
-  const sig = JSON.stringify([e.id, e.manche, e.phase, e.statut, e.moi.main.map(c => c.i), e.moi.wins, e.adv.wins, e.adv.present, e.moi.choix && e.moi.choix.i, DUEL.choix, DUEL.envoi, !!revel, fini]);
-  const chrono = view.querySelector("#dchrono");
-  const reste = e.reste_ms == null ? null : Math.max(0, Math.ceil((e.reste_ms - (Date.now() - DUEL.recu)) / 1000));
-  if(sig === DUEL.signature && chrono){
-    if(reste != null) chrono.textContent = Math.min(20, reste);
-    chrono.closest(".dchrono").classList.toggle("urgent", reste != null && reste <= 5);
-    const h = view.querySelector("#dhors"); if(h) h.hidden = DUEL.hors < 3;
+  const v = CB.v; if(!v){ viewDuel(); return; }
+  const sig = JSON.stringify([v.version, CB.mode, CB.envoi, [...CB.mull]]);
+  if(!force && sig === CB.sig && document.querySelector(".cbpartie")){ cbChrono(); return; }
+  CB.sig = sig;
+  const mk = v.moi_k, ak = 3 - mk, fini = v.statut !== "ACTIVE";
+  const monTour = v.mon_tour && !fini;
+  const cibles = CB.mode ? cbCibles(CB.mode.regle) : new Set();
+  // mulligan
+  if(v.phase === "MULLIGAN" && !fini){
+    view.innerHTML = `<div class="cbpartie cbmull">
+      <h2 class="vuetitre">Main de départ</h2>
+      <p class="sub">${v.premier ? "Vous commencez : 3 cartes." : "Vous jouez en second : 4 cartes, et « Élan » (+1 mana une fois)."} Touchez les cartes à remplacer, puis validez. Les cartes écartées retournent dans le deck après le remplacement.</p>
+      ${v.moi.mulligan ? `<p><b>Main validée.</b> En attente de l'adversaire… <span id="cbchrono" class="cbchrono"></span></p>` : ""}
+      <div class="cbmain grande">${v.moi.main.map(p => cbCarteHTML(p, {choisie:CB.mull.has(p.iid), data:v.moi.mulligan ? "" : `data-mull="${cbEsc(p.iid)}"`})).join("")}</div>
+      ${v.moi.mulligan ? "" : `<div class="row" style="justify-content:center;gap:.5rem;margin-top:1rem"><span id="cbchrono" class="cbchrono"></span>
+        <button class="btn" id="cbmullok" ${CB.envoi ? "disabled" : ""}>${CB.mull.size ? "Remplacer " + CB.mull.size + " carte" + (CB.mull.size > 1 ? "s" : "") : "Garder ma main"}</button></div>`}
+    </div>`;
+    view.querySelectorAll("[data-mull]").forEach(el => el.onclick = ()=>{ const i = el.dataset.mull; CB.mull.has(i) ? CB.mull.delete(i) : CB.mull.add(i); cbPeindre(true); });
+    const ok = view.querySelector("#cbmullok"); if(ok) ok.onclick = ()=>cbAgir({type:"mulligan", remplacer:[...CB.mull]});
+    cbChrono();
     return;
   }
-  DUEL.signature = sig;
-  const choixFait = e.moi.choix;
-  const sel = DUEL.choix;
-  const posts = Object.keys(POSTURES);
-  const carteSel = e.moi.main.find(c => c.i === (choixFait ? choixFait.i : sel.i));
+  const journal = (v.journal || []).map(e => cbJournalTexte(e, v)).filter(Boolean).slice(-4);
+  const peutAttaquer = m => monTour && m.pret && m.attaques === 0 && m.atq > 0;
+  const herosPeut = monTour && v.moi.arme && !v.moi.heros_attaque;
+  const pouvoirOk = monTour && !v.moi.pouvoir_utilise && v.moi.mana >= v.pouvoir.cout;
   view.innerHTML = `
-    <div class="dpartie">
-      <div class="plateau plateau-${esc(e.adv.plateau || "classique")} dadv">
-        <div class="ptete"><span class="ppseudo">${esc(e.adv.pseudo || "Adversaire")}${e.adv.bot ? ` <span class="tag">bot</span>` : ""}</span>
-          ${duelPips(e.adv.wins)}<span class="dpres ${e.adv.present ? "on" : ""}" title="${e.adv.present ? "connecté" : "déconnecté"}"></span></div>
-        <div class="dmainadv">${[...Array(e.adv.main_n)].map(() => `<span class="ddos"></span>`).join("")}</div>
-        <div class="pinfo sub">Pioche ${e.adv.pioche} · Éliminées ${e.adv.defausse.length}${e.adv.present ? "" : " · <b>déconnecté, la partie l'attend</b>"}</div>
-        ${e.adv.posture_prec && !fini ? `<div class="dprec">Au tour précédent : <b>${POSTURES[e.adv.posture_prec].ic} ${POSTURES[e.adv.posture_prec].nom}</b> <span class="sub">— un indice, il peut changer</span></div>` : ""}
+    <div class="cbpartie ${CB.mode ? "cibler" : ""}">
+      <div class="plateau plateau-${cbEsc(v.adv.decor || "classique")} cbmoitie adv">
+        <div class="cbhaut">
+          ${cbHerosHTML(v.adv, ak, false, {cible:cibles.has(ak + ":heros")})}
+          <div class="cbinfo"><b>${cbEsc(v.adv.pseudo || "Adversaire")}${v.adv.bot ? ` <span class="tag">bot</span>` : ""}</b>
+            ${cbMana(v.adv)}
+            <span class="sub">Main ${v.adv.main_n} · Deck ${v.adv.deck_n}${v.adv.fatigue ? " · Fatigue " + v.adv.fatigue : ""}${v.adv.present ? "" : " · <b>déconnecté</b>"}</span></div>
+          <div class="cbdos">${[...Array(Math.min(10, v.adv.main_n))].map(() => `<i></i>`).join("")}</div>
+        </div>
+        <div class="cbrang">${v.adv.plateau.map(m => cbServHTML(m, ak, {cible:cibles.has(ak + ":" + m.iid)})).join("") || `<span class="sub cbrangvide">aucun serviteur</span>`}</div>
       </div>
-
-      <div class="dcentre">
-        <div class="dbandeau"><span>${MODES_DUEL[e.mode]} · manche ${e.manche} / 5</span>
-          ${fini ? "" : `<span class="dchrono"><b id="dchrono">${reste == null ? "" : Math.min(20, reste)}</b> s</span>`}</div>
-        <div class="drevel">${revel ? duelRevelation(revel) : fini ? "" : choixFait ? `<p class="sub">Choix verrouillé : ${POSTURES[choixFait.p].ic} ${POSTURES[choixFait.p].nom}. En attente de la révélation…</p>` : `<p class="sub">Choisissez une carte et une posture, puis confirmez.</p>`}</div>
-        <p class="sub" id="dhors" ${DUEL.hors >= 3 ? "" : "hidden"} style="color:var(--red)">Connexion perdue : reconnexion en cours, la partie vous attend 60 secondes.</p>
+      <div class="cbcentre">
+        <div class="cbjournal">${journal.map(t => `<span>${cbEsc(t)}</span>`).join("")}</div>
+        <div class="cbbarre">
+          <span>${MODES_COMBAT[v.mode]} · tour ${v.tour || 0}</span>
+          ${fini ? "" : `<span id="cbchrono" class="cbchrono"></span>`}
+          ${fini ? "" : `<button class="btn small" id="cbfin" ${!monTour || CB.envoi ? "disabled" : ""}>${monTour ? "Terminer le tour" : "Tour adverse"}</button>`}
+        </div>
+        ${CB.mode ? `<div class="cbconsigne">${cbEsc(CB.mode.consigne)} <button class="btn small ghost" id="cbstop">Annuler</button></div>` : ""}
+        <p class="sub" id="cbhors" ${CB.hors >= 3 ? "" : "hidden"} style="color:var(--red)">Connexion perdue : reconnexion en cours (la partie vous attend 60 s).</p>
       </div>
-
-      <div class="plateau plateau-${esc(e.moi.plateau || "classique")} dmoi">
-        <div class="ptete"><span class="ppseudo">${esc(e.moi.pseudo || "Vous")}</span>${duelPips(e.moi.wins)}<span class="sub">Pioche ${e.moi.pioche} · Éliminées ${e.moi.defausse.length}</span></div>
-        ${fini ? "" : `<div class="dposts">${posts.map(p => {
-          const val = carteSel ? duelBase(carteSel, p) : null;
-          const on = (choixFait ? choixFait.p : sel.p) === p;
-          return `<button class="dpbtn ${on ? "on" : ""}" data-dp="${p}" ${choixFait || DUEL.envoi ? "disabled" : ""}>
-            <span class="ic">${POSTURES[p].ic}</span><b>${POSTURES[p].nom}</b><small>${val == null ? POSTURES[p].stat : duelArrondi(val)}</small></button>`;
-        }).join("")}</div>
-        <p class="sub dcycle">Assaut ⟶ Feinte ⟶ Garde ⟶ Assaut : chaque posture bat la suivante (×1,35 contre ×0,85).</p>`}
-        <div class="dmain">${e.moi.main.map(c => duelMini(c, {clic:!fini && !choixFait, choisie:(choixFait ? choixFait.i : sel.i) === c.i})).join("")}</div>
-        ${fini ? "" : `<div class="row" style="justify-content:space-between;margin-top:.6rem;gap:.5rem">
-          <button class="btn small ghost" id="dabandon">Abandonner</button>
-          <button class="btn" id="dconfirmer" ${choixFait || DUEL.envoi || !sel.i || !sel.p ? "disabled" : ""}>${choixFait ? "Choix verrouillé" : DUEL.envoi ? "Envoi…" : "Confirmer"}</button></div>`}
+      <div class="plateau plateau-${cbEsc(v.moi.decor || "classique")} cbmoitie moi">
+        <div class="cbrang">${v.moi.plateau.map(m => cbServHTML(m, mk, {pret:peutAttaquer(m), clic:peutAttaquer(m) && !CB.mode, cible:cibles.has(mk + ":" + m.iid), choisi:CB.mode && CB.mode.attaquant === m.iid})).join("") || `<span class="sub cbrangvide">aucun serviteur</span>`}</div>
+        <div class="cbhaut">
+          ${cbHerosHTML(v.moi, mk, true, {cible:cibles.has(mk + ":heros"), pret:herosPeut, clic:herosPeut && !CB.mode})}
+          <div class="cbinfo"><b>${cbEsc(v.moi.pseudo || "Vous")}</b>${cbMana(v.moi)}
+            <span class="sub">Deck ${v.moi.deck_n}${v.moi.fatigue ? " · Fatigue " + v.moi.fatigue : ""}</span></div>
+          <button class="cbpouvoir" id="cbpouvoir" ${pouvoirOk && !CB.mode ? "" : "disabled"} title="Pouvoir de héros : ${v.pouvoir.degats} dégât">
+            <span class="cbcout">${v.pouvoir.cout}</span><b>✶</b><small>${v.pouvoir.degats} dégât</small></button>
+        </div>
       </div>
-    </div>
-`;
-  view.querySelectorAll("[data-dcarte]").forEach(el => el.onclick = ()=>{ DUEL.choix.i = el.dataset.dcarte; duelPeindre(); });
-  view.querySelectorAll("[data-dp]").forEach(b => b.onclick = ()=>{ DUEL.choix.p = b.dataset.dp; duelPeindre(); });
-  const cf = view.querySelector("#dconfirmer"); if(cf) cf.onclick = duelConfirmer;
-  const ab = view.querySelector("#dabandon"); if(ab) ab.onclick = duelAbandonner;
-  document.querySelectorAll(".dfinmodal").forEach(x => { if(!(fini && !revel) || x.dataset.id !== e.id) x.remove(); });
-  if(fini && !revel && !document.querySelector(".dfinmodal")){
-    const m = document.createElement("div");
-    m.innerHTML = duelFin(e);
-    const fen = m.firstElementChild; fen.dataset.id = e.id;
-    document.body.appendChild(fen);
-    const rj = fen.querySelector("#drejouer"); if(rj) rj.onclick = ()=>{ const t = DUEL.dernierType; duelQuitter(); if(t && t !== "REJOINDRE" && t !== "SALON") duelLancer(t); };
-    fen.querySelector("#dretour").onclick = duelQuitter;
+      <div class="cbmain">${v.moi.main.map(p => {
+        const ok = monTour && !CB.mode && p.cout <= v.moi.mana && !(p.type === "serviteur" && v.moi.plateau.length >= 7);
+        return cbCarteHTML(p, {jouable:ok, data:ok ? `data-jouer="${cbEsc(p.iid)}"` : ""});
+      }).join("")}</div>
+      ${fini ? "" : `<div class="row" style="justify-content:flex-end;margin-top:.5rem"><button class="btn small ghost" id="cbabandon">Abandonner</button></div>`}
+    </div>`;
+  // jouer une carte
+  view.querySelectorAll("[data-jouer]").forEach(el => el.onclick = ()=>{
+    const p = v.moi.main.find(x => x.iid === el.dataset.jouer); if(!p) return;
+    const regle = cbRegleCarte(p);
+    if(!regle) return cbAgir({type:"jouer", iid:p.iid});
+    const options = cbCibles(regle);
+    if(!options.size){
+      if(p.type === "serviteur") return cbAgir({type:"jouer", iid:p.iid});        // cri sans cible possible : la carte arrive quand même
+      return toast("Aucune cible", "ce sort n'a pas de cible possible", "lose");
+    }
+    CB.mode = {action:"jouer", iid:p.iid, regle, consigne:"Choisissez la cible de « " + p.nom + " »."};
+    cbPeindre(true);
+  });
+  view.querySelectorAll("[data-serv]").forEach(el => el.onclick = ()=>{
+    CB.mode = {action:"attaquer", attaquant:el.dataset.serv, regle:"attaque", consigne:"Choisissez la cible de l'attaque."};
+    cbPeindre(true);
+  });
+  const ha = view.querySelector("[data-herosatt]"); if(ha) ha.onclick = ()=>{ CB.mode = {action:"attaquer", attaquant:"heros", regle:"attaque", consigne:"Votre héros attaque : choisissez la cible."}; cbPeindre(true); };
+  const po = view.querySelector("#cbpouvoir"); if(po) po.onclick = ()=>{ CB.mode = {action:"pouvoir", regle:"personnage", consigne:"Pouvoir de héros : choisissez la cible."}; cbPeindre(true); };
+  if(CB.mode) view.querySelectorAll("[data-cible]").forEach(el => { if(cibles.has(el.dataset.cible)) el.onclick = ev => {
+    ev.stopPropagation();
+    const m = CB.mode, cible = el.dataset.cible;
+    if(m.action === "jouer") cbAgir({type:"jouer", iid:m.iid, cible});
+    else if(m.action === "attaquer") cbAgir({type:"attaquer", attaquant:m.attaquant, cible});
+    else if(m.action === "pouvoir") cbAgir({type:"pouvoir", cible});
+  }; });
+  const st = view.querySelector("#cbstop"); if(st) st.onclick = ()=>{ CB.mode = null; cbPeindre(true); };
+  const fin = view.querySelector("#cbfin"); if(fin) fin.onclick = ()=>cbAgir({type:"fin_tour"});
+  const ab = view.querySelector("#cbabandon"); if(ab) ab.onclick = async ()=>{
+    if(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner")) cbAgir({type:"abandon"});
+  };
+  cbChrono();
+  // résultat : une fenêtre attachée au document
+  document.querySelectorAll(".cbfinmodal").forEach(x => { if(!fini || x.dataset.id !== v.id) x.remove(); });
+  if(fini && !document.querySelector(".cbfinmodal")){
+    const titre = v.resultat === "victoire" ? "Victoire" : v.resultat === "defaite" ? "Défaite" : "Match nul";
+    const d = document.createElement("div");
+    d.className = "modal cbfinmodal"; d.dataset.id = v.id;
+    d.innerHTML = `<div class="inner" style="max-width:380px;text-align:center">
+      <div class="cbfintitre r-${v.resultat}">${titre}</div>
+      <p class="sub" style="margin:.3rem 0">${cbEsc(v.raison || "")} · ${v.moi.pv} PV contre ${v.adv.pv}</p>
+      ${v.cote && v.cote.delta != null ? `<p style="margin:.4rem 0"><b>Cote : ${v.cote.avant} → ${v.cote.avant + v.cote.delta}</b> (${v.cote.delta >= 0 ? "+" : ""}${v.cote.delta})</p>` : ""}
+      <div class="row" style="justify-content:center;gap:.5rem;margin-top:.8rem">
+        <button class="btn small ghost" id="cbretour">Retour</button>
+        ${CB.dernierType && CB.dernierType !== "REJOINDRE" && CB.dernierType !== "SALON" ? `<button class="btn small" id="cbrejouer">Rejouer</button>` : ""}
+      </div></div>`;
+    document.body.appendChild(d);
+    d.querySelector("#cbretour").onclick = cbQuitter;
+    const rj = d.querySelector("#cbrejouer"); if(rj) rj.onclick = ()=>{ const t = CB.dernierType; cbQuitter(); cbLancer(t); };
   }
-  // la révélation se referme seule
-  if(revel){ clearTimeout(DUEL.tr); DUEL.tr = setTimeout(()=>{ DUEL.signature = ""; duelPeindre(); }, Math.max(0, DUEL.revelJusqua - Date.now()) + 30); }
 }
-function duelRevelation(h){
-  const cote = (c, p, b, m, v, gagne, dg, el) => `<div class="drcote ${gagne ? "gagne" : ""}">
-    ${c ? duelMini(c, {posture:p}) : `<div class="dcarte petite"><span class="dvide">⌛</span><div class="dnom">Aucun choix</div></div>`}
-    ${c ? `<div class="drcalc">${duelArrondi(b)} × ${String(m).replace(".", ",")} = <b>${duelArrondi(v)}</b></div>` : ""}
-    ${el ? `<div class="drdeg elim">Éliminée</div>` : dg > 0 ? `<div class="drdeg">−${duelArrondi(dg)} DÉF</div>` : ""}</div>`;
-  const verdict = h.gagnant === 1 ? "Manche gagnée" : h.gagnant === 2 ? "Manche perdue" : "Manche nulle";
-  return `<div class="drevelation">
-    <div class="drduo">${cote(h.c1, h.p1, h.b1, h.m1, h.v1, h.gagnant === 1, h.dg1, h.el1)}<span class="drvs">contre</span>${cote(h.c2, h.p2, h.b2, h.m2, h.v2, h.gagnant === 2, h.dg2, h.el2)}</div>
-    <div class="drverdict v${h.gagnant}">${verdict}${h.raison && h.raison !== "valeur" ? ` <span class="sub">· ${esc(h.raison)}</span>` : ""}</div></div>`;
-}
-function duelFin(e){
-  const titre = e.resultat === "victoire" ? "Victoire" : e.resultat === "defaite" ? "Défaite" : "Match nul";
-  return `<div class="modal dfinmodal"><div class="inner" style="max-width:380px;text-align:center">
-    <div class="dfintitre r-${e.resultat}">${titre}</div>
-    <p class="sub" style="margin:.3rem 0">${e.moi.wins} – ${e.adv.wins} contre ${esc(e.adv.pseudo || "")} · ${esc(e.raison || "")}</p>
-    ${e.cote && e.cote.delta != null ? `<p style="margin:.4rem 0"><b>Cote : ${e.cote.avant} → ${e.cote.avant + e.cote.delta}</b> (${e.cote.delta >= 0 ? "+" : ""}${e.cote.delta})</p>` : ""}
-    <div class="row" style="justify-content:center;gap:.5rem;margin-top:.8rem">
-      <button class="btn small ghost" id="dretour">Retour</button>
-      ${DUEL.dernierType && DUEL.dernierType !== "REJOINDRE" && DUEL.dernierType !== "SALON" ? `<button class="btn small" id="drejouer">Rejouer</button>` : ""}
-    </div></div></div>`;
-}
-/* Un duel en cours hors de l'écran Combat : un rappel, la veille continue */
+/* Partie en cours hors de l'écran Combat : un rappel */
 setInterval(()=>{
-  if(DUEL.id && DUEL.etat && DUEL.etat.statut === "ACTIVE" && state.view !== "duel" && fmPret){
-    if(!DUEL.rappel || Date.now() - DUEL.rappel > 15000){ DUEL.rappel = Date.now(); toast("Duel en cours", "revenez dans Combat : la partie continue", "info"); }
+  if(CB.id && CB.v && CB.v.statut === "ACTIVE" && state.view !== "duel" && fmPret && CB.v.mon_tour){
+    if(!CB.rappel || Date.now() - CB.rappel > 20000){ CB.rappel = Date.now(); toast("Combat en cours", "c'est votre tour : revenez dans Combat", "info"); }
   }
-  const t = document.getElementById("dattente-t");
-  if(t && DUEL.attente && DUEL.attente.depuis) t.textContent = Math.floor((Date.now() - DUEL.attente.depuis) / 1000) + " s";
+  const t = document.getElementById("cbattente-t");
+  if(t && CB.attente && CB.attente.depuis) t.textContent = Math.floor((Date.now() - CB.attente.depuis) / 1000) + " s";
 }, 1000);
 
 /* ======================================================================
@@ -13293,6 +13333,7 @@ async function ouvrirAdmin(){
       <div class="admtabs">
         <button class="btn small ${st.onglet === "alertes" ? "" : "ghost"}" data-onglet="alertes">Alertes</button>
         <button class="btn small ${st.onglet === "joueurs" ? "" : "ghost"}" data-onglet="joueurs">Joueurs et Cristaux</button>
+        <button class="btn small ghost" id="admrapport">Rapport des cartes (CSV)</button>
       </div>
       ${st.msg ? `<p class="sub" style="margin:0 0 .6rem"><b>${esc(st.msg)}</b></p>` : ""}
       ${st.onglet === "alertes" ? `
@@ -13328,6 +13369,19 @@ async function ouvrirAdmin(){
           </div>`).join("") : `<p class="sub">Aucun joueur trouvé.</p>`}</div>`}
     </div>`;
     m.querySelector("#close").onclick = ()=>m.remove();
+    m.querySelector("#admrapport").onclick = async ()=>{
+      try{
+        const l = lignesRpc(await regRpc("admin_rapport_cartes", {}), "admin_rapport_cartes");
+        const col = ["carte", "nom", "univers", "rarete", "atk", "def", "type", "cout", "atq", "pv", "role", "texte"];
+        const val = x => { const c = x.combat || {}; return [x.carte, x.nom, x.univers, x.rarete, x.atk, x.def, c.type, c.cout, c.atq, c.pv != null ? c.pv : c.dur, c.role, c.texte]; };
+        const csv = [col.join(";"), ...l.map(x => val(x).map(v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"').join(";"))].join("\n");
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(new Blob(["\ufeff" + csv], {type:"text/csv"}));
+        a.download = "fandomasters-cartes-combat.csv"; a.click();
+        st.msg = l.length + " cartes exportées.";
+      }catch(e){ st.msg = "Erreur : " + regRaison(e); }
+      peindre();
+    };
     m.querySelectorAll("[data-onglet]").forEach(b => b.onclick = ()=>{ st.onglet = b.dataset.onglet; st.msg = ""; peindre(); charger(); });
     const tt = m.querySelector("#toutes"); if(tt) tt.onchange = ()=>{ st.toutes = tt.checked; charger(); };
     const go = m.querySelector("#admgo"), q = m.querySelector("#admq");
