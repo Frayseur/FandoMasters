@@ -3775,6 +3775,15 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 @keyframes cbImpactFixed{from{opacity:1;scale:.25}to{opacity:0;scale:5}}
 @keyframes cbImpactLabel{0%{opacity:0;translate:0 6px}25%{opacity:1;translate:0 -10px}100%{opacity:0;translate:0 -24px}}
 
+
+/* Fix robuste du clone animé : aucun style de positionnement du serviteur ne s'applique au wrapper. */
+.cbfx-flyer{box-sizing:border-box;will-change:transform,filter;filter:drop-shadow(0 8px 12px rgba(0,0,0,.75))}
+.cbfx-flyer>.cbserv,.cbfx-flyer>.cbheros{display:block!important;position:relative!important;inset:auto!important;width:100%!important;height:100%!important;min-width:0!important;max-width:none!important;transform:none!important;animation:none!important}
+.cbfx-launching{z-index:20!important;filter:brightness(1.25) drop-shadow(0 0 10px rgba(255,191,83,.8))!important}
+.cbfx-impact-shards{width:6px;height:6px;border-radius:50%;background:#ffe9a8;box-shadow:0 -22px #ffb34d,18px -9px #fff0bc,22px 8px #f26d34,7px 20px #ffe2a0,-15px 14px #ff8a35,-22px -5px #ffe9a8;
+ transform:translate(-50%,-50%);animation:cbImpactShards .48s ease-out forwards}
+@keyframes cbImpactShards{from{opacity:1;scale:.5}to{opacity:0;scale:2.8;translate:0 -8px}}
+
 </style>
 </head>
 <body>
@@ -13561,49 +13570,95 @@ function cbFxAttack(attackerId, targetId){
   if(!root || !attackerId || !targetId) return;
   const find = id => root.querySelector(`[data-fxid="${CSS.escape(id)}"]`);
   const src = find(attackerId), dst = find(targetId);
-  if(!src || !dst) return;
+  if(!src || !dst) {
+    // If the target click triggers a rerender before lookup, fail safely.
+    return;
+  }
   const a = src.getBoundingClientRect(), b = dst.getBoundingClientRect();
-  if(!a.width || !b.width) return;
-  const ax=a.left+a.width/2, ay=a.top+a.height/2, bx=b.left+b.width/2, by=b.top+b.height/2;
+  if(a.width < 2 || a.height < 2 || b.width < 2 || b.height < 2) return;
+
+  const ax=a.left+a.width/2, ay=a.top+a.height/2;
+  const bx=b.left+b.width/2, by=b.top+b.height/2;
+  const dx=bx-ax, dy=by-ay, len=Math.hypot(dx,dy);
+  const duration= Math.min(520, Math.max(300, len*.5));
+  const reduce=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // A single viewport-level overlay avoids board transforms/clipping affecting the flight.
   const overlay=document.createElement("div");
   overlay.className="cbfx-flight-layer";
-  Object.assign(overlay.style,{position:"fixed",inset:"0",zIndex:"99999",pointerEvents:"none",overflow:"hidden"});
+  Object.assign(overlay.style,{
+    position:"fixed",left:"0",top:"0",right:"0",bottom:"0",
+    zIndex:"2147483000",pointerEvents:"none",overflow:"visible",
+    margin:"0",padding:"0",border:"0",transform:"none"
+  });
   document.body.appendChild(overlay);
+
   const trail=document.createElement("i");
   trail.className="cbfx-attack-trail";
-  const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);
-  Object.assign(trail.style,{left:ax+"px",top:ay+"px",width:len+"px",transform:`rotate(${Math.atan2(dy,dx)}rad)`});
+  Object.assign(trail.style,{
+    position:"fixed",left:ax+"px",top:ay+"px",width:len+"px",
+    transformOrigin:"0 50%",transform:`rotate(${Math.atan2(dy,dx)}rad)`,
+    opacity:"0"
+  });
   overlay.appendChild(trail);
-  const clone=document.createElement("div");
-  clone.className="cbfx-flyer "+src.className;
-  clone.innerHTML=src.innerHTML;
-  Object.assign(clone.style,{left:a.left+"px",top:a.top+"px",width:a.width+"px",height:a.height+"px"});
-  clone.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id"));
-  clone.querySelectorAll("img").forEach(img=>{img.loading="eager";img.draggable=false;});
-  overlay.appendChild(clone);
-  const mx=bx-ax, my=by-ay;
-  const duration=Math.min(430,Math.max(260,len*.42));
-  const reduce=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if(!reduce && clone.animate){
-    clone.animate([
-      {transform:"translate(0,0) scale(1)",filter:"brightness(1)"},
-      {transform:`translate(${mx*.68}px,${my*.68-12}px) scale(1.08)`,filter:"brightness(1.25)",offset:.72},
-      {transform:`translate(${mx}px,${my}px) scale(.72)`,filter:"brightness(1.8)"}
-    ],{duration,easing:"cubic-bezier(.2,.75,.2,1)",fill:"forwards"});
-    trail.animate([{opacity:0,scale:"0 1"},{opacity:.95,scale:"1 1",offset:.18},{opacity:0,scale:"1 .4"}],{duration:duration*.9,easing:"ease-out",fill:"forwards"});
-  }else{
-    clone.style.transform=`translate(${mx}px,${my}px) scale(.8)`;
-  }
-  const impact=()=>{
-    const flash=document.createElement("i");flash.className="cbfx-impact-fixed";
-    Object.assign(flash.style,{left:bx+"px",top:by+"px"});overlay.appendChild(flash);
-    const label=document.createElement("b");label.className="cbfx-hit-label";label.textContent="IMPACT";
-    Object.assign(label.style,{left:bx+"px",top:by+"px"});overlay.appendChild(label);
-    setTimeout(()=>overlay.remove(),500);
-  };
-  setTimeout(impact,reduce?0:duration*.76);
-}
 
+  // Keep the animated wrapper neutral; the card itself is a visual clone inside it.
+  const flyer=document.createElement("div");
+  flyer.className="cbfx-flyer";
+  Object.assign(flyer.style,{
+    position:"fixed",left:a.left+"px",top:a.top+"px",
+    width:a.width+"px",height:a.height+"px",margin:"0",
+    padding:"0",zIndex:"2",pointerEvents:"none",
+    transform:"translate3d(0,0,0)",transformOrigin:"center center"
+  });
+  const card=src.cloneNode(true);
+  card.removeAttribute("id");
+  card.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id"));
+  card.querySelectorAll("[data-cible],[data-serv],[data-herosatt],[data-zoom]").forEach(el=>{
+    el.removeAttribute("data-cible");el.removeAttribute("data-serv");
+    el.removeAttribute("data-herosatt");el.removeAttribute("data-zoom");
+  });
+  Object.assign(card.style,{
+    position:"relative",left:"auto",top:"auto",right:"auto",bottom:"auto",
+    width:"100%",height:"100%",margin:"0",transform:"none",
+    animation:"none",transition:"none",pointerEvents:"none"
+  });
+  flyer.appendChild(card);
+  overlay.appendChild(flyer);
+
+  // Mark the real source briefly so players can track where the attack started.
+  src.classList.add("cbfx-launching");
+  setTimeout(()=>src.classList.remove("cbfx-launching"),duration+80);
+
+  if(!reduce && flyer.animate){
+    flyer.animate([
+      {transform:"translate3d(0,0,0) scale(1) rotate(0deg)",filter:"brightness(1)"},
+      {transform:`translate3d(${dx*.58}px,${dy*.58-18}px,0) scale(1.12) rotate(${dx>=0?4:-4}deg)`,filter:"brightness(1.28)",offset:.68},
+      {transform:`translate3d(${dx}px,${dy}px,0) scale(.76) rotate(${dx>=0?8:-8}deg)`,filter:"brightness(1.8)"}
+    ],{duration,easing:"cubic-bezier(.18,.72,.24,1)",fill:"forwards"});
+    trail.animate([
+      {opacity:0,transform:`rotate(${Math.atan2(dy,dx)}rad) scaleX(.05)`},
+      {opacity:.98,transform:`rotate(${Math.atan2(dy,dx)}rad) scaleX(1)`,offset:.18},
+      {opacity:0,transform:`rotate(${Math.atan2(dy,dx)}rad) scaleX(1)`}
+    ],{duration:duration*.9,easing:"ease-out",fill:"forwards"});
+  }else{
+    flyer.style.transform=`translate3d(${dx}px,${dy}px,0) scale(.8)`;
+    trail.style.opacity=".7";
+  }
+
+  const impact=()=>{
+    const flash=document.createElement("i");
+    flash.className="cbfx-impact-fixed";
+    Object.assign(flash.style,{position:"fixed",left:bx+"px",top:by+"px"});
+    overlay.appendChild(flash);
+    const shards=document.createElement("span");
+    shards.className="cbfx-impact-shards";
+    Object.assign(shards.style,{position:"fixed",left:bx+"px",top:by+"px"});
+    overlay.appendChild(shards);
+    setTimeout(()=>overlay.remove(),650);
+  };
+  setTimeout(impact,reduce?0:duration*.72);
+}
 function cbFxRun(){
   const attacks = CB.fxAttacks || [];
   CB.fxAttacks = [];
