@@ -14128,7 +14128,7 @@ function cbPeindre(force){
   if(v.phase === "VOTE" && !fini){
     const options = [{id:"classique",nom:"Classique",desc:"Bois et pierre"},{id:"braise",nom:"Braise",desc:"Lueurs chaudes"},{id:"abysse",nom:"Abysse",desc:"Ambiance sombre"}];
     view.innerHTML = cbFond(`<section class="cbvoteplateau">
-      <h2>Choisissez le plateau</h2><p>Un joueur VIP est dans la partie. Votez tous les deux : si vous êtes en désaccord, le choix VIP prime. Si vous êtes tous les deux VIP, le plateau est départagé aléatoirement.</p>
+      <h2>Choisissez le plateau</h2><p>Un joueur VIP est dans la partie. Choisissez votre plateau : contre un bot, votre vote VIP est appliqué immédiatement. En duel entre joueurs, le choix VIP prime en cas de désaccord ; entre deux VIP, le serveur départage aléatoirement.</p>
       <div class="cbvotegrille">${options.map(o=>`<button class="cbvotebtn" data-vote-plateau="${o.id}" ${CB.envoi?"disabled":""}><b>${o.nom}</b><small>${o.desc}</small></button>`).join("")}</div>
       <p class="cbvotesub">${v.reste_ms>0?`Temps restant : ${Math.ceil(v.reste_ms/1000)} s`:"Finalisation du vote…"}</p>
       <button class="cbbtn ghost" id="cbvoteattente" disabled>En attente du vote adverse…</button>
