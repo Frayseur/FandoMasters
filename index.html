@@ -6753,7 +6753,20 @@ const sfx = {
   },
   hit(){ tone(680, 0, 0.1, {type:"square", gain:0.08, to:1100}); noise(0.01, 0.14, {gain:0.07, freq:2600, sweep:1200}); },
   hurt(){ tone(220, 0, 0.22, {type:"sawtooth", gain:0.08, to:90}); noise(0, 0.18, {gain:0.06, freq:700, sweep:200}); },
-  ach(){ [784,1047].forEach((f,i)=>tone(f, i*0.11, 0.35, {type:"triangle", gain:0.1})); }
+  ach(){ [784,1047].forEach((f,i)=>tone(f, i*0.11, 0.35, {type:"triangle", gain:0.1})); },
+  /* Sound design procédural pour les combats : aucun fichier externe à charger. */
+  cardPlay(){ noise(0,0.13,{gain:0.045,freq:2300,sweep:850,q:1.1}); tone(210,0.025,0.12,{type:"triangle",gain:0.045,to:125}); },
+  spell(){ noise(0,0.32,{gain:0.055,freq:3200,sweep:420,q:0.65}); [440,660,880].forEach((f,i)=>tone(f,i*.045,.25,{type:"sine",gain:.035,to:f*1.18})); },
+  attackWhoosh(){ noise(0,.22,{gain:.075,freq:1250,sweep:220,q:.6}); tone(180,.035,.17,{type:"triangle",gain:.035,to:75}); },
+  impact(){ noise(0,.12,{gain:.105,freq:950,sweep:170,q:.8}); tone(95,0,.19,{type:"triangle",gain:.09,to:48}); tone(520,.012,.07,{type:"square",gain:.025,to:180}); },
+  minionDeath(){ tone(190,0,.28,{type:"triangle",gain:.07,to:58}); noise(.025,.22,{gain:.06,freq:1100,sweep:260,q:.7}); },
+  heal(){ [660,880,990].forEach((f,i)=>tone(f,i*.055,.22,{type:"sine",gain:.045,to:f*1.08})); },
+  armor(){ tone(330,0,.16,{type:"triangle",gain:.05,to:520}); noise(.025,.12,{gain:.04,freq:1800,sweep:900,q:1.3}); },
+  shield(){ tone(880,0,.18,{type:"sine",gain:.055,to:1320}); tone(1320,.07,.22,{type:"triangle",gain:.035,to:980}); },
+  debuff(){ tone(390,0,.22,{type:"sawtooth",gain:.035,to:150}); noise(.025,.18,{gain:.035,freq:750,sweep:240}); },
+  turn(){ tone(520,0,.09,{type:"triangle",gain:.035}); tone(690,.08,.13,{type:"triangle",gain:.04}); },
+  victory(){ [523,659,784,1047].forEach((f,i)=>tone(f,i*.11,.48,{type:"triangle",gain:.065})); noise(.25,.38,{gain:.035,freq:2600,sweep:4400}); },
+  defeat(){ [392,330,247,165].forEach((f,i)=>tone(f,i*.13,.42,{type:"triangle",gain:.055,to:f*.72})); noise(.08,.38,{gain:.04,freq:550,sweep:110,q:.5}); }
 };
 function sfxForRarity(r){
   const i = RARITIES.indexOf(r);
@@ -13625,6 +13638,35 @@ function cbFxSnapshot(v){
   });
   return out;
 }
+function cbSonsEvenements(events, avant, apres){
+  if(!Array.isArray(events) || !events.length || state.profile.mute) return;
+  let degatsJoues = 0;
+  for(const e of events){
+    if(!e || typeof e.type !== "string") continue;
+    switch(e.type){
+      case "joue": sfx.cardPlay(); if(e.carte && /sort/i.test(e.carte.type||"")) sfx.spell(); break;
+      case "attaque": sfx.attackWhoosh(); break;
+      case "degats":
+        // Une seule percussion pour une rafale de dégâts de zone évite la cacophonie.
+        if(degatsJoues < 3){ sfx.impact(); degatsJoues++; }
+        break;
+      case "mort": sfx.minionDeath(); break;
+      case "soin": if(+e.n > 0) sfx.heal(); break;
+      case "armure": sfx.armor(); break;
+      case "bouclier": sfx.shield(); break;
+      case "bouclier_brise": sfx.impact(); break;
+      case "silence": case "detruit": case "gel": case "affaiblir": case "transformation": sfx.debuff(); break;
+      case "invocation": sfx.spell(); break;
+      case "tour": sfx.turn(); break;
+      case "arme_brisee": sfx.clunk(); break;
+    }
+  }
+  if(avant && apres && avant.statut === "ACTIVE" && apres.statut !== "ACTIVE"){
+    if(apres.resultat === "victoire") sfx.victory();
+    else if(apres.resultat === "defaite") sfx.defeat();
+    else sfx.turn();
+  }
+}
 function cbAppliquer(r){
   if(!r) return;
   if(r.id){
@@ -13648,7 +13690,9 @@ function cbAppliquer(r){
       }
       if(before && after){
         const oldN = before.journal.length;
-        after.journal.slice(oldN).filter(e=>e && e.type==="attaque").forEach(e=>{
+        const newEvents = after.journal.slice(oldN);
+        cbSonsEvenements(newEvents, CB.v, r);
+        newEvents.filter(e=>e && e.type==="attaque").forEach(e=>{
           const attacker = e.attaquant || e.source || e.iid_attaquant;
           const targetId = e.cible;
           if(attacker && targetId){
@@ -14186,7 +14230,7 @@ function cbPeindre(force){
     cbPeindre(true);
   });
   const ha = view.querySelector("[data-herosatt]"); if(ha) ha.onclick = ()=>{ CB.mode = {action:"attaquer", attaquant:"heros", regle:"attaque", consigne:"Votre héros attaque : choisissez la cible."}; cbPeindre(true); };
-  const po = view.querySelector("#cbpouvoir"); if(po) po.onclick = ()=>{ CB.mode = {action:"pouvoir", regle:"personnage", consigne:"Pouvoir de héros : choisissez la cible."}; cbPeindre(true); };
+  const po = view.querySelector("#cbpouvoir"); if(po) po.onclick = ()=>{ if(!state.profile.mute) sfx.flip(); CB.mode = {action:"pouvoir", regle:"personnage", consigne:"Pouvoir de héros : choisissez la cible."}; cbPeindre(true); };
   if(CB.mode) view.querySelectorAll("[data-cible]").forEach(el => { if(cibles.has(el.dataset.cible)) el.onclick = ev => {
     ev.stopPropagation();
     const m = CB.mode, cible = el.dataset.cible;
