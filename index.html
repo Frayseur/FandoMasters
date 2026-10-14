@@ -5324,6 +5324,7 @@ const egalJ = (a, b) => stable(a) === stable(b);
    qu'il arrive au reste de la partie. */
 const PERSO = ["banner","bannerImg","title","titresAff","fav","slots","avatar","avatarImg","avatarCrop","pseudo","pseudoStyle"];
 let persoVu = null;
+let FM_DERNIER_SOLDE_OBSERVE = null;
 function persoInstantane(p){ persoVu = Object.fromEntries(PERSO.map(k => [k, stable(p[k])])); }
 function tamponnerPerso(p){
   if(!persoVu) return;
@@ -5517,7 +5518,15 @@ async function sset(key, val, shared=false){
       await noterRetraits(val);
       val = allegerCol(val);
     }
-    if(key === "fm:profile" && !shared && val && typeof val === "object") tamponnerPerso(val);
+    if(key === "fm:profile" && !shared && val && typeof val === "object") {
+      if(fmPret && Number.isFinite(+val.coins)){
+        const solde=+val.coins;
+        if(FM_DERNIER_SOLDE_OBSERVE != null && solde > FM_DERNIER_SOLDE_OBSERVE)
+          val.coinsEarnedTotal=(val.coinsEarnedTotal||0)+(solde-FM_DERNIER_SOLDE_OBSERVE);
+        FM_DERNIER_SOLDE_OBSERVE=solde;
+      }
+      tamponnerPerso(val);
+    }
     if(await idbPret){
       try{ await idbSet("kv", lsKey(key,shared), val); }
       catch(e){
@@ -6667,6 +6676,7 @@ function sfxForRarity(r){
 const view = document.getElementById("view");
 
 function render(){
+  try{ appliquerDroitsVIP(); }catch(e){}
   setTimeout(()=>holoScan(view), 0);
   document.getElementById("coins").textContent = short(state.profile.coins);
   paintMana();
@@ -7253,7 +7263,7 @@ function pseudoAffiche(p){
 let profilPublie = "", profilPublieA = 0, profilMinuteur = null;
 function vitrinePublique(){
   const p = state.profile;
-  if(!vipActif()) p.pseudoStyle = "normal";
+  const vip = vipActif();
   const lv = levelFromXP(playerXP());
   /* la dernière fiche connue de chaque carte exposée est gardée : une vitrine
      publiée ne se vide plus parce qu'une carte manque un instant à la collection */
@@ -7268,12 +7278,12 @@ function vitrinePublique(){
   return {
     niveau: lv.lvl, xp: lv.left, xpMax: lv.need,
     titre: titresAffiches()[0] || null, titres: titresAffiches(), titresV: 2,
-    pseudoStyle: vipActif() ? (p.pseudoStyle || "normal") : "normal",
-    vip: vipActif(), vip_jusqua: p.vip_jusqua || FM_VIP_JUSQUA || null,
+    pseudoStyle: vip ? (p.pseudoStyle || "normal") : "normal",
+    vip, vip_jusqua: p.vip_jusqua || FM_VIP_JUSQUA || null,
     fav: p.fav || null,
     avatar: av, crop: p.avatarCrop || null,
     banniere: p.banner ? bannerSrc(p.banner) : "",
-    vitrine: (p.slots || []).map(carte).filter(Boolean).slice(0, 10),
+    vitrine: (p.slots || []).slice(0, vip ? 10 : 3).map(carte).filter(Boolean),
     stats: {
       cartes: state.collection.length,
       exemplaires: state.collection.reduce((n, c) => n + (c.count || 1), 0),
@@ -7653,6 +7663,7 @@ function htmlGuilde(){
         <div class="amiact"><button class="btn small" data-gaccepte="${g.id}">Rejoindre</button><button class="btn small ghost" data-grefuse="${g.id}">Refuser</button></div></div>`).join("")}
     </div>` : "";
   if(!guilde.g){
+    if(!vipActif()) return invites + `<div class="panel gfonder"><h3 style="font-size:1.15rem;margin-bottom:.3rem">Création de guilde réservée aux VIP</h3><p class="sub">Les non-VIP peuvent rejoindre une guilde sur invitation, mais doivent activer le VIP pour en fonder une.</p><button class="btn" id="g-vip-shop">Découvrir le VIP</button></div>`;
     const assez = (state.profile.coins || 0) >= GUILDE_PRIX;
     return invites + `<div class="panel gfonder">
       <h3 style="font-size:1.15rem;margin-bottom:.3rem">Fonder une guilde</h3>
@@ -7939,6 +7950,7 @@ function viewAmis(){
   if(ong === "guilde" || ong === "classement"){
     const rafraichir = ()=>{ if(state.view === "amis" && amis.onglet === ong) viewAmis(); };
     brancherGuilde(rafraichir);
+    if(ong === "guilde") { const vipShop = view.querySelector("#g-vip-shop"); if(vipShop) vipShop.onclick=()=>go("shop"); }
     if(ong === "guilde" && !guilde.charge) guildeCharger().then(rafraichir);
     if(ong === "classement" && !guilde.classeCharge) guildeClassementCharger().then(rafraichir);
     if(!amis.charge) amisCharger().catch(()=>{});
@@ -8055,7 +8067,7 @@ async function viewJoueur(){
             <div class="avatar halo${halo}" style="display:grid;place-items:center;${esc(avSt)}">${v.avatar ? "" : esc((pr.pseudo || "?").slice(0, 1).toUpperCase())}</div>
           </div>
           <div style="min-width:0;flex:1">
-            <h3 style="font-size:1.4rem">${esc(v.pseudoStyle === "frak" && v.vip ? toScript(pr.pseudo, FRAK) : v.pseudoStyle === "bfrak" && v.vip ? toScript(pr.pseudo, BFRAK) : plainName(pr.pseudo))}</h3>
+            <h3 style="font-size:1.4rem">${esc(publicVip && v.pseudoStyle === "frak" ? toScript(pr.pseudo, FRAK) : publicVip && v.pseudoStyle === "bfrak" ? toScript(pr.pseudo, BFRAK) : plainName(pr.pseudo))}</h3>
             <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
               <span class="lvlbadge">Niv. ${lvl}</span>
               ${(v.titresV ? (v.titres || []) : (v.titre ? [v.titre] : [])).filter(t => (v.vip && v.vip_jusqua && new Date(v.vip_jusqua) > new Date()) || !["VIP", "Riche"].includes(t)).slice(0, v.vip && v.vip_jusqua && new Date(v.vip_jusqua) > new Date() ? 3 : 1).map(titreTag).join("")}
@@ -8066,6 +8078,7 @@ async function viewJoueur(){
           </div>
         </div>
         <div class="row" style="margin:.9rem 0 0;position:relative;z-index:2;gap:.4rem">
+          ${publicVip ? `<button class="btn small" id="jalbum">Ouvrir l'album public</button>` : ""}
           ${ami ? `<button class="btn small" id="jech">Proposer un échange</button>
                    <button class="btn small ghost" id="jretire">Retirer de mes amis</button>`
             : amis.envoyes.includes(id) ? `<span class="sub">Demande d'ami envoyée</span>`
@@ -8100,6 +8113,7 @@ async function viewJoueur(){
       try{ await f(); if(msg) toast(msg, "", "info"); }catch(e){ toast("Action impossible", String(e.message || e), "lose"); }
       await amisCharger(); peindre();
     };
+    const alb = view.querySelector("#jalbum"); if(alb) alb.onclick = ()=>ouvrirAlbumProfilVIP(id, pr.pseudo);
     const je = view.querySelector("#jech"); if(je) je.onclick = ()=>composerEchange(id);
     const ja = view.querySelector("#jajout");
     if(ja) ja.onclick = ()=>agir(ja, ()=>nuageRest("amities", {method:"POST", body:JSON.stringify([{demandeur:moi, cible:id}])}), "Demande envoyée");
@@ -8117,6 +8131,20 @@ async function viewJoueur(){
   if(!amis.charge) await amisCharger();
   if(!pr && state.view === "joueur"){ view.innerHTML = `<h2 class="vuetitre">Profil</h2><div class="panel"><p class="sub" style="margin:0">Profil introuvable.</p></div>`; return; }
   peindre();
+}
+
+/* L'album d'un profil public est servi par une RPC qui revérifie le VIP côté serveur. */
+async function ouvrirAlbumProfilVIP(id, pseudo){
+  const m = document.createElement("div"); m.className = "modal";
+  m.innerHTML = `<div class="inner" style="max-width:1100px;width:min(1100px,96vw)"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="font-size:1.2rem">Album de ${esc(pseudo||"ce joueur")}</h3><button class="btn small ghost" id="fermer-album-public">Fermer</button></div><p class="sub" id="album-public-info">Vérification des droits VIP…</p><div class="grid" id="album-public-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.65rem;max-height:68vh;overflow:auto"></div></div>`;
+  document.body.appendChild(m); m.querySelector("#fermer-album-public").onclick=()=>m.remove(); m.onclick=e=>{if(e.target===m)m.remove();};
+  try{
+    const r = await nuageRest("rpc/collection_profil", {method:"POST", body:JSON.stringify({p_joueur:id})});
+    const cartes = Array.isArray(r) ? r : (r && Array.isArray(r.collection) ? r.collection : []);
+    if(!m.isConnected) return;
+    m.querySelector("#album-public-info").textContent = `${cartes.length} cartes · album public réservé aux profils VIP`;
+    m.querySelector("#album-public-grid").innerHTML = cartes.map(c=>`<div class="panel" style="padding:.35rem;min-width:0">${cardHTML(c,{compact:true,count:c.count||1})}<div style="font-size:.75rem;margin-top:.3rem;overflow-wrap:anywhere"><b>${esc(c.title||c.nom||"Carte")}</b><div class="sub">${esc(c.univ||"")} · ${esc(c.rarity||"")}${c.count>1?` · ×${c.count}`:""}</div></div></div>`).join("") || `<p class="sub">Cet album est vide.</p>`;
+  }catch(e){ if(m.isConnected) m.querySelector("#album-public-info").textContent = /VIP|réservé|FM_REFUS/i.test(String(e.message||e)) ? "L'album public n'est plus accessible : le VIP est expiré ou le profil est privé." : "Impossible de charger l'album. Réessayez plus tard."; }
 }
 
 /* ---- choix de cartes dans une liste ---- */
@@ -11153,8 +11181,16 @@ function oddsFold(){
 
 let FM_VIP_JUSQUA = null;
 function vipActif(){
+  if(typeof estAdmin === "function" && estAdmin()) return true;
   const fin = FM_VIP_JUSQUA || (state.profile && state.profile.vip_jusqua) || null;
   return !!(fin && Number.isFinite(new Date(fin).getTime()) && new Date(fin).getTime() > Date.now());
+}
+function appliquerDroitsVIP(){
+  const p = state && state.profile;
+  if(!p || vipActif()) return;
+  // Les préférences VIP restent enregistrées, mais ne sont jamais rendues visibles hors VIP.
+  if(Array.isArray(p.slots) && p.slots.length > 3 && state.view === 'profil') { /* rendu limité ci-dessous */ }
+  if(p.pseudoStyle && p.pseudoStyle !== 'normal') paintMe();
 }
 
 function packLabel(){
@@ -11190,9 +11226,19 @@ function viewPack(){
   view.innerHTML = `
     <h2 class="vuetitre">Ouvertures</h2>
     <p class="sub">Un booster gratuit toutes les 10 minutes, ${FREE_MAX} en réserve.</p>
+    ${vipActif() ? `<div class="row" style="margin:.6rem 0 .9rem"><button class="btn small ghost" id="vip-open-history">Historique détaillé · 5 dernières ouvertures</button></div>` : ""}
     ${oddsFold()}
     <div class="packstage" id="stage"></div>`;
+  const hist = view.querySelector("#vip-open-history"); if(hist) hist.onclick = ouvrirHistoriqueOuvertures;
   renderStage();
+}
+function ouvrirHistoriqueOuvertures(){
+  if(!vipActif()){ toast("Fonctionnalité VIP", "L'historique détaillé est réservé aux VIP.", "info"); return; }
+  const hist = (state.profile.openHistory||[]).slice(0,5);
+  const m=document.createElement("div"); m.className="modal";
+  const fmt=d=>new Date(d).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  m.innerHTML=`<div class="inner" style="max-width:760px"><div class="row" style="justify-content:space-between;align-items:center"><h3 style="font-size:1.2rem">Vos 5 dernières ouvertures</h3><button class="btn small ghost" id="close-open-history">Fermer</button></div><p class="sub">Historique détaillé VIP, conservé sur ce compte.</p><div id="open-history-list">${hist.length?hist.map((h,i)=>`<section class="panel" style="margin:.55rem 0;padding:.8rem"><div class="row" style="justify-content:space-between;align-items:baseline"><b>${h.count} booster${h.count>1?"s":""} · ${esc(h.kindLabel||h.kind||"Classique")}</b><span class="sub">${fmt(h.at)}</span></div><p class="sub" style="margin:.35rem 0">${Object.entries(h.rarities||{}).sort((a,b)=>b[1]-a[1]).map(([r,n])=>`${esc(r)} × ${n}`).join(" · ")||"Raretés non enregistrées"}</p><div class="sub">${(h.cards||[]).map(c=>`<div style="padding:.18rem 0;border-bottom:1px solid var(--line)"><b>${esc(c.title||"Carte")}</b> — ${esc(c.univ||"")} <span style="color:var(--brass)">${esc(c.rarity||"")}</span></div>`).join("")}</div></section>`).join(""):`<div class="panel"><p class="sub">Aucune ouverture enregistrée depuis l'activation de cet historique.</p></div>`}</div></div>`;
+  document.body.appendChild(m); m.querySelector("#close-open-history").onclick=()=>m.remove(); m.onclick=e=>{if(e.target===m)m.remove();};
 }
 
 function renderStage(){
@@ -12541,7 +12587,7 @@ async function openFox(){
 async function openPack(n, kind){
   if(state.busy) return;
   n = n || 1; kind = kind || "normal";
-  if(n > 10 && !vipActif()){
+  if(!estAdmin() && n > 10 && !vipActif()){
     toast("Ouverture réservée aux VIP", "Les ouvertures groupées de plus de 10 boosters sont réservées aux membres VIP.", "lose");
     return;
   }
@@ -12627,6 +12673,19 @@ async function openPack(n, kind){
     if(kind === "mythic") state.profile.mythOpened = (state.profile.mythOpened||0) + n;
     if(kind === "demon")  state.profile.demonOpened = (state.profile.demonOpened||0) + n;
     if(n >= 10) state.profile.tens = (state.profile.tens||0) + 1;
+    const jourOuverture=fmDateLocale();
+    if(state.profile.openDay!==jourOuverture){ state.profile.openDay=jourOuverture; state.profile.openedToday=0; }
+    state.profile.openedToday=(state.profile.openedToday||0)+n;
+    state.profile.openDays=[...new Set([...(state.profile.openDays||[]),jourOuverture])].slice(-120);
+    state.profile.maxBulkOpened=Math.max(state.profile.maxBulkOpened||0,n);
+    state.profile.freePacksOpened=(state.profile.freePacksOpened||0)+(paid.free||0);
+    const raretesOuverture = {};
+    for(const carte of all) raretesOuverture[carte.rarity||"Inconnue"] = (raretesOuverture[carte.rarity||"Inconnue"]||0)+1;
+    state.profile.maxLegendsInOpening=Math.max(state.profile.maxLegendsInOpening||0,raretesOuverture["Légendaire"]||0);
+    state.profile.maxRelicsInOpening=Math.max(state.profile.maxRelicsInOpening||0,raretesOuverture["Relique"]||0);
+    if(n>=100 && state.forcedUniv) state.profile.opened100SameUniverse=true;
+    state.profile.openHistory = [{at:Date.now(), count:n, kind, kindLabel:kind==="mythic"?"Mythique":kind==="demon"?"Démonique":"Classique", rarities:raretesOuverture,
+      cards:all.slice().sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity)).slice(0,8).map(c=>({title:c.title,univ:c.univ,rarity:c.rarity}))}, ...(state.profile.openHistory||[])].slice(0,5);
 
     state.forcedUniv = null;
     const missing = n*5 - all.length;
@@ -12851,6 +12910,7 @@ function showCard(c){
       const n = Math.min(qty, c.count);
       state.profile.coins += n*unit;
       state.profile.sold = (state.profile.sold||0) + n;
+      state.profile.duplicatesConverted = (state.profile.duplicatesConverted||0) + Math.min(n,Math.max(0,(c.count||1)-1));
       c.count -= n;
       if(c.count <= 0){
         state.collection = state.collection.filter(x=>x.id !== c.id);
@@ -13575,7 +13635,8 @@ function viewDuel(){
   }
   if(CB.id && CB.v) return cbPeindre(true);
   cbPleinEcran(false);
-  const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ["plateau", "Plateau"], ["classement", "Classement"]];
+  if(!vipActif() && CB.onglet === "classement") CB.onglet = "jouer";
+  const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ["plateau", "Plateau"], ...(vipActif() ? [["classement", "Classement"]] : [])];
   view.innerHTML = `
     <h2 class="vuetitre">Combat</h2>
     <div class="admtabs">${onglets.map(([k, n]) => `<button class="btn small ${CB.onglet === k ? "" : "ghost"}" data-cbong="${k}">${n}</button>`).join("")}</div>
@@ -13842,6 +13903,7 @@ function cbFxAttack(attackerId, targetId){
   setTimeout(impact,reduce?0:duration*.72);
 }
 function cbFxRun(){
+  if(!vipActif() && !estAdmin()){ CB.fxAttacks = []; CB.fxPending = []; return; }
   const attacks = CB.fxAttacks || [];
   CB.fxAttacks = [];
   attacks.forEach(a=>cbFxAttack(a.attacker,a.target));
@@ -14069,8 +14131,8 @@ async function boutiqueCharger(){
   btq.erreur = "";
 }
 function viewBoutique(){
-  const vip = !!(state.profile && state.profile.vip_jusqua && new Date(state.profile.vip_jusqua) > new Date());
-  const dateVip = vip ? new Date(state.profile.vip_jusqua).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
+  const vip = vipActif();
+  const dateVip = state.profile && state.profile.vip_jusqua && new Date(state.profile.vip_jusqua) > new Date() ? new Date(state.profile.vip_jusqua).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
   view.innerHTML = `
     <h2 class="vuetitre">Boutique VIP</h2>
     <p class="sub" style="margin:-.35rem 0 1rem">Un abonnement annuel pour soutenir FandoMasters et débloquer des options de personnalisation et des fonctionnalités communautaires. Les cartes et boosters ne sont pas à vendre.</p>
@@ -14083,8 +14145,8 @@ function viewBoutique(){
         </div>
         ${vip ? `<span class="chip" style="border-color:var(--brass);color:var(--brass)">VIP actif</span>` : ""}
       </div>
-      ${vip ? `<p style="margin:.9rem 0 0">Votre VIP est actif jusqu'au <b>${dateVip}</b>.</p>` : `<p class="sub" style="margin:.9rem 0 0">Votre VIP est activé pour un an après achat. Solde actuel : <b>${soldeCristaux().toLocaleString("fr-FR")} Cristaux</b>.</p>`}
-      <button class="btn" id="vip-achat" ${vip || btq.achat || soldeCristaux() < 1000 ? "disabled" : ""} style="width:100%;margin-top:1rem;${vip || btq.achat || soldeCristaux() < 1000 ? "opacity:.7;cursor:not-allowed" : ""}">${vip ? "Abonnement actif" : "Acheter le VIP · 1 000 Cristaux"}</button>
+      ${vip ? `<p style="margin:.9rem 0 0">${estAdmin() && !dateVip ? "Accès DEV illimité." : `Votre VIP est actif jusqu'au <b>${dateVip}</b>.`}</p>` : `<p class="sub" style="margin:.9rem 0 0">Votre VIP est activé pour un an après achat. Solde actuel : <b>${soldeCristaux().toLocaleString("fr-FR")} Cristaux</b>.</p>`}
+      <button class="btn" id="vip-achat" ${vip || btq.achat || soldeCristaux() < 1000 ? "disabled" : ""} style="width:100%;margin-top:1rem;${vip || btq.achat || soldeCristaux() < 1000 ? "opacity:.7;cursor:not-allowed" : ""}">${vip ? (estAdmin() && !dateVip ? "Accès DEV illimité" : "Abonnement actif") : "Acheter le VIP · 1 000 Cristaux"}</button>
     </section>
     <h3 style="font-size:1.15rem;margin:1.2rem 0 .65rem">Comparatif des accès</h3>
     <div style="overflow-x:auto">
@@ -14114,7 +14176,7 @@ function viewBoutique(){
   if(btq.articles === null) boutiqueCharger();
 }
 async function acheterVipAnnuel(){
-  if(btq.achat || state.profile?.vip_jusqua && new Date(state.profile.vip_jusqua)>new Date()) return;
+  if(btq.achat || vipActif()) return;
   if(soldeCristaux() < 1000){ toast("Cristaux insuffisants", "Il faut 1 000 Cristaux pour acheter le VIP annuel.", "lose"); return; }
   if(!(await demanderConfirmation("FandoMasters VIP", "Acheter le VIP pour 1 000 Cristaux ? L'abonnement dure un an à partir de la date d'expiration actuelle ou d'aujourd'hui.", "Acheter"))) return;
   btq.achat=true; viewBoutique();
@@ -16358,7 +16420,38 @@ const ACHIEVEMENTS = [
   {id:"guild15", name:"Légion",                 desc:"Être dans une guilde de 15 membres.",         goal:15,  val:()=>state.profile.guildeMembresMax||0, reward:25},
   {id:"guildlv5",name:"Bannière levée",         desc:"Atteindre le niveau 5 de guilde.",            goal:5,   val:()=>state.profile.guildeNiveauMax||0, reward:10},
   {id:"guildlv10",name:"Guilde légendaire",     desc:"Atteindre le niveau 10 de guilde.",           goal:10,  val:()=>state.profile.guildeNiveauMax||0, reward:30},
-  {id:"gchat25", name:"Crieur de guilde",       desc:"Envoyer 25 messages dans le chat de guilde.", goal:25,  val:()=>state.profile.msgGuilde||0, reward:5}
+  {id:"gchat25", name:"Crieur de guilde",       desc:"Envoyer 25 messages dans le chat de guilde.", goal:25,  val:()=>state.profile.msgGuilde||0, reward:5},
+  {id:"col100", name:"Archiviste des mondes", desc:"Posséder 100 cartes différentes.", goal:100, val:()=>state.collection.length, reward:5},
+  {id:"col250", name:"Bibliothécaire du fandom", desc:"Posséder 250 cartes différentes.", goal:250, val:()=>state.collection.length, reward:12},
+  {id:"univ100", name:"Conservateur de musée", desc:"Posséder 100 cartes différentes d'un même univers.", goal:100, val:()=>Math.max(0,...[...new Set(state.collection.map(c=>c.univ).filter(Boolean))].map(u=>state.collection.filter(c=>c.univ===u).length)), reward:20},
+  {id:"pack1000", name:"L'addiction a un nom", desc:"Ouvrir 1 000 boosters au total.", goal:1000, val:()=>state.profile.packs||0, reward:30},
+  {id:"pack5000", name:"L'usine à cartes", desc:"Ouvrir 5 000 boosters au total.", goal:5000, val:()=>state.profile.packs||0, reward:80},
+  {id:"rare10", name:"L'étoile montante", desc:"Obtenir 10 cartes rares.", goal:10, val:()=>nRar("Rare"), reward:4},
+  {id:"rare25", name:"Chasseur de pépites", desc:"Obtenir 25 cartes rares.", goal:25, val:()=>nRar("Rare"), reward:8},
+  {id:"leg3", name:"Touché par la chance", desc:"Obtenir 3 cartes légendaires.", goal:3, val:()=>nRar("Légendaire"), reward:12},
+  {id:"leg10", name:"Aimant à raretés", desc:"Obtenir 10 cartes légendaires.", goal:10, val:()=>nRar("Légendaire"), reward:25},
+  {id:"pairs5", name:"Copie conforme", desc:"Posséder 5 cartes différentes en double ou plus.", goal:5, val:()=>state.collection.filter(c=>(c.count||1)>=2).length, reward:5},
+  {id:"triples50", name:"Le collectionneur maniaque", desc:"Posséder 3 exemplaires de 50 cartes différentes.", goal:50, val:()=>state.collection.filter(c=>(c.count||1)>=3).length, reward:30},
+  {id:"dupes100", name:"Rien ne se perd", desc:"Obtenir 100 cartes en double, exemplaires au-delà du premier.", goal:100, val:()=>state.collection.reduce((n,c)=>n+Math.max(0,(c.count||1)-1),0), reward:10},
+  {id:"total1000", name:"Le coffre déborde", desc:"Posséder 1 000 cartes au total, doublons inclus.", goal:1000, val:()=>state.collection.reduce((n,c)=>n+(c.count||1),0), reward:15},
+  {id:"franchise25", name:"Le spécialiste", desc:"Posséder 25 cartes différentes d'un même univers.", goal:25, val:()=>Math.max(0,...[...new Set(state.collection.map(c=>c.univ).filter(Boolean))].map(u=>state.collection.filter(c=>c.univ===u).length)), reward:8},
+  {id:"triplegends10", name:"L'ultime collection", desc:"Posséder 3 exemplaires de 10 cartes légendaires différentes.", goal:10, val:()=>state.collection.filter(c=>c.rarity==="Légendaire"&&(c.count||1)>=3).length, reward:35},
+  {id:"titles25", name:"Légende vivante", desc:"Débloquer 25 autres titres de progression.", goal:25, val:()=>new Set((state.profile.ach||[]).filter(id=>TITLES.some(t=>t.id===id))).size, reward:25},
+  {id:"titles50", name:"FandoMaster absolu", desc:"Débloquer 50 titres de progression.", goal:50, val:()=>new Set((state.profile.ach||[]).filter(id=>TITLES.some(t=>t.id===id))).size, reward:60},
+  {id:"login7", name:"Habitué des lieux", desc:"Se connecter 7 jours différents.", goal:7, val:()=>new Set(state.profile.loginDays||[]).size, reward:4},
+  {id:"streak7", name:"Une semaine de passion", desc:"Se connecter 7 jours consécutifs.", goal:7, val:()=>state.profile.loginStreak||0, reward:8},
+  {id:"login30", name:"Pilier du fandom", desc:"Se connecter 30 jours différents.", goal:30, val:()=>new Set(state.profile.loginDays||[]).size, reward:15},
+  {id:"login100", name:"Ancien du royaume", desc:"Se connecter 100 jours différents.", goal:100, val:()=>new Set(state.profile.loginDays||[]).size, reward:40},
+  {id:"daily10", name:"Le rituel du dimanche", desc:"Ouvrir 10 boosters au cours d'une même journée.", goal:10, val:()=>state.profile.openDay===fmDateLocale()?(state.profile.openedToday||0):0, reward:5},
+  {id:"openDays7", name:"Jamais sans mon booster", desc:"Ouvrir au moins un booster pendant 7 jours différents.", goal:7, val:()=>new Set(state.profile.openDays||[]).size, reward:8},
+  {id:"bulk50", name:"Ouverture compulsive", desc:"Ouvrir 50 boosters en une seule session.", goal:50, val:()=>state.profile.maxBulkOpened||0, reward:15},
+  {id:"free50", name:"Sans dépenser un sou", desc:"Ouvrir 50 boosters financés par les réserves gratuites.", goal:50, val:()=>state.profile.freePacksOpened||0, reward:12},
+  {id:"rich10k", name:"Le banquier", desc:"Posséder 10 000 Fandominus simultanément.", goal:10000, val:()=>state.profile.coins||0, reward:15},
+  {id:"coinsEarn1000", name:"Premier investissement", desc:"Accumuler 1 000 Fandominus gagnés grâce au jeu.", goal:1000, val:()=>state.profile.coinsEarnedTotal||0, reward:5},
+  {id:"coinsEarn100k", name:"Fortune du fandom", desc:"Accumuler 100 000 Fandominus gagnés grâce au jeu.", goal:100000, val:()=>state.profile.coinsEarnedTotal||0, reward:40},
+  {id:"leg2Session", name:"Chance insolente", desc:"Obtenir 2 cartes légendaires dans une même ouverture.", goal:2, val:()=>state.profile.maxLegendsInOpening||0, reward:18},
+  {id:"relic5", name:"Élu des boosters", desc:"Posséder 5 cartes de rareté maximale.", goal:5, val:()=>nRar("Relique"), reward:50},
+  {id:"dupeconvert25", name:"Le recycleur", desc:"Convertir 25 cartes doublons dans le recycleur.", goal:25, val:()=>state.profile.duplicatesConverted||0, reward:8}
 ];
 
 function achGoal(a){ return a.dyn ? a.dyn() : a.goal; }
@@ -16370,6 +16463,18 @@ function achPending(){
   return ACHIEVEMENTS.filter(a=>owned.has(a.id) && !paid.has(a.id));
 }
 
+async function fmDateLocale(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+function enregistrerConnexionQuotidienne(){
+  const p=state.profile, today=fmDateLocale();
+  if(p.lastLoginDate===today) return;
+  const y=new Date(); y.setDate(y.getDate()-1);
+  p.loginDays=[...new Set([...(p.loginDays||[]),today])].slice(-120);
+  p.loginStreak=p.lastLoginDate===fmDateLocale(y)?(p.loginStreak||0)+1:1;
+  p.lastLoginDate=today;
+  sset("fm:profile",p);
+}
 async function checkAch(){
   try{ recompenserNiveaux(); }catch(e){}
   const owned = new Set(state.profile.ach||[]);
@@ -16746,6 +16851,7 @@ function levelFromXP(xp){
 }
 
 /* ---------- titres ---------- */
+const TITRES_BASE = new Set(["Collectionneur", "Archiviste", "Chasseur de légendes", "Porteur de l'Anneau", "Stratège"]);
 const TITLES = [
   {id:"col50",   name:"Collectionneur"},
   {id:"col200",  name:"Archiviste"},
@@ -16773,7 +16879,43 @@ const TITLES = [
   {id:"prop25",  name:"Correcteur"},
   {id:"vote50",  name:"Voix du peuple"},
   {id:"guild1",  name:"Fondateur de guilde"},
-  {id:"guildlv10", name:"Seigneur de guerre"}
+  {id:"guildlv10", name:"Seigneur de guerre"},
+  {id:"col100", name:"Cartographe des archives"},
+  {id:"col250", name:"Bibliothécaire du fandom"},
+  {id:"univ100", name:"Conservateur de musée"},
+  {id:"pack1000", name:"Accro aux boosters"},
+  {id:"pack5000", name:"L'usine à cartes"},
+  {id:"rare10", name:"Étoile montante"},
+  {id:"rare25", name:"Chasseur de pépites"},
+  {id:"leg3", name:"Touché par la chance"},
+  {id:"leg10", name:"Aimant à raretés"},
+  {id:"pairs5", name:"Copie conforme"},
+  {id:"triples50", name:"Collectionneur maniaque"},
+  {id:"dupes100", name:"Rien ne se perd"},
+  {id:"total1000", name:"Le coffre déborde"},
+  {id:"franchise25", name:"Le spécialiste"},
+  {id:"triplegends10", name:"L'ultime collection"},
+  {id:"titles25", name:"Légende vivante"},
+  {id:"titles50", name:"FandoMaster absolu"},
+  {id:"col10", name:"Collectionneur en herbe"},
+  {id:"pack1", name:"Premier frisson"},
+  {id:"pack25", name:"Accro aux boosters"},
+  {id:"pack100", name:"Ouverture compulsive"},
+  {id:"leg1", name:"Le flair légendaire"},
+  {id:"login7", name:"Habitué des lieux"},
+  {id:"streak7", name:"Une semaine de passion"},
+  {id:"login30", name:"Pilier du fandom"},
+  {id:"login100", name:"Ancien du royaume"},
+  {id:"daily10", name:"Le rituel du dimanche"},
+  {id:"openDays7", name:"Jamais sans mon booster"},
+  {id:"bulk50", name:"Ouverture compulsive"},
+  {id:"free50", name:"Sans dépenser un sou"},
+  {id:"rich10k", name:"Le banquier"},
+  {id:"coinsEarn1000", name:"Premier investissement"},
+  {id:"coinsEarn100k", name:"Fortune du fandom"},
+  {id:"leg2Session", name:"Chance insolente"},
+  {id:"relic5", name:"Élu des boosters"},
+  {id:"dupeconvert25", name:"Le recycleur"}
 ];
 function bannerSrc(id){
   const c = state.collection.find(x=>x.id === id);
@@ -16783,11 +16925,14 @@ function bannerSrc(id){
 function unlockedTitles(){
   const owned = new Set(state.profile.ach||[]);
   const vip = vipActif();
-  const vipNames = new Set(["VIP", "Riche"]);
-  const l = TITLES.filter(t=>owned.has(t.id) && (vip || !vipNames.has(t.name)));
+  const l = TITLES.filter(t=>owned.has(t.id) && (vip || TITRES_BASE.has(t.name)));
+  if(vip){
+    l.unshift({id:"vip_title", name:"VIP", vip:true});
+    l.unshift({id:"riche_title", name:"Riche", vip:true});
+  }
   if(estAdmin()) l.unshift({id:"dev", name:"DEV", dev:true});   // réservé aux développeurs
   const g = state.profile.guilde;
-  if(g && g.nom){
+  if(vip && g && g.nom){
     if(g.baron) l.push({id:"gbaron", name:"Baron de Guilde : " + g.nom});
     l.push({id:"gnom", name:g.nom});
   }
@@ -16808,9 +16953,7 @@ function viewProfil(){
   /* Une carte absente de la collection à l'instant (chargement en cours, synchro)
      ne vide plus son emplacement : on montre la dernière image connue. */
   const plafondVitrine = vipActif() ? 10 : 3;
-  p.slots = (p.slots||[]).filter(Boolean).slice(0, plafondVitrine);
-  if (!vipActif() && Array.isArray(p.titresAff)) { p.titresAff = p.titresAff.slice(0,1); p.title = p.titresAff[0] || null; }
-  const slots = p.slots.map(id=>state.collection.find(c=>c.id===id) || (p.vitrineCache || {})[id] || null);
+  const slots = (p.slots||[]).filter(Boolean).slice(0, plafondVitrine).map(id=>state.collection.find(c=>c.id===id) || (p.vitrineCache || {})[id] || null);
   const lv0 = levelFromXP(playerXP());
   const since = p.since ? new Date(p.since) : new Date();
   const nice = since.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
@@ -16959,11 +17102,15 @@ function viewProfil(){
     await sset("fm:profile", p);
     viewProfil();
   });
-  view.querySelectorAll("[data-add]").forEach(el=>el.onclick = ()=>pickCard({
-    title:"Ajouter à la vitrine",
-    filter:c=>!(p.slots||[]).includes(c.id),
-    onPick:async c=>{ p.slots = (p.slots||[]).concat(c.id).slice(0,10); await sset("fm:profile", p); viewProfil(); }
-  }));
+  view.querySelectorAll("[data-add]").forEach(el=>el.onclick = ()=>{
+    const limite = vipActif() ? 10 : 3;
+    if((p.slots||[]).filter(Boolean).length >= limite){ toast("Vitrine pleine", vipActif()?"10 emplacements maximum.":"Les 3 emplacements gratuits sont utilisés. Le VIP en débloque 7 de plus.", "info"); return; }
+    pickCard({
+      title:"Ajouter à la vitrine",
+      filter:c=>!(p.slots||[]).includes(c.id),
+      onPick:async c=>{ p.slots = (p.slots||[]).concat(c.id).slice(0,limite); await sset("fm:profile", p); publierProfil(); viewProfil(); }
+    });
+  });
   view.querySelectorAll("[data-rm]").forEach(el=>el.onclick = async e=>{
     e.stopPropagation();
     p.slots.splice(+el.dataset.rm, 1);
@@ -18339,6 +18486,7 @@ function openSettings(){
   }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
+  FM_DERNIER_SOLDE_OBSERVE = Number.isFinite(+state.profile.coins) ? +state.profile.coins : 0;
   persoInstantane(state.profile);
   // les parties créées avant les Fandominus repartent avec la dotation complète
   if(!state.profile.v || state.profile.v < 3){
@@ -18366,6 +18514,7 @@ function openSettings(){
     state.profile.achClaimed = (state.profile.ach||[]).slice();
     await sset("fm:profile", state.profile);
   }
+  enregistrerConnexionQuotidienne();
   await migrateStats();
   await repareCommons();
   await refreshRelics();
