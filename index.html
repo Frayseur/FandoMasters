@@ -3546,6 +3546,79 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .cbcamp.plateau-ebene .cbcase.pleine,.cbcamp.plateau-braise .cbcase.pleine,.cbcamp.plateau-abysse .cbcase.pleine{box-shadow:none;background:none}
 .cbdecor{padding:.75rem}
 .cbligne .cbcout{position:relative;top:auto;left:auto;width:26px;font-size:.8rem}
+
+/* FandoMasters — direction artistique « grimoire d'automne » inspirée des références du plateau */
+.cbscene{
+  --mw:min(11.2vw,9.8vh,124px);
+  color:#f6e8d2;
+  background:
+    radial-gradient(ellipse at 8% 8%,rgba(132,22,27,.92) 0 8%,transparent 31%),
+    radial-gradient(ellipse at 92% 91%,rgba(125,18,25,.92) 0 9%,transparent 32%),
+    radial-gradient(ellipse at 95% 7%,rgba(150,37,31,.42),transparent 22%),
+    radial-gradient(ellipse at 4% 95%,rgba(143,26,31,.38),transparent 24%),
+    repeating-linear-gradient(0deg,rgba(9,13,20,.42) 0 2px,transparent 2px 54px),
+    repeating-linear-gradient(90deg,rgba(9,13,20,.35) 0 2px,transparent 2px 84px),
+    linear-gradient(145deg,#30323b 0%,#20232b 48%,#151820 100%);
+  isolation:isolate;
+}
+.cbscene::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.95;
+  background:
+    radial-gradient(ellipse at 0% 0%,transparent 0 15%,rgba(101,13,25,.8) 16% 18%,transparent 24%),
+    radial-gradient(ellipse at 100% 100%,transparent 0 15%,rgba(101,13,25,.78) 16% 18%,transparent 24%),
+    radial-gradient(ellipse at 100% 0%,transparent 0 17%,rgba(105,17,28,.55) 18% 20%,transparent 26%),
+    radial-gradient(ellipse at 0% 100%,transparent 0 17%,rgba(105,17,28,.55) 18% 20%,transparent 26%);
+}
+.cbscene>*{position:relative;z-index:1}
+.cbz-board{padding:.25rem 0;}
+.cbtable{
+  width:min(100%,calc(var(--mw)*7 + 6*var(--mw)*.12 + 2.4rem));
+  padding:clamp(.45rem,1.35vmin,1rem);
+  border-radius:clamp(13px,2.5vmin,28px);
+  background:linear-gradient(135deg,#9d7045 0%,#5b3925 13%,#30231d 50%,#7c512e 88%,#b18451 100%);
+  box-shadow:0 1.1em 2em rgba(0,0,0,.62),inset 0 0 0 2px rgba(224,181,119,.62),inset 0 0 0 5px rgba(35,22,18,.8),inset 0 0 0 7px rgba(218,177,118,.22);
+}
+.cbcamp{
+  border-radius:clamp(8px,1.5vmin,18px);
+  padding:clamp(.45rem,1.35vmin,1rem) .3rem;
+  background-color:#b49a7b;
+  background-image:
+    radial-gradient(ellipse at 50% 50%,rgba(255,231,190,.28),transparent 68%),
+    repeating-linear-gradient(132deg,rgba(91,63,43,.045) 0 1px,transparent 1px 7px),
+    linear-gradient(145deg,#c6ad8e 0%,#a88b6d 45%,#c0a486 100%);
+  box-shadow:inset 0 0 0 1px rgba(74,46,29,.72),inset 0 0 0 4px rgba(230,203,160,.42),inset 0 0 24px rgba(79,47,29,.24);
+  overflow:visible;
+}
+.cbcamp::before{content:"";position:absolute;inset:5px;border:1px solid rgba(82,54,35,.35);border-radius:inherit;pointer-events:none}
+.cbcamp.adv{border-bottom-left-radius:4px;border-bottom-right-radius:4px;}
+.cbcamp.moi{border-top-left-radius:4px;border-top-right-radius:4px;}
+.cbcase{border-radius:calc(var(--mw)*.055);background:rgba(86,58,38,.055);box-shadow:inset 0 0 0 1px rgba(80,52,34,.26),inset 0 2px 7px rgba(63,41,28,.12)}
+.cbligne-centre{background:linear-gradient(90deg,transparent,rgba(77,49,31,.22) 14%,rgba(77,49,31,.22) 86%,transparent);border-top:1px solid rgba(87,58,38,.25);border-bottom:1px solid rgba(87,58,38,.25)}
+.cblune{color:#d8bd91;background:radial-gradient(circle at 35% 25%,#dfc5a0,#a98762 76%);box-shadow:0 0 0 2px #806044,0 0 0 4px rgba(226,196,151,.35),0 3px 8px rgba(0,0,0,.38);text-shadow:0 1px 1px rgba(69,43,27,.5)}
+.cbjournal,.cbtourinfo{text-shadow:0 1px 2px rgba(47,29,20,.8);color:#f6e7d1}
+.cbmana{border-radius:5px;background:linear-gradient(180deg,#28252a,#121318);border:1px solid #8c6841;box-shadow:inset 0 1px rgba(255,231,191,.2),0 3px 8px rgba(0,0,0,.45)}
+.cbbougie{background:radial-gradient(circle,rgba(255,173,78,.24),rgba(209,76,37,.08) 42%,transparent 72%)}
+.cbheros,.cbserv,.cbcadre{filter:drop-shadow(0 3px 3px rgba(30,18,12,.28))}
+.cbheros{background:linear-gradient(145deg,#f0cf8d,#9a6534 42%,#493020 76%,#d3a45c);box-shadow:0 .3em .9em rgba(0,0,0,.65),inset 0 0 0 1px rgba(255,236,194,.68),inset 0 0 0 4px rgba(64,38,22,.45)}
+.cbportrait{background:radial-gradient(circle at 50% 30%,#a88a6c,#392720 75%)}
+.cbcarte .cbcadre{background:linear-gradient(145deg,#f0d18c 0%,#a66f35 20%,#4a3024 48%,#b27b3d 80%,#e2bd75 100%);box-shadow:0 .25em .7em rgba(0,0,0,.58),inset 0 0 0 1px rgba(255,235,190,.62),inset 0 0 0 3px rgba(53,31,20,.62)}
+.cbbandeau{background:linear-gradient(180deg,#352b2a,#171518);border-bottom-color:#c59a58}
+.cbtexte{background:linear-gradient(180deg,#e6d1ac,#c6a77d);color:#38271c;box-shadow:inset 0 1px rgba(255,245,215,.6)}
+.cbcout{background:linear-gradient(#fff0b3,#c18c37);filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}
+.cbst{filter:drop-shadow(0 2px 2px rgba(0,0,0,.45))}
+.cbfintour{border:3px solid #bd9253!important;background:radial-gradient(circle at 35% 25%,#51464a,#17171c 72%)!important;color:#f5e4c7!important;box-shadow:0 0 0 2px #4a2e20,0 5px 14px rgba(0,0,0,.58),inset 0 0 0 1px rgba(255,222,164,.3)!important}
+.cbrond{background:linear-gradient(145deg,#51403a,#1b1718);border-color:#ad814a;color:#f4dfbd}
+.cbconsigne{background:linear-gradient(90deg,transparent,rgba(112,29,27,.96) 12%,rgba(112,29,27,.96) 88%,transparent)}
+.cbscene button:focus-visible{outline:2px solid #f4d18c;outline-offset:3px}
+@media(max-width:600px){
+ .cbscene{--mw:min(12.7vw,8.7vh,76px);padding:max(.3rem,env(safe-area-inset-top)) .25rem max(.25rem,env(safe-area-inset-bottom));gap:.25rem .25rem}
+ .cbtable{width:100%;padding:.35rem;border-radius:13px}
+ .cbcamp{padding:.45rem .12rem}
+ .cbnomjoueur b{max-width:24vw;font-size:.78rem}
+ .cbjournal,.cbtourinfo{font-size:.62rem;max-width:calc(50% - 1.8rem)}
+ .cblune{width:2rem;font-size:1rem}
+}
+@media(prefers-reduced-motion:reduce){.cbbougie{animation:none}}
+
 </style>
 </head>
 <body>
