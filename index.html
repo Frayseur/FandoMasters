@@ -3417,7 +3417,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 @keyframes cbflamme{0%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}100%{opacity:.85;transform:scale(.98)}}
 .cbz-ahero{grid-area:ahero;display:flex;align-items:flex-start;gap:.5rem;z-index:2}
 .cbz-ahand{grid-area:ahand;display:flex;flex-direction:column;align-items:center;gap:.3rem;min-width:0}
-.cbz-amenu{grid-area:amenu;display:flex;flex-direction:column;gap:.35rem;z-index:2}
+.cbz-amenu{grid-area:amenu;display:flex;flex-direction:column;gap:.35rem;z-index:80;position:relative;pointer-events:auto;touch-action:manipulation}
 .cbz-board{grid-area:board;display:flex;flex-direction:column;justify-content:center;min-height:0;position:relative}
 .cbz-fin{grid-area:fin;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;z-index:3}
 .cbz-moi{grid-area:moi;display:flex;align-items:flex-end;gap:.55rem;z-index:3}
@@ -3454,7 +3454,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
     linear-gradient(160deg,#4b2547,#26122b);
   border:2px solid #b58a4a;box-shadow:0 3px 6px rgba(0,0,0,.6)}
 .cbdos i:first-child{margin-left:0}
-.cbrond{width:2.3rem;height:2.3rem;border-radius:50%;border:1px solid #9a7440;background:linear-gradient(#3a302a,#1b1513);color:#f3e6cf;font-size:1.05rem;cursor:pointer;display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.cbrond{position:relative;z-index:80;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent;width:2.3rem;height:2.3rem;border-radius:50%;border:1px solid #9a7440;background:linear-gradient(#3a302a,#1b1513);color:#f3e6cf;font-size:1.05rem;cursor:pointer;display:grid;place-items:center;box-shadow:0 3px 8px rgba(0,0,0,.5)}
 .cbrond:hover{border-color:#e7c37a}
 /* plateau de parchemin */
 .cbtable{position:relative;margin:0 auto;width:min(100%, calc(var(--mw) * 7 + 6 * var(--mw) * .12 + 2.4rem));border-radius:clamp(14px, 3vmin, 34px);padding:clamp(.4rem, 1.6vmin, 1.1rem) clamp(.4rem, 1.4vmin, 1rem);
@@ -13797,7 +13797,7 @@ function viewDuel(){
   if(CB.id && CB.v) return cbPeindre(true);
   cbPleinEcran(false);
   if(!vipActif() && CB.onglet === "classement") CB.onglet = "jouer";
-  const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ["plateau", "Plateau"], ...(vipActif() ? [["classement", "Classement"]] : [])];
+  const onglets = [["jouer", "Jouer"], ["deck", "Mon deck"], ...(vipActif() ? [["classement", "Classement"]] : [])];
   view.innerHTML = `
     <h2 class="vuetitre">Combat</h2>
     <div class="admtabs">${onglets.map(([k, n]) => `<button class="btn small ${CB.onglet === k ? "" : "ghost"}" data-cbong="${k}">${n}</button>`).join("")}</div>
@@ -13806,7 +13806,6 @@ function viewDuel(){
   view.querySelectorAll("[data-cbong]").forEach(b => b.onclick = ()=>{ CB.onglet = b.dataset.cbong; CB.erreur = ""; viewDuel(); });
   const corps = view.querySelector("#cbcorps");
   if(CB.onglet === "deck") return cbVueDeck(corps);
-  if(CB.onglet === "plateau") return cbVuePlateau(corps);
   if(CB.onglet === "classement") return cbVueClassement(corps);
   cbVueJouer(corps);
 }
@@ -13829,6 +13828,7 @@ function cbVueJouer(corps){
       <button class="btn small ghost" data-cbong2="deck">${val.ok ? "Modifier" : "Composer"}</button>
     </div>
     ${!enLigne ? `<p class="sub">Le combat demande une connexion au serveur.</p>` : ""}
+    <p class="sub">Plateau de combat : si au moins un joueur est VIP, les deux joueurs pourront voter parmi les trois plateaux au début du match. En cas de désaccord, la priorité dépend du statut VIP.</p>
     ${at ? `<div class="panel cbattente">
         ${at.type === "recherche"
           ? `<div class="cbspin"></div><b>Recherche d'un adversaire ${at.mode === "RANKED" ? "classé" : "en ligne"}…</b><span class="sub" id="cbattente-t">${Math.floor((Date.now() - at.depuis) / 1000)} s</span>`
@@ -14124,6 +14124,24 @@ function cbPeindre(force){
   const mk = v.moi_k, ak = 3 - mk, fini = v.statut !== "ACTIVE";
   const monTour = v.mon_tour && !fini;
   const cibles = CB.mode ? cbCibles(CB.mode.regle) : new Set();
+  // Vote de plateau : le serveur arbitre et synchronise le résultat pour les deux joueurs.
+  if(v.phase === "VOTE" && !fini){
+    const options = [{id:"classique",nom:"Classique",desc:"Bois et pierre"},{id:"braise",nom:"Braise",desc:"Lueurs chaudes"},{id:"abysse",nom:"Abysse",desc:"Ambiance sombre"}];
+    view.innerHTML = cbFond(`<section class="cbvoteplateau">
+      <h2>Choisissez le plateau</h2><p>Un joueur VIP est dans la partie. Votez tous les deux : si vous êtes en désaccord, le choix VIP prime. Si vous êtes tous les deux VIP, le plateau est départagé aléatoirement.</p>
+      <div class="cbvotegrille">${options.map(o=>`<button class="cbvotebtn" data-vote-plateau="${o.id}" ${CB.envoi?"disabled":""}><b>${o.nom}</b><small>${o.desc}</small></button>`).join("")}</div>
+      <p class="cbvotesub">${v.reste_ms>0?`Temps restant : ${Math.ceil(v.reste_ms/1000)} s`:"Finalisation du vote…"}</p>
+      <button class="cbbtn ghost" id="cbvoteattente" disabled>En attente du vote adverse…</button>
+    </section>`, "cbvote");
+    view.querySelectorAll("[data-vote-plateau]").forEach(b=>b.onclick=async()=>{
+      if(CB.envoi) return; CB.envoi=true; cbPeindre(true);
+      try{ await cbAppel("combat_vote_plateau",{p_combat:v.id,p_plateau:b.dataset.votePlateau}); cbAppliquer(await cbAppel("combat_etat",{p_combat:v.id})); }
+      catch(e){ CB.erreur=regRaison(e); }
+      finally{ CB.envoi=false; cbPeindre(true); }
+    });
+    if((v.reste_ms||0)<=0 && !CB.voteTimeout){ CB.voteTimeout=true; cbAppel("combat_vote_plateau",{p_combat:v.id,p_plateau:"timeout"}).then(()=>cbAppel("combat_etat",{p_combat:v.id})).then(r=>{CB.voteTimeout=false;cbAppliquer(r);cbPeindre(true)}).catch(()=>{CB.voteTimeout=false;}); }
+    cbChrono(); return;
+  }
   // mulligan
   if(v.phase === "MULLIGAN" && !fini){
     view.innerHTML = cbFond(`<div class="cbmulltete">
@@ -14169,8 +14187,9 @@ function cbPeindre(force){
         ${cbMana(v.adv)}
       </div>
       <div class="cbz-amenu">
-        <button class="cbrond" id="cbmenu" title="Revenir au menu (la partie continue)">☰</button>
-        ${fini ? "" : `<button class="cbrond" id="cbabandon" title="Abandonner">⚑</button>`}
+        <button class="cbrond" id="cbmenu" title="Revenir au menu (la partie continue)" aria-label="Revenir au menu">☰</button>
+        <button class="cbrond" id="cbmuter" title="${state.profile.mute ? "Réactiver les sons" : "Couper les sons"}" aria-label="${state.profile.mute ? "Réactiver les sons" : "Couper les sons"}">${state.profile.mute ? "🔇" : "🔊"}</button>
+        ${fini ? "" : `<button class="cbrond" id="cbabandon" title="Abandonner" aria-label="Abandonner">⚑</button>`}
       </div>
       <div class="cbz-board">
         <div class="cbtable">
@@ -14245,9 +14264,26 @@ function cbPeindre(force){
   const st = view.querySelector("#cbstop"); if(st) st.onclick = ()=>{ CB.mode = null; cbPeindre(true); };
   const fin = view.querySelector("#cbfin"); if(fin) fin.onclick = ()=>cbAgir({type:"fin_tour"});
   const menu = view.querySelector("#cbmenu"); if(menu) menu.onclick = ()=>{ CB.mode = null; cbPleinEcran(false); go("hub"); };
-  const ab = view.querySelector("#cbabandon"); if(ab) ab.onclick = async ()=>{
-    if(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner")) cbAgir({type:"abandon"});
+  const mute = view.querySelector("#cbmuter"); if(mute) mute.onclick = async ()=>{
+    state.profile.mute = !state.profile.mute;
+    await sset("fm:profile", state.profile);
+    mute.textContent = state.profile.mute ? "🔇" : "🔊";
+    mute.title = state.profile.mute ? "Réactiver les sons" : "Couper les sons";
+    mute.setAttribute("aria-label", mute.title);
+    if(!state.profile.mute) sfx.flip();
   };
+  const ab = view.querySelector("#cbabandon"); if(ab) {
+    ab.style.cssText += ";position:relative;z-index:80;pointer-events:auto;touch-action:manipulation;-webkit-tap-highlight-color:transparent";
+    const abandonner = async ev => {
+      if(ev) { ev.preventDefault(); ev.stopPropagation(); }
+      if(ab.dataset.busy === "1") return;
+      ab.dataset.busy = "1";
+      try {
+        if(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner")) await cbAgir({type:"abandon"});
+      } finally { if(ab.isConnected) ab.dataset.busy = "0"; }
+    };
+    ab.onclick = abandonner;
+  }
   cbChrono();
   // résultat : une fenêtre attachée au document
   document.querySelectorAll(".cbfinmodal").forEach(x => { if(!fini || x.dataset.id !== v.id) x.remove(); });
@@ -18776,3 +18812,12 @@ function openSettings(){
 </script>
 </body>
 </html>
+
+<style>
+.cbvoteplateau{width:min(94vw,760px);margin:auto;padding:clamp(16px,4vw,32px);text-align:center;background:rgba(28,19,16,.94);border:1px solid #c49a5a;border-radius:18px;color:#f5dfb6;box-shadow:0 12px 40px #0009}
+.cbvoteplateau h2{margin:0 0 12px;font-size:clamp(1.4rem,4vw,2rem)}.cbvoteplateau p{line-height:1.5}
+.cbvotegrille{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}
+.cbvotebtn{min-height:125px;border:1px solid #b58b4e;border-radius:12px;background:linear-gradient(145deg,#68432a,#2c1b16);color:#ffe4b2;padding:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;touch-action:manipulation}
+.cbvotebtn b{font-size:1.1rem}.cbvotebtn small{opacity:.8}.cbvotebtn:active{transform:scale(.98)}.cbvotebtn:disabled{opacity:.5}
+@media(max-width:520px){.cbvotegrille{grid-template-columns:1fr;gap:8px}.cbvotebtn{min-height:70px;flex-direction:row}.cbvoteplateau{padding:14px}}
+</style>
