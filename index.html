@@ -13488,21 +13488,25 @@ function cbValider(ids){
     for(let i = 0; i < k; i++) cartes.push(x.p);
   }
   if(ids.length !== 30) erreurs.unshift(ids.length < 30 ? "il manque " + (30 - ids.length) + " carte" + (30 - ids.length > 1 ? "s" : "") : (ids.length - 30) + " carte(s) de trop");
+  const provocations = cartes.filter(p => p.type === "serviteur" && p.role === "tank").length;
+  if(provocations > 3) erreurs.unshift("Deck trop défensif : 3 serviteurs avec Provocation maximum.");
   const courbe = [0, 0, 0, 0, 0, 0, 0, 0]; cartes.forEach(p => courbe[Math.min(7, p.cout)]++);
   return {ok:!erreurs.length, erreurs:[...new Set(erreurs)], cartes, courbe};
 }
 /* Deck conseillé : les cartes les plus efficaces pour leur coût, avec une courbe de mana jouable */
 function cbDeckAuto(){
-  const val = p => p.type === "sort" ? 1.5 : p.type === "arme" ? 2.2 : (p.atq + p.pv + (p.role === "ninja" ? 1 : 0.6)) / (p.cout + 0.6);
+  const val = p => p.type === "sort" ? 2.8 + (p.eff && ["zone","zone_tous","silence","detruire","transformation","affaiblir"].includes(p.eff.type) ? 0.7 : 0) : p.type === "arme" ? 2.2 : (p.atq + p.pv + (p.role === "ninja" ? 1 : 0.6)) / (p.cout + 0.6);
   const cat = cbCatalogue().sort((a, b) => val(b.p) - val(a.p));
+  const byId = new Map(cat.map(x => [x.p.id, x]));
   const deck = [], parCout = {};
   const quota = c => c <= 2 ? 8 : c <= 4 ? 12 : c <= 6 ? 8 : 4;
   const tranche = c => c <= 2 ? 2 : c <= 4 ? 4 : c <= 6 ? 6 : 10;
   for(const passe of [true, false]) for(const x of cat){
     for(let i = deck.filter(d => d === x.p.id).length; i < x.max && deck.length < 30; i++){
+      if(x.p.type === "serviteur" && x.p.role === "tank" && deck.filter(id => { const y = byId.get(id); return y && y.p.type === "serviteur" && y.p.role === "tank"; }).length >= 3) break;
       const t = tranche(x.p.cout);
       if(passe && (parCout[t] || 0) >= quota(x.p.cout)) break;
-      if(passe && x.p.type === "sort" && deck.filter(d => d.startsWith("sort:")).length >= 6) break;   // 6 sorts au plus
+      if(x.p.type === "sort" && deck.filter(d => d.startsWith("sort:")).length >= 12) break;   // au plus 12 sorts : le deck conserve une vraie présence de serviteurs
       deck.push(x.p.id); parCout[t] = (parCout[t] || 0) + 1;
     }
   }
@@ -13605,7 +13609,7 @@ function cbCibles(regle){
   return out;
 }
 function cbRegleCarte(p){
-  if(p.type === "sort"){ const t = p.eff.type; return t === "degats" ? (p.eff.cible || "personnage") : t === "soin" ? (p.eff.cible || "personnage") : t === "bonus" || t === "bouclier" ? "allie_serviteur" : t === "silence" ? "serviteur" : ["detruire","gel","affaiblir"].includes(t) ? (p.eff.cible || "ennemi_serviteur") : null; }
+  if(p.type === "sort"){ const t = p.eff.type; return t === "degats" ? (p.eff.cible || "personnage") : t === "soin" ? (p.eff.cible || "personnage") : t === "bonus" || t === "bouclier" ? "allie_serviteur" : t === "silence" ? "serviteur" : ["detruire","gel","affaiblir","transformation"].includes(t) ? (p.eff.cible || "ennemi_serviteur") : t === "combo" ? (p.eff.cible || null) : null; }
   if(p.type === "serviteur" && p.eff && p.eff.cri) return p.eff.cri.type === "degats" ? "ennemi" : "allie";
   return null;
 }
@@ -13764,7 +13768,7 @@ function viewDuel(){
 }
 function cbRegles(){
   return info("Règles du combat", `<p class='sub' style='margin:0 0 .5rem'>Chaque joueur a un héros à 30 PV et un deck de 30 cartes. À votre tour, votre mana maximum augmente de 1 (jusqu'à 10) et se remplit ; vous piochez une carte. Jouez des serviteurs et des sorts, attaquez, puis terminez votre tour. Le premier héros à 0 PV perd.</p>
-    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Entre serviteurs, les dégâts sont simultanés.</p>
+    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Un deck est limité à <b>3 serviteurs avec Provocation</b> pour éviter les plateaux verrouillés. <b>Ruée</b> permet d’attaquer les serviteurs dès l’arrivée, <b>Furtivité</b> empêche d’être ciblé par l’adversaire avant sa première attaque, et <b>Râle de mort</b> déclenche un effet à la mort. Les sorts de zone touchent plusieurs serviteurs, le Silence retire les capacités, et la Transformation remplace les statistiques et capacités par celles d’un serviteur simple. Entre serviteurs, les dégâts sont simultanés.</p>
     <p class='sub' style='margin:0'>Pouvoir de héros : 2 mana, 1 dégât, une fois par tour. Main de 10 cartes au plus (au-delà, la carte piochée brûle) ; deck vide : fatigue de 1, puis 2, puis 3… Le second joueur reçoit « Élan » (+1 mana une fois).</p>`);
 }
 function cbVueJouer(corps){
