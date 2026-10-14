@@ -3721,6 +3721,44 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
   .cbtable { width:min(100%,1160px); }
 }
 
+
+/* ---- Combat FX : feedback visuel basé sur les changements d'état serveur ---- */
+.cbfx-layer{position:absolute;inset:0;z-index:80;pointer-events:none;overflow:hidden}
+.cbfx-hit{position:relative!important;z-index:12!important;animation:cbHitShake .42s ease-out}
+.cbfx-hit::after{content:"";position:absolute;inset:-18%;pointer-events:none;border-radius:50%;
+ background:radial-gradient(circle,rgba(255,248,205,.96) 0 3%,rgba(255,189,78,.75) 8%,rgba(235,75,44,.35) 24%,transparent 68%);
+ animation:cbHitBurst .48s ease-out forwards;mix-blend-mode:screen}
+.cbfx-hero.cbfx-hit::after{inset:-12%;border-radius:45%}
+.cbfx-number{position:absolute;z-index:100;transform:translate(-50%,-50%);font:900 clamp(22px,4.5vmin,42px)/1 Georgia,serif;
+ color:#fff2d6;text-shadow:0 2px 0 #5c160f,0 0 7px #f34c26,2px 4px 5px #160b09;
+ animation:cbDamageFloat .95s cubic-bezier(.15,.7,.3,1) forwards;white-space:nowrap}
+.cbfx-number::before{content:"";position:absolute;z-index:-1;inset:-8px -13px;border-radius:50%;
+ background:radial-gradient(ellipse,rgba(195,40,22,.62),transparent 72%)}
+.cbfx-number.heal{color:#d7ffbd;text-shadow:0 2px #17491b,0 0 9px #71f65c}
+.cbfx-death{position:absolute;z-index:90;pointer-events:none;transform:translate(-50%,-50%);
+ font-size:clamp(28px,6vmin,54px);filter:drop-shadow(0 3px 5px #160b09);
+ animation:cbDeathBurst .8s ease-out forwards}
+.cbfx-ring{position:absolute;z-index:88;width:16px;height:16px;border:3px solid #ffd58a;border-radius:50%;
+ transform:translate(-50%,-50%);box-shadow:0 0 12px #ff8b35, inset 0 0 8px #ff8b35;
+ animation:cbRing .55s ease-out forwards}
+.cbfx-trail{position:absolute;z-index:85;height:4px;transform-origin:left center;border-radius:99px;
+ background:linear-gradient(90deg,transparent,#fff5cb,#ffb13b,#e74729,transparent);
+ box-shadow:0 0 8px #ff6d32;animation:cbTrail .32s ease-out forwards}
+.cbserv.pret::before{content:"";position:absolute;inset:-5px;border:2px solid rgba(255,222,135,.9);border-radius:inherit;
+ opacity:.8;animation:cbReadyPulse 1.6s ease-in-out infinite;pointer-events:none}
+.cbserv.cible,.cbheros.cible{animation:cbTargetPulse .8s ease-in-out infinite alternate}
+.cbserv.cible::after,.cbheros.cible::after{content:"";position:absolute;inset:-5px;border:2px solid #ffcb65;border-radius:inherit;
+ box-shadow:0 0 15px rgba(255,174,57,.72);pointer-events:none}
+@keyframes cbHitShake{0%,100%{translate:0 0}18%{translate:-5px 1px}36%{translate:4px -2px}54%{translate:-3px 1px}72%{translate:2px 0}}
+@keyframes cbHitBurst{0%{opacity:0;transform:scale(.15)}22%{opacity:1;transform:scale(.7)}100%{opacity:0;transform:scale(1.55)}}
+@keyframes cbDamageFloat{0%{opacity:0;translate:0 12px;scale:.55}15%{opacity:1;translate:0 -4px;scale:1.18}35%{scale:1}100%{opacity:0;translate:0 -58px;scale:.9}}
+@keyframes cbDeathBurst{0%{opacity:0;scale:.3;rotate:-18deg}20%{opacity:1;scale:1.2;rotate:8deg}65%{opacity:.9;scale:1;rotate:0}100%{opacity:0;scale:1.5;translate:0 -28px}}
+@keyframes cbRing{0%{opacity:1;scale:.2}100%{opacity:0;scale:7}}
+@keyframes cbTrail{0%{opacity:0;scale:0 1}15%{opacity:1;scale:1 1}100%{opacity:0;scale:1 .4}}
+@keyframes cbReadyPulse{0%,100%{opacity:.2}50%{opacity:.85}}
+@keyframes cbTargetPulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+@media(prefers-reduced-motion:reduce){.cbfx-hit,.cbfx-number,.cbfx-death,.cbfx-ring,.cbfx-trail,.cbserv.pret::before,.cbserv.cible,.cbheros.cible{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+
 </style>
 </head>
 <body>
@@ -13132,7 +13170,7 @@ function cbCarteHTML(p, opts = {}){
 }
 /* serviteur sur le plateau */
 function cbServHTML(m, k, opts = {}){
-  return `<div class="cbserv ${m.provocation ? "provoc" : ""} ${opts.pret ? "pret" : ""} ${opts.cible ? "cible" : ""} ${opts.choisi ? "choisi" : ""}" data-r="${cbEsc(m.r || "")}" data-cible="${k}:${cbEsc(m.iid)}" ${opts.clic ? `data-serv="${cbEsc(m.iid)}"` : ""} data-zoom="${k}:${cbEsc(m.iid)}" title="${cbEsc(m.nom + " — " + (m.texte || ""))}">
+  return `<div class="cbserv ${m.provocation ? "provoc" : ""} ${opts.pret ? "pret" : ""} ${opts.cible ? "cible" : ""} ${opts.choisi ? "choisi" : ""}" data-r="${cbEsc(m.r || "")}" data-fxid="${k}:${cbEsc(m.iid)}" data-cible="${k}:${cbEsc(m.iid)}" ${opts.clic ? `data-serv="${cbEsc(m.iid)}"` : ""} data-zoom="${k}:${cbEsc(m.iid)}" title="${cbEsc(m.nom + " — " + (m.texte || ""))}">
     <div class="cbsart">${cbArtHTML(m)}</div>
     ${m.provocation ? `<span class="cbkw provoc" title="Provocation">🛡</span>` : m.charge ? `<span class="cbkw" title="Charge">⚡</span>` : ""}
     <span class="cbst a">${m.atq}</span><span class="cbst p ${m.pv < m.pvmax ? "blesse" : ""}">${m.pv}</span>
@@ -13150,7 +13188,7 @@ function cbPortrait(moi, cote){
 }
 function cbHerosHTML(cote, k, moi, opts = {}){
   const nom = cote.pseudo || (moi ? "Vous" : "Adversaire");
-  return `<div class="cbheros ${moi ? "moi" : "adv"} ${opts.cible ? "cible" : ""} ${opts.pret ? "pret" : ""}" data-cible="${k}:heros" ${opts.clic ? `data-herosatt="1"` : ""} title="${cbEsc(nom)}">
+  return `<div class="cbheros ${moi ? "moi" : "adv"} ${opts.cible ? "cible" : ""} ${opts.pret ? "pret" : ""}" data-fxid="${k}:heros" data-cible="${k}:heros" ${opts.clic ? `data-herosatt="1"` : ""} title="${cbEsc(nom)}">
     <div class="cbportrait">${cbPortrait(moi, cote)}</div>
     <span class="cbst p heros ${cote.pv < cote.pvmax ? "blesse" : ""}">${cote.pv}</span>
     ${cote.arme ? `<span class="cbarme" title="${cbEsc(cote.arme.nom)}"><b>⚔ ${cote.arme.atq}</b><i>${cote.arme.dur}</i></span>` : ""}
@@ -13193,10 +13231,40 @@ function cbRegleCarte(p){
 }
 
 /* ---- serveur ---- */
+function cbFxSnapshot(v){
+  if(!v || !v.moi || !v.adv) return null;
+  const out = {units:{}, heroes:{}};
+  const mk = v.moi_k, ak = 3 - mk;
+  [[v.moi,mk],[v.adv,ak]].forEach(([side,k])=>{
+    out.heroes[k] = {pv:side.pv, max:side.pvmax};
+    (side.plateau||[]).forEach(m=>{ out.units[k+":"+m.iid] = {pv:m.pv, max:m.pvmax, nom:m.nom}; });
+  });
+  return out;
+}
 function cbAppliquer(r){
   if(!r) return;
   if(r.id){
-    if(CB.id !== r.id){ CB.mode = null; CB.mull = new Set(); CB.vuJournal = 0; }
+    const same = CB.id === r.id;
+    if(same && CB.v && r.version !== CB.v.version){
+      const before = cbFxSnapshot(CB.v), after = cbFxSnapshot(r), hits = [];
+      if(before && after){
+        Object.keys(after.units).forEach(id=>{
+          const a=before.units[id], b=after.units[id];
+          if(a && b && Number.isFinite(a.pv) && Number.isFinite(b.pv) && b.pv < a.pv)
+            hits.push({id, damage:a.pv-b.pv, dead:b.pv<=0, name:b.nom});
+        });
+        Object.keys(before.units).forEach(id=>{
+          if(!after.units[id]) hits.push({id, damage:0, dead:true, name:before.units[id].nom});
+        });
+        Object.keys(after.heroes).forEach(id=>{
+          const a=before.heroes[id], b=after.heroes[id];
+          if(a && b && Number.isFinite(a.pv) && Number.isFinite(b.pv) && b.pv < a.pv)
+            hits.push({id:id+":heros", damage:a.pv-b.pv, dead:b.pv<=0, hero:true});
+        });
+      }
+      if(hits.length) CB.fxPending = (CB.fxPending||[]).concat(hits).slice(-12);
+    }
+    if(!same){ CB.mode = null; CB.mull = new Set(); CB.vuJournal = 0; CB.fxPending = []; }
     CB.id = r.id; CB.v = r; CB.attente = null; CB.dernierMode = r.mode;
     if(r.statut !== "ACTIVE"){ cbProfilCharger(); setTimeout(()=>registreVerifier(), 500); }
   }else if(r.recherche){ CB.attente = {type:"recherche", mode:r.recherche, depuis:Date.now() - (r.depuis_ms || 0)}; CB.id = null; CB.v = null; }
@@ -13447,6 +13515,47 @@ function cbFond(contenu, classe){
     ${contenu}
   </div>`;
 }
+
+function cbFxRun(){
+  const pending = CB.fxPending || [];
+  if(!pending.length) return;
+  CB.fxPending = [];
+  const root = document.querySelector(".cbpartie");
+  if(!root) return;
+  let layer = root.querySelector(".cbfx-layer");
+  if(!layer){ layer=document.createElement("div"); layer.className="cbfx-layer"; root.appendChild(layer); }
+  const rootRect = root.getBoundingClientRect();
+  const pos = el => { const r=el.getBoundingClientRect(); return {x:r.left+r.width/2-rootRect.left,y:r.top+r.height/2-rootRect.top}; };
+  pending.forEach((hit,index)=>{
+    const target = root.querySelector(`[data-fxid="${CSS.escape(hit.id)}"]`);
+    if(!target){
+      // A unit that disappeared was destroyed: place the effect at its former slot if possible.
+      const fallback = root.querySelector(".cbz-board");
+      if(!fallback) return;
+      const r=fallback.getBoundingClientRect(), x=r.left+r.width/2-rootRect.left, y=r.top+r.height/2-rootRect.top;
+      const death=document.createElement("span"); death.className="cbfx-death"; death.textContent="✦";
+      death.style.left=(x+(index%5-2)*24)+"px"; death.style.top=(y+(index%3-1)*18)+"px"; layer.appendChild(death);
+      setTimeout(()=>death.remove(),900); return;
+    }
+    target.classList.remove("cbfx-hit"); void target.offsetWidth; target.classList.add("cbfx-hit");
+    if(hit.hero) target.classList.add("cbfx-hero");
+    const p=pos(target);
+    const ring=document.createElement("i"); ring.className="cbfx-ring"; ring.style.left=p.x+"px"; ring.style.top=p.y+"px"; layer.appendChild(ring);
+    if(hit.damage>0){
+      const num=document.createElement("b"); num.className="cbfx-number"; num.textContent="−"+hit.damage;
+      num.style.left=(p.x+(Math.random()*14-7))+"px"; num.style.top=(p.y-8)+"px"; layer.appendChild(num);
+      setTimeout(()=>num.remove(),1100);
+    }
+    if(hit.dead){
+      const death=document.createElement("span"); death.className="cbfx-death"; death.textContent="💥";
+      death.style.left=p.x+"px"; death.style.top=p.y+"px"; layer.appendChild(death);
+      target.classList.add("cbfx-dying");
+      setTimeout(()=>death.remove(),900);
+    }
+    setTimeout(()=>{target.classList.remove("cbfx-hit","cbfx-hero","cbfx-dying");ring.remove()},700);
+  });
+}
+
 function cbPeindre(force){
   if(state.view !== "duel") return;
   const v = CB.v; if(!v){ viewDuel(); return; }
@@ -13538,6 +13647,7 @@ function cbPeindre(force){
           return cbCarteHTML(p, {jouable:ok, style:`--i:${i - (v.moi.main.length - 1) / 2}`, data:ok ? `data-jouer="${cbEsc(p.iid)}"` : `data-zoommain="${cbEsc(p.iid)}"`});
         }).join("")}</div>
       </div>`, CB.mode ? "cibler" : "");
+  cbFxRun();
   // jouer une carte
   view.querySelectorAll("[data-jouer]").forEach(el => el.onclick = ()=>{
     const p = v.moi.main.find(x => x.iid === el.dataset.jouer); if(!p) return;
