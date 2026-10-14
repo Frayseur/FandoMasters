@@ -3979,34 +3979,31 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 @media(max-width:560px){.vipshop-hero{border-radius:18px}.vipshop-grid{grid-template-columns:1fr}.vipshop-benefit{padding:.85rem}.vipshop-table{font-size:.78rem}.vipshop-table th,.vipshop-table td{padding:.65rem .55rem}.vipshop-table th:first-child,.vipshop-table td:first-child{min-width:145px}.vipshop-trust{gap:.45rem .8rem}.vipshop-crown{font-size:2.8rem}}
 
 
-/* Correctif responsive final : bandeau organisé en deux lignes sur tablette/mobile. */
+/* Bandeau compact téléphone/tablette : contrôles à leur taille naturelle, sans étirement. */
 @media (max-width: 820px){
-  .wrap{padding-left:clamp(.55rem,2.5vw,.9rem);padding-right:clamp(.55rem,2.5vw,.9rem)}
-  .topbar{display:grid!important;grid-template-columns:minmax(28px,auto) minmax(0,1fr) auto auto;grid-template-areas:
-    "logo me sound settings"
-    "free mana coins coins";
-    align-items:center;gap:.42rem .5rem;padding:.55rem 0 .75rem!important;width:100%;}
-  .topbar .logo{grid-area:logo;min-width:28px;justify-self:start}
-  .topbar .me{grid-area:me;max-width:none!important;width:100%;min-width:0;padding:.2rem .55rem .2rem .2rem;justify-self:stretch}
-  .topbar .me #mename{min-width:0;max-width:100%}
+  .wrap{padding-left:12px;padding-right:12px}
+  .topbar{display:flex!important;flex-wrap:wrap!important;align-items:center;gap:8px;padding:8px 0 12px!important;width:100%;}
+  .topbar .logo{order:1;flex:0 0 30px;width:30px;min-width:30px}
+  .topbar .me{order:2;flex:0 1 auto;width:auto;max-width:min(42vw,190px)!important;min-width:0;padding:3px 9px 3px 3px;}
+  .topbar .me #mename{min-width:0;max-width:28vw;overflow:hidden;text-overflow:ellipsis}
+  .topbar .me .pic{width:27px;height:27px;flex:0 0 27px}
   .topbar .spacer{display:none!important}
-  .topbar #sound{grid-area:sound;display:flex!important;align-items:center;justify-content:center;min-width:34px;min-height:34px;padding:.25rem}
-  .topbar #wikitag{grid-area:settings;display:flex;align-items:center;justify-content:center;min-width:38px;min-height:34px;padding:.25rem .45rem}
-  .topbar .freebox{grid-area:free;justify-self:start;margin:0!important;min-width:0}
-  .topbar .purse.mana{grid-area:mana;justify-self:center}
-  .topbar .purse:not(.mana){grid-area:coins;justify-self:end}
-  .topbar .purse,.topbar .freebox{min-height:32px;padding:.25rem .55rem;font-size:.8rem}
+  .topbar #sound{order:3;display:inline-flex!important;flex:0 0 34px;width:34px;height:34px;min-width:34px;min-height:34px;padding:0;align-items:center;justify-content:center}
+  .topbar #wikitag{order:4;display:inline-flex;flex:0 0 38px;width:38px;height:34px;min-width:38px;min-height:34px;padding:0;align-items:center;justify-content:center}
+  .topbar .freebox{order:5;flex:0 0 auto;width:auto;max-width:100%;margin:0!important;padding:5px 10px;min-height:32px}
+  .topbar .purse.mana{order:6;flex:0 0 auto;width:auto;max-width:100%;margin:0;padding:5px 10px;min-height:32px}
+  .topbar .purse:not(.mana){order:7;flex:0 0 auto;width:auto;max-width:100%;margin:0;padding:5px 10px;min-height:32px}
   .topbar .purse small,.topbar .freebox small{display:none!important}
   .topbar #univcount{display:none}
 }
 @media (max-width:420px){
-  .topbar{grid-template-columns:26px minmax(0,1fr) 32px 36px;gap:.35rem .35rem}
-  .topbar .logo .mark{width:24px;height:26px}
-  .topbar .me{font-size:.78rem;gap:.3rem}
-  .topbar .me .pic{width:22px;height:22px}
-  .topbar .purse,.topbar .freebox{font-size:.74rem;padding:.22rem .4rem}
-  .topbar .purse.mana{justify-self:start}
-  .topbar .purse:not(.mana){justify-self:end}
+  .topbar{gap:6px;padding-top:6px!important}
+  .topbar .logo{flex-basis:26px;width:26px;min-width:26px}
+  .topbar .logo .mark{width:25px;height:25px}
+  .topbar .me{max-width:calc(100vw - 164px)!important;font-size:.8rem;gap:5px}
+  .topbar .me #mename{max-width:calc(100vw - 210px)}
+  .topbar #sound,.topbar #wikitag{height:32px;min-height:32px}
+  .topbar .purse,.topbar .freebox{font-size:.78rem;padding:4px 8px}
 }
 
 </style>
@@ -5500,6 +5497,28 @@ const SANDBOX = HAS_WS;            // artefact Claude : réseau externe bloqué
 const memStore = {};
 const lectureEchouee = {};
 let stockagePlein = false;   // une écriture n'a tenu qu'en mémoire
+/* File de secours locale pour les primes de succès. Elle protège les encaissements
+   même si une ancienne version du registre serveur ignore l'opération d'union. */
+let FM_ACH_CACHE_RECONCILED = false;
+function fmAchCacheKey(){ return "fm-ach-claims-v1:" + acct(); }
+function fmLireCacheSucces(){
+  try{ const raw=localStorage.getItem(fmAchCacheKey()); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+}
+function fmEcrireCacheSucces(){
+  if(!FM_ACH_CACHE_RECONCILED || !state || !state.profile) return;
+  try{ localStorage.setItem(fmAchCacheKey(), JSON.stringify({ids:[...new Set(state.profile.achClaimed||[])], coins:Number(state.profile.coins)||0, updated:Date.now()})); }catch(e){}
+}
+function fmReprendreCacheSucces(){
+  const c=fmLireCacheSucces();
+  if(!c || !Array.isArray(c.ids)) { FM_ACH_CACHE_RECONCILED=true; return; }
+  const serveur=new Set(state.profile.achClaimed||[]), cache=new Set(c.ids);
+  const ids=[...new Set([...serveur,...cache])];
+  const cacheContientNouveaux=[...cache].some(id=>!serveur.has(id));
+  state.profile.achClaimed=ids;
+  /* Ne restaure le solde mémorisé que si un encaissement local manque au profil serveur. */
+  if(cacheContientNouveaux && Number.isFinite(+c.coins)) state.profile.coins=Math.max(Number(state.profile.coins)||0,+c.coins);
+  FM_ACH_CACHE_RECONCILED=true;
+}
 function lsKey(k,s){ return s ? ("fm-shared:"+k) : ("fm-local:"+acct()+":"+k); }
 function wsKey(k,s){ return s ? k : (acct()+"/"+k); }
 async function sget(key, shared=false){
@@ -5600,6 +5619,7 @@ async function sset(key, val, shared=false){
       }
     }else if(!lsPoser(lsKey(key,shared), JSON.stringify(val))) throw new Error("stockage plein");
   }catch(e){ memStore[lsKey(key,shared)] = val; stockagePlein = true; }
+  if(key === "fm:profile" && !shared) fmEcrireCacheSucces();
   /* L'appareil garde toujours la main : l'écriture locale est faite, le
      serveur suit. Si le réseau manque, la partie n'est pas perdue. */
   if(!shared && NUAGE_CLES.indexOf(key) >= 0) nuagePousse(key, val);
@@ -16584,6 +16604,10 @@ async function claimAch(ids){
   // Mise à jour immédiate de l'interface, puis sauvegarde durable.
   state.profile.achClaimed = [...paid];
   state.profile.coins = (Number(state.profile.coins)||0) + total;
+  /* Écriture immédiate du journal local avant tout aller-retour réseau. */
+  FM_ACH_CACHE_RECONCILED = true;
+  fmEcrireCacheSucces();
+  await sset("fm:profile", state.profile);
   const coinEl = document.getElementById("coins"); if(coinEl) coinEl.textContent = short(state.profile.coins);
   paintAchDot();
   if(state.view === "ach") viewAch();
@@ -18580,7 +18604,9 @@ function openSettings(){
   }
   await migrateLegacy();
   const p = await sget("fm:profile"); if(p) Object.assign(state.profile, p);
+  fmReprendreCacheSucces();
   FM_DERNIER_SOLDE_OBSERVE = Number.isFinite(+state.profile.coins) ? +state.profile.coins : 0;
+  await sset("fm:profile", state.profile);
   persoInstantane(state.profile);
   // les parties créées avant les Fandominus repartent avec la dotation complète
   if(!state.profile.v || state.profile.v < 3){
