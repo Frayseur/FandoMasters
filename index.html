@@ -3548,115 +3548,98 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .cbligne .cbcout{position:relative;top:auto;left:auto;width:26px;font-size:.8rem}
 
 
-/* FandoMasters — amélioration sobre et symétrique des cartes de collection */
+/* FandoMasters — finition professionnelle discrète, basée sur le design original */
 .card{
-  --fm-line: color-mix(in srgb, var(--g1, #b99b62) 72%, #5b4730);
-  --fm-panel: #211a16;
-  --fm-panel-soft: #2a211b;
-  border-radius: 3.2cqw;
-  overflow: hidden;
+  /* Le format, la structure et les couleurs de rareté d'origine restent intacts. */
+  box-shadow:
+    0 12px 24px -18px #000,
+    inset 0 .55cqw 0 #FFFFFF70,
+    inset 0 -.7cqw 1.2cqw -.5cqw #00000070,
+    inset 0 0 0 .42cqw #00000040,
+    var(--glow);
 }
 .card .inner{
-  inset: 1.6cqw !important;
-  border-radius: 2.2cqw !important;
-  overflow: hidden;
-  background: #17120f !important;
-  box-shadow: inset 0 0 0 .45cqw #0b0908,
-              inset 0 0 0 .8cqw var(--fm-line) !important;
+  border-radius:4.35cqw;
+  box-shadow:
+    inset 0 0 0 .48cqw #00000099,
+    inset 0 0 0 .88cqw var(--g2),
+    inset 0 0 0 1.25cqw var(--g1);
 }
-/* Un cartouche rectangulaire, centré et identique sur chaque côté. */
 .card .plate{
-  margin: 2.7cqw 2.7cqw 2.2cqw !important;
-  min-height: 10.8cqw;
-  padding: 1.3cqw 2.6cqw !important;
-  background: var(--fm-panel-soft);
-  border: .65cqw solid var(--fm-line);
-  border-radius: 1.2cqw;
-  box-shadow: none !important;
-  clip-path: none !important;
+  margin:3.05cqw 3.05cqw 2.45cqw;
+  padding:1.55cqw 4cqw;
 }
 .card .plate::before{
-  content: none !important;
+  box-shadow:
+    inset 0 .42cqw 0 #FFFFFF2B,
+    inset 0 0 0 .46cqw var(--g1),
+    0 .65cqw 1.8cqw -1.2cqw #000;
 }
 .card .plate .name{
-  color: #f3e8d3;
-  text-shadow: 0 .35cqw .8cqw #0009;
-  letter-spacing: .01em;
+  letter-spacing:.008em;
+  text-shadow:0 .35cqw 0 #000,0 0 2.5cqw #0008;
 }
-/* Illustration conservée comme point focal : bordure fine et régulière. */
 .card .art{
-  margin: 0 2.7cqw !important;
-  border: .65cqw solid var(--fm-line);
-  border-radius: 1.2cqw;
-  clip-path: none !important;
-  box-shadow: none !important;
-  background: #100d0b;
+  margin:0 3.05cqw;
+  box-shadow:
+    inset 0 0 0 .65cqw var(--g1),
+    inset 0 0 0 1.3cqw #0000009C,
+    inset 0 4.8cqw 9cqw -7cqw #000,
+    inset 0 -5.6cqw 10cqw -7cqw #000;
 }
-.card .art img{
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-/* Zone d’informations alignée sur la largeur du titre et de l’illustration. */
 .card .body{
-  margin: 2.2cqw 2.7cqw 0 !important;
-  padding: 2.1cqw 2.6cqw 2.4cqw !important;
-  gap: .6cqw !important;
-  border: .65cqw solid var(--fm-line);
-  border-radius: 1.2cqw;
-  background: var(--fm-panel) !important;
-  box-shadow: none !important;
+  margin:2.45cqw 3.05cqw 0;
+  padding:2.25cqw 3.45cqw 2.7cqw;
+  box-shadow:
+    inset 0 0 0 .42cqw #00000078,
+    inset 0 0 0 .85cqw #FFFFFF12;
 }
 .card .univ{
-  letter-spacing: .08em;
-  text-align: center;
+  letter-spacing:.12em;
+  padding-bottom:1.1cqw;
+  border-bottom:.42cqw solid #FFFFFF24;
 }
 .card .desc{
-  line-height: 1.25;
+  line-height:1.27;
+  text-shadow:0 .35cqw 1.2cqw #0008;
 }
-/* Attaque et défense : même gabarit, même hauteur, équilibrés de part et d’autre. */
 .card .band{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: stretch;
-  gap: 1.2cqw;
+  margin:2.45cqw 3.05cqw .45cqw;
+  padding:1.05cqw 3.25cqw;
 }
-.card .atk,
-.card .def{
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  border: .55cqw solid var(--fm-line);
-  border-radius: 1cqw;
-  box-shadow: none !important;
+.card .band::before{
+  box-shadow:
+    inset 0 .42cqw 0 #FFFFFF26,
+    inset 0 0 0 .46cqw var(--g1);
 }
-/* Les raretés se distinguent par une nuance de bordure, pas par des ornements supplémentaires. */
-.card[data-r="Commun"]{--fm-line:#857b6a}
-.card[data-r="Peu commun"]{--fm-line:#719a80}
-.card[data-r="Rare"]{--fm-line:#7298bf}
-.card[data-r="Super rare"]{--fm-line:#9d83c5}
-.card[data-r="Ultra rare"]{--fm-line:#c79b59}
-.card[data-r="Légendaire"]{--fm-line:#d4b86f}
-.card[data-r="Relique"]{--fm-line:#c47d72}
-.card .inner::before,
-.card .inner::after,
-.card .plate::after,
-.card .art::before,
-.card .body::before{
-  animation: none !important;
+.card .band .atk,.card .band .def{
+  gap:1.9cqw;
+  text-shadow:0 .35cqw 0 #000,0 0 2.5cqw #0009;
 }
-/* Mouvement discret au survol, sans déformer la silhouette de la carte. */
-.card{
-  transition: filter .16s ease, transform .16s ease;
+/* Le reflet est conservé, mais devient plus doux pour ne pas masquer l'illustration. */
+.card .inner::before{
+  background:linear-gradient(100deg,transparent 45%,#ffffff20 50%,transparent 55%);
+  animation-duration:5.8s;
 }
-.card:hover{
-  filter: brightness(1.05);
+.card[data-r="Super rare"] .inner::before{
+  background:linear-gradient(100deg,transparent 45%,#ffffff2B 50%,transparent 55%);
+  animation-duration:5.2s;
 }
-@media (prefers-reduced-motion: reduce){
-  .card{transition:none}
+.card[data-r="Ultra rare"] .inner::before{
+  background:linear-gradient(100deg,transparent 44%,#ffffff35 50%,transparent 56%);
+  animation-duration:4.8s;
+}
+.card[data-r="Légendaire"] .inner::before{
+  background:linear-gradient(100deg,transparent 43%,#FFF0C25C 50%,transparent 57%);
+  animation-duration:4.4s;
+}
+/* Bordures de rareté inchangées ; uniquement des lueurs un peu mieux contenues. */
+.card[data-r="Rare"]{--glow:0 0 16px -11px #3C3C86}
+.card[data-r="Super rare"]{--glow:0 0 18px -10px #C77FA8}
+.card[data-r="Ultra rare"]{--glow:0 0 24px -9px #FF5E22}
+.card[data-r="Légendaire"]{--glow:0 0 30px -9px #E8B44C}
+@media (prefers-reduced-motion:reduce){
+  .card .inner::before{animation:none}
 }
 
 </style>
