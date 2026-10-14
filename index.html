@@ -4902,6 +4902,7 @@ function regRebaser(ancien, nouv){
    un autre appareil a joué). */
 async function regRecharger(ancien, ecraser){
   const s = await regRpc("etat_joueur");
+  FM_VIP_JUSQUA = s.vip_jusqua || null;
   const nouv = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)};
   const avant = ancien || REG.confirme;
   REG.confirme = nouv;
@@ -5017,6 +5018,7 @@ async function registreDemarrer(){
         env = null;
       }
       const s = await regRpc("etat_joueur");
+      FM_VIP_JUSQUA = s.vip_jusqua || null;
       S = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)};
     }catch(e){
       diagLog("serveur injoignable au démarrage : " + (e && e.message));
@@ -5058,7 +5060,7 @@ async function registreDemarrer(){
         REG.confirme = {version:r.version, etat:r.etat || {}, cartes:r.cartes ? regMap(r.cartes) : REG.confirme.cartes};
         REG.envoi = null;
       }catch(e){
-        if(regRefus(e)){ REG.envoi = null; diagLog("reprise refusée : " + regRaison(e)); try{ const s = await regRpc("etat_joueur"); REG.confirme = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)}; }catch(e2){ REG.confirme = S; } }
+        if(regRefus(e)){ REG.envoi = null; diagLog("reprise refusée : " + regRaison(e)); try{ const s = await regRpc("etat_joueur"); FM_VIP_JUSQUA = s.vip_jusqua || null; REG.confirme = {version:s.version, etat:s.etat || {}, cartes:regMap(s.cartes)}; }catch(e2){ REG.confirme = S; } }
         else{ REG.pret = true; return false; }               // l'envoi reste en suspens, il repartira
       }
     }
@@ -11137,6 +11139,12 @@ function oddsFold(){
   </details>`;
 }
 
+let FM_VIP_JUSQUA = null;
+function vipActif(){
+  const fin = FM_VIP_JUSQUA || (state.profile && state.profile.vip_jusqua) || null;
+  return !!(fin && Number.isFinite(new Date(fin).getTime()) && new Date(fin).getTime() > Date.now());
+}
+
 function packLabel(){
   return state.profile.free > 0
     ? `Ouvrir un booster gratuit · ${state.profile.free} en réserve`
@@ -11153,7 +11161,7 @@ function canAfford(n){
 /* de quoi refaire exactement le même type d'ouverture ? */
 function canRepeat(kind, n){
   n = n || 1;
-  if(state.busy) return false;
+  if(state.busy || (n > 10 && !vipActif())) return false;
   if(kind === "mythic") return (state.profile.mythic||0) >= n;
   if(kind === "demon")  return (state.profile.demon||0) >= n;
   if(kind === "fox")    return renardsDispo() >= n;
@@ -11200,7 +11208,7 @@ function renderStage(){
       <div class="row tiers">
         <button class="btn" id="open" ${canAfford(1)?"":"disabled"}><span class="tierx">×1</span><span class="tierl">${packLabel()}</span></button>
         <button class="btn ghost" id="open10" ${canAfford(10)?"":"disabled"}><span class="tierx">×10</span><span class="tierl">${c10.free?`${c10.free} gratuit${c10.free>1?"s":""}${c10.coins?" + ":""}`:""}${c10.coins?`${c10.coins} ◆`:""}</span></button>
-        <button class="btn ghost" id="open100" ${canAfford(100)?"":"disabled"}><span class="tierx">×100</span><span class="tierl">${(()=>{const c=costFor(100);return (c.free?`${c.free} gratuit${c.free>1?"s":""}${c.coins?" + ":""}`:"")+(c.coins?`${c.coins} ◆`:"");})()}</span></button>
+        <button class="btn ghost" id="open100" ${canAfford(100) && vipActif()?"":"disabled"}><span class="tierx">×100</span><span class="tierl">${vipActif()?(()=>{const c=costFor(100);return (c.free?`${c.free} gratuit${c.free>1?"s":""}${c.coins?" + ":""}`:"")+(c.coins?`${c.coins} ◆`:"");})():"VIP requis"}</span></button>
       </div>
       <div id="packmsg" class="sub"></div>
 
@@ -12521,6 +12529,10 @@ async function openFox(){
 async function openPack(n, kind){
   if(state.busy) return;
   n = n || 1; kind = kind || "normal";
+  if(n > 10 && !vipActif()){
+    toast("Ouverture réservée aux VIP", "Les ouvertures groupées de plus de 10 boosters sont réservées aux membres VIP.", "lose");
+    return;
+  }
   if(kind === "fox") return openFox();
   syncFree();
 
@@ -14072,7 +14084,7 @@ function viewBoutique(){
       <article class="btqart"><b>▣ Ouvertures groupées</b><p class="sub">Ouverture de jusqu'à 100 boosters simultanément.</p></article>
       <article class="btqart"><b>♟ Guildes</b><p class="sub">Possibilité de créer une guilde et de rassembler une communauté.</p></article>
     </div>
-    <p class="sub" style="margin-top:.9rem;font-size:.82rem">Certaines fonctionnalités VIP restent à développer ou à vérifier avant activation. Le tarif annuel et le moyen de paiement doivent être définis avant toute vente.</p>`;
+    <p class="sub" style="margin-top:.9rem;font-size:.82rem">Les ouvertures groupées de plus de 10 boosters sont vérifiées côté serveur et réservées aux VIP. Les autres avantages sont activés progressivement.</p>`;
   const vipBuy = view.querySelector("#vip-achat");
   if(vipBuy && !vip) vipBuy.onclick = () => acheterVipAnnuel();
   if(btq.articles === null) boutiqueCharger();
@@ -14090,7 +14102,7 @@ async function acheterVipAnnuel(){
     for(let essai=1;;essai++){ try{ r=await regRpc("acheter",{p_article:"vip_annuel",p_cle:cle}); break; } catch(e){ if(regRefus(e)||essai>=4) throw e; await new Promise(res=>setTimeout(res,700*essai)); } }
     const ancien=REG.confirme; REG.confirme={version:r.version,etat:r.etat||{},cartes:regMap(r.cartes)};
     await regPersister(); regRebaser(ancien,REG.confirme);
-    if(!state.profile) state.profile={}; state.profile.vip_jusqua=r.vip_jusqua || new Date(Date.now()+365*86400000).toISOString();
+    if(!state.profile) state.profile={}; state.profile.vip_jusqua=r.vip_jusqua || new Date(Date.now()+365*86400000).toISOString(); FM_VIP_JUSQUA = state.profile.vip_jusqua;
     await sset("fm:profile",state.profile);
     toast("VIP activé !", "Votre VIP annuel est actif.", "ach"); logEvent("Achat VIP annuel", "gold");
   }catch(e){ toast("Achat non effectué", regRefus(e)?regRaison(e):"Erreur réseau ; vérifiez votre solde avant de réessayer.","lose"); if(!regRefus(e)) setTimeout(()=>registreVerifier(),3000); }
