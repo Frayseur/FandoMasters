@@ -3784,6 +3784,117 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
  transform:translate(-50%,-50%);animation:cbImpactShards .48s ease-out forwards}
 @keyframes cbImpactShards{from{opacity:1;scale:.5}to{opacity:0;scale:2.8;translate:0 -8px}}
 
+
+/* ==========================================================================
+   FANDOMASTERS — direction artistique des cartes, toutes vues confondues
+   Cadre premium bronze/parchemin, lisibilité renforcée, sans toucher au gameplay.
+   ========================================================================== */
+:root{
+  --fm-card-ink:#211611;
+  --fm-card-brown:#50311f;
+  --fm-card-bronze:#a9753c;
+  --fm-card-gold:#e5c184;
+  --fm-card-parchment:#e8d4b1;
+  --fm-card-shadow:rgba(17,10,8,.48);
+}
+
+/* Cartes standards repérées par les classes de cartes partagées du site. */
+.carte,.card,.carte-fandom,.card-fandom,.fm-card,.carte-item,.carte-collection,
+.card-item,.card-collection,.booster-card,.opening-card,.inventaire-carte,
+[data-card-id],[data-carte-id]{
+  transition:transform .22s cubic-bezier(.2,.75,.25,1),filter .22s ease,box-shadow .22s ease;
+}
+.carte:hover,.card:hover,.carte-fandom:hover,.card-fandom:hover,.fm-card:hover,
+.carte-item:hover,.carte-collection:hover,.card-item:hover,.card-collection:hover,
+.booster-card:hover,.opening-card:hover,.inventaire-carte:hover,
+[data-card-id]:hover,[data-carte-id]:hover{
+  transform:translateY(-4px);
+  filter:brightness(1.045) saturate(1.04);
+}
+
+/* Finitions communes : liseré métal et profondeur discrète. */
+.carte,.card,.carte-fandom,.card-fandom,.fm-card,.carte-item,.carte-collection,
+.card-item,.card-collection,.booster-card,.opening-card,.inventaire-carte,
+[data-card-id],[data-carte-id]{
+  border-color:rgba(178,132,75,.8);
+  box-shadow:0 4px 12px var(--fm-card-shadow),inset 0 0 0 1px rgba(255,224,165,.16);
+  background-clip:padding-box;
+  backface-visibility:hidden;
+}
+
+/* Les illustrations restent le point focal : pas de filtre qui dénature les artworks. */
+.carte img,.card img,.carte-fandom img,.card-fandom img,.fm-card img,
+.carte-item img,.carte-collection img,.card-item img,.card-collection img,
+.booster-card img,.opening-card img,.inventaire-carte img,
+[data-card-id] img,[data-carte-id] img{
+  display:block;
+  object-fit:cover;
+  backface-visibility:hidden;
+}
+
+/* Typographie des noms : contraste renforcé, titre de carte plus net. */
+.carte .nom,.card .name,.carte .titre,.card .title,.carte-nom,.card-name,
+.nom-carte,.titre-carte,.card-title,.card-name,.carte-titre{
+  color:#f4e2bf;
+  text-shadow:0 1px 2px #1b100b,0 0 6px rgba(0,0,0,.55);
+  letter-spacing:.015em;
+}
+
+/* Badges de rareté en métal plutôt que des aplats plats. */
+.rarete,.rarity,.badge-rarete,.rarity-badge,.carte-rarete,.card-rarity{
+  border:1px solid rgba(255,224,164,.52);
+  box-shadow:inset 0 1px rgba(255,255,255,.18),0 2px 5px rgba(0,0,0,.28);
+  text-shadow:0 1px 2px rgba(0,0,0,.72);
+}
+
+/* Focus clavier clair, sans modifier les actions des cartes. */
+.carte:focus-visible,.card:focus-visible,.carte-fandom:focus-visible,
+.card-fandom:focus-visible,.fm-card:focus-visible,[data-card-id]:focus-visible,
+[data-carte-id]:focus-visible{
+  outline:2px solid #f1cc83;
+  outline-offset:3px;
+}
+
+/* Les cartes de combat gardent leurs dimensions et interactions; seuls les matériaux évoluent. */
+.cbcarte{
+  border-color:#5b351d;
+  background:linear-gradient(145deg,#e5c487 0%,#b17c40 14%,#5a3824 40%,#2a1b16 67%,#d9ad67 100%);
+  box-shadow:0 5px 12px rgba(14,8,7,.55),inset 0 0 0 1px rgba(255,224,165,.42),inset 0 0 0 4px rgba(40,24,16,.78);
+}
+.cbcarte .cbtexte,.cbcarte .cbbandeau{
+  color:#f2dfba;
+  text-shadow:0 1px 2px #140c09;
+}
+.cbcarte .cbart{
+  box-shadow:inset 0 0 0 1px rgba(255,226,175,.32);
+}
+.cbcarte .cbcout{
+  border:1px solid #f6d995;
+  box-shadow:0 2px 5px rgba(0,0,0,.6),inset 0 1px rgba(255,255,255,.6);
+}
+
+/* Rarete : lueur douce, plus visible en grand format mais non agressive. */
+[data-r="Rare"] , [data-r="Épique"], [data-r="Epique"]{
+  box-shadow:0 4px 12px rgba(17,10,8,.48),0 0 0 1px rgba(90,133,199,.22);
+}
+[data-r="Épique"],[data-r="Epique"]{
+  box-shadow:0 4px 12px rgba(17,10,8,.48),0 0 10px rgba(139,102,220,.18);
+}
+[data-r="Légendaire"],[data-r="Legendaire"],[data-r="Relique"]{
+  box-shadow:0 4px 12px rgba(17,10,8,.48),0 0 13px rgba(238,174,73,.26);
+}
+
+/* Respect des utilisateurs sensibles au mouvement. */
+@media(prefers-reduced-motion:reduce){
+ .carte,.card,.carte-fandom,.card-fandom,.fm-card,.carte-item,.carte-collection,
+ .card-item,.card-collection,.booster-card,.opening-card,.inventaire-carte,
+ [data-card-id],[data-carte-id]{transition:none!important}
+ .carte:hover,.card:hover,.carte-fandom:hover,.card-fandom:hover,.fm-card:hover,
+ .carte-item:hover,.carte-collection:hover,.card-item:hover,.card-collection:hover,
+ .booster-card:hover,.opening-card:hover,.inventaire-carte:hover,
+ [data-card-id]:hover,[data-carte-id]:hover{transform:none!important}
+}
+
 </style>
 </head>
 <body>
