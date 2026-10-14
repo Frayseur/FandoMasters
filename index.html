@@ -3353,16 +3353,23 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
   font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:calc(15cqw * var(--k,1));color:#fff;text-shadow:0 1px 2px #08123a,0 0 3px #08123a}
 .cbcout::before{content:"";position:absolute;inset:9%;clip-path:inherit;background:radial-gradient(circle at 40% 30%,#7fb2ff,#2a5fd6 45%,#123a9a);z-index:-1}
 .cbcout{isolation:isolate}
-/* boucliers : attaque (bronze) et vie (rouge) */
+/* Statistiques de carte : attaque (bronze) et points de vie (rouge), clairement séparées. */
 .cbst{position:absolute;z-index:3;bottom:-5cqw;width:calc(27cqw * var(--k,1));aspect-ratio:.9;display:grid;place-items:center;isolation:isolate;
   clip-path:polygon(50% 100%,6% 74%,0 10%,50% 0,100% 10%,94% 74%);background:linear-gradient(#ffe39a,#8a5a1c);
   font-family:"Cinzel",Georgia,serif;font-weight:700;font-size:calc(15cqw * var(--k,1));color:#fff;text-shadow:0 1px 2px #000,0 0 3px #000;padding-bottom:6%}
 .cbst::before{content:"";position:absolute;inset:8%;clip-path:inherit;z-index:-1}
-.cbst.a{left:-6cqw}
+.cbst.a{left:1.5cqw}
 .cbst.a::before{background:radial-gradient(circle at 40% 30%,#e0b464,#9c6a26 55%,#5e3b10)}
-.cbst.p,.cbst.d{right:-6cqw}
+.cbst.p,.cbst.d{right:1.5cqw}
 .cbst.p::before{background:radial-gradient(circle at 40% 30%,#ff7a6a,#c3261c 55%,#6e0d08)}
 .cbst.d::before{background:radial-gradient(circle at 40% 30%,#c7ccd6,#6f7685 55%,#383d48)}
+/* Sur les cartes en main, les valeurs ne sont plus collées aux bords : les libellés ATQ/PV restent visibles même sans emoji. */
+.cbcarte .cbst{bottom:0;width:27cqw;aspect-ratio:1;display:flex;flex-direction:column;justify-content:center;gap:1cqw;padding:0 0 2cqw;font-size:calc(14cqw * var(--k,1));line-height:1;clip-path:polygon(50% 100%,6% 74%,0 10%,50% 0,100% 10%,94% 74%)}
+.cbcarte .cbst::after{font-family:Arial,sans-serif;font-size:calc(6.3cqw * var(--k,1));font-weight:900;letter-spacing:.04em;line-height:1.1;text-shadow:0 1px 2px #000}
+.cbcarte .cbst.a::after{content:"ATQ"}
+.cbcarte .cbst.p::after{content:"PV"}
+.cbcarte .cbst.a{left:2cqw}
+.cbcarte .cbst.p,.cbcarte .cbst.d{right:2cqw}
 .cbst.p.blesse{color:#ffd1cb}
 .cbst.p.blesse::before{background:radial-gradient(circle at 40% 30%,#ff3d2e,#a10d05 60%)}
 .cbcarte.jouable{cursor:pointer}
@@ -13329,7 +13336,7 @@ function cbArtHTML(p, cadre){
 function cbCarteHTML(p, opts = {}){
   const vrai = p.id && state.collection.find(x => x.id === p.id);
   const cadre = vrai ? styleCadrage(cadrageDe(vrai)) : "";
-  const stats = p.type === "serviteur" ? `<span class="cbst a">${p.atq}</span><span class="cbst p">${p.pv}</span>`
+  const stats = p.type === "serviteur" ? `<span class="cbst a" aria-label="Attaque ${p.atq}" title="Attaque">${p.atq}</span><span class="cbst p" aria-label="Points de vie ${p.pv}" title="Points de vie">${p.pv}</span>`
               : p.type === "arme" ? `<span class="cbst a">${p.atq}</span><span class="cbst d">${p.dur}</span>` : "";
   return `<div class="cbcarte t-${p.type} ${opts.jouable ? "jouable" : ""} ${opts.choisie ? "choisie" : ""} ${opts.petite ? "petite" : ""}" data-r="${cbEsc(p.r || "")}" ${opts.style ? `style="${opts.style}"` : ""} ${opts.data || ""} title="${cbEsc((p.nom || "") + (p.texte ? " — " + p.texte : ""))}">
     <div class="cbcadre">
@@ -13556,7 +13563,7 @@ function viewDuel(){
 }
 function cbRegles(){
   return info("Règles du combat", `<p class='sub' style='margin:0 0 .5rem'>Chaque joueur a un héros à 30 PV et un deck de 30 cartes. À votre tour, votre mana maximum augmente de 1 (jusqu'à 10) et se remplit ; vous piochez une carte. Jouez des serviteurs et des sorts, attaquez, puis terminez votre tour. Le premier héros à 0 PV perd.</p>
-    <p class='sub' style='margin:0 0 .5rem'>Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Entre serviteurs, les dégâts sont simultanés.</p>
+    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Entre serviteurs, les dégâts sont simultanés.</p>
     <p class='sub' style='margin:0'>Pouvoir de héros : 2 mana, 1 dégât, une fois par tour. Main de 10 cartes au plus (au-delà, la carte piochée brûle) ; deck vide : fatigue de 1, puis 2, puis 3… Le second joueur reçoit « Élan » (+1 mana une fois).</p>`);
 }
 function cbVueJouer(corps){
@@ -15476,7 +15483,10 @@ function battleCard(c){
   return {
     uid:"m"+(++uidSeq), id:c.id, title:c.title, img:c.img, univ:c.univ,
     rarity:c.rarity, variant:c.variant, role, cost, atk, hp, max:hp,
-    taunt: role === "tank",
+    // Provocation doit rester un mot-clé rare : le rôle tank ne suffit plus
+    // à rendre chaque carte impossible à contourner. Environ 1 carte sur 4
+    // des profils défensifs obtient la Provocation, de façon déterministe.
+    taunt: role === "tank" && (hashId(c.id) % 4 === 0),
     charge: role === "ninja" && (ri >= 4),
     rush: role === "ninja" && ri < 4,
     cry: role === "soigneur" ? {heal:2 + Math.floor(ri/2)} : role === "magicien" ? {dmg:1 + Math.floor(ri/2)} : null,
