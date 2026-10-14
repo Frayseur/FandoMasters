@@ -3548,68 +3548,95 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .cbligne .cbcout{position:relative;top:auto;left:auto;width:26px;font-size:.8rem}
 
 
-/* FandoMasters — retouches ciblées après observation d'une vraie carte mobile.
-   On conserve le style original : mêmes couleurs, formes, textures et ornements. */
-
-/* 1. Titres longs : éviter les coupures artificielles au milieu des mots. */
+/* FandoMasters — passe de finition visuelle visible, sans refonte de l'identité */
+.card .inner{
+  /* mieux séparer le métal du contenu, sans épaissir le cadre */
+  box-shadow:
+    inset 0 0 0 .48cqw #000000A8,
+    inset 0 0 0 .91cqw var(--g2),
+    inset 0 0 0 1.28cqw var(--g1);
+}
+.card .plate{
+  margin:3.05cqw 3.05cqw 2.35cqw;
+  padding:1.55cqw 3.6cqw;
+}
 .card .plate .name{
+  font-size:5.65cqw;
+  line-height:1.12;
+  letter-spacing:.01em;
   overflow-wrap:normal;
   word-break:normal;
   hyphens:none;
-  font-size:5.55cqw;
-  line-height:1.12;
-  padding-inline:.5cqw;
 }
-
-/* 2. Image : bordure interne plus régulière, sans changer la découpe. */
+/* Image plus propre : le liseré reste fin et l'illustration garde la priorité. */
 .card .art{
-  background-color:#1A1512;
+  margin:0 3.05cqw;
   box-shadow:
-    inset 0 0 0 .72cqw var(--g1),
-    inset 0 0 0 1.45cqw #000000A8,
-    inset 0 5.8cqw 11.8cqw -8cqw #000,
-    inset 0 -6.8cqw 12.8cqw -8.4cqw #000;
+    inset 0 0 0 .58cqw var(--g1),
+    inset 0 0 0 1.18cqw #000000A8,
+    inset 0 4.8cqw 9cqw -7cqw #000,
+    inset 0 -5.6cqw 10cqw -7cqw #000;
 }
-.card .art img{display:block}
-
-/* 3. Texte : une marge respirable et une ligne de séparation moins lourde. */
+/* Panneau descriptif : hiérarchie plus claire et respiration plus régulière. */
 .card .body{
-  padding:2.35cqw 3.6cqw 2.7cqw;
-  gap:.65cqw;
+  margin:2.35cqw 3.05cqw 0;
+  padding:2.15cqw 3.25cqw 2.45cqw;
+  gap:.45cqw;
+  background:
+    linear-gradient(180deg,#FFFFFF08,transparent 35%),
+    linear-gradient(180deg,var(--t1),var(--t2));
+  box-shadow:
+    inset 0 0 0 .42cqw #00000085,
+    inset 0 0 0 .82cqw #FFFFFF12;
 }
 .card .univ{
   padding-bottom:1.05cqw;
-  border-bottom:.38cqw solid #FFFFFF24;
+  border-bottom:.38cqw solid #FFFFFF28;
+  letter-spacing:.12em;
 }
 .card .desc{
-  line-height:1.26;
+  font-size:5.35cqw;
+  line-height:1.25;
   margin-top:.55cqw;
 }
-
-/* 4. Statistiques : trois colonnes stables pour équilibrer attaque, rôle et défense.
-   Le rôle reste centré, même si les nombres n'ont pas la même longueur. */
+/* Bandeau de stats : trois zones géométriquement équilibrées, sans changer les icônes. */
 .card .band{
+  margin:2.35cqw 3.05cqw .55cqw;
   display:grid;
   grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
   align-items:center;
-  gap:1.4cqw;
-  padding:1.15cqw 2.8cqw;
+  gap:1.2cqw;
+  padding:1.15cqw 2.75cqw;
 }
-.card .band .atk{justify-self:start;min-width:0;gap:1.6cqw;white-space:nowrap}
+.card .band .atk{
+  justify-self:start;
+  gap:1.65cqw;
+  min-width:0;
+  white-space:nowrap;
+}
 .card .band .role{justify-self:center}
-.card .band .def{justify-self:end;min-width:0;gap:1.6cqw;white-space:nowrap}
-
-/* 5. Finition du cadre : garder la texture existante, adoucir uniquement l'ombre. */
-.card{
-  box-shadow:
-    0 16px 27px -20px #000,
-    inset 0 .7cqw 0 #FFFFFF70,
-    inset 0 -.9cqw 1.5cqw -.5cqw #00000075,
-    inset 0 0 0 .48cqw #00000042,
-    var(--glow);
+.card .band .def{
+  justify-self:end;
+  gap:1.65cqw;
+  min-width:0;
+  white-space:nowrap;
+}
+/* Reflets plus discrets pour que les détails de l'illustration restent lisibles. */
+.card .inner::before{
+  background:linear-gradient(100deg,transparent 44%,#ffffff24 50%,transparent 56%);
+}
+.card[data-r="Super rare"] .inner::before{
+  background:linear-gradient(100deg,transparent 44%,#ffffff37 50%,transparent 56%);
+}
+.card[data-r="Ultra rare"] .inner::before{
+  background:linear-gradient(100deg,transparent 43%,#ffffff43 50%,transparent 57%);
+}
+.card[data-r="Légendaire"] .inner::before{
+  background:linear-gradient(100deg,transparent 42%,#FFF0C26B 50%,transparent 58%);
 }
 @media (max-width:480px){
-  .card .plate .name{font-size:5.35cqw}
+  .card .plate .name{font-size:5.45cqw}
+  .card .desc{font-size:5.2cqw}
 }
 
 </style>
