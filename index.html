@@ -3894,7 +3894,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .card .band{
   margin:2.7cqw 3.8cqw .8cqw;
   display:grid;
-  grid-template-columns:minmax(0,1fr) 13.8cqw minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
   align-items:center;
   gap:1.2cqw;
   padding:1.2cqw 2.8cqw;
@@ -3907,8 +3907,8 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
     inset 0 0 0 .5cqw var(--g1),
     inset 0 0 0 .95cqw #080706;
 }
-.card .band .atk{justify-self:start;gap:1.8cqw;white-space:nowrap}
-.card .band .def{justify-self:end;gap:1.8cqw;white-space:nowrap}
+.card .band .atk{grid-column:1;justify-self:start;justify-content:flex-start;gap:1.8cqw;white-space:nowrap;min-width:0}
+.card .band .def{grid-column:2;justify-self:end;justify-content:flex-end;gap:1.8cqw;white-space:nowrap;min-width:0}
 .card .band .role{
   justify-self:center;
   width:10.8cqw;height:10.8cqw;
