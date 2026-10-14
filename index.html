@@ -3759,6 +3759,22 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 @keyframes cbTargetPulse{from{filter:brightness(1)}to{filter:brightness(1.35)}}
 @media(prefers-reduced-motion:reduce){.cbfx-hit,.cbfx-number,.cbfx-death,.cbfx-ring,.cbfx-trail,.cbserv.pret::before,.cbserv.cible,.cbheros.cible{animation-duration:.01ms!important;animation-iteration-count:1!important}}
 
+
+/* Attaque lisible : la carte quitte visuellement son emplacement et percute sa cible. */
+.cbfx-flight-layer{contain:layout style}
+.cbfx-flyer{position:fixed;z-index:2;pointer-events:none;transform-origin:center center;filter:drop-shadow(0 8px 12px rgba(0,0,0,.7));will-change:transform,filter}
+.cbfx-flyer.cbserv,.cbfx-flyer.cbheros,.cbfx-flyer.cbcarte{position:fixed!important;inset:auto!important;transform-origin:center center!important;z-index:2}
+.cbfx-flyer .cbserv,.cbfx-flyer .cbheros,.cbfx-flyer .cbcarte{position:relative!important;inset:auto!important;width:100%!important;height:100%!important;transform:none!important}
+.cbfx-attack-trail{position:fixed;z-index:1;height:5px;transform-origin:left center;border-radius:999px;
+ background:linear-gradient(90deg,rgba(255,219,130,0),#ffefb0 30%,#ff9d37 70%,rgba(235,61,34,0));
+ box-shadow:0 0 8px #ff8b35,0 0 18px rgba(255,160,50,.65);pointer-events:none;will-change:transform,opacity}
+.cbfx-impact-fixed{position:fixed;width:18px;height:18px;border:3px solid #fff1bb;border-radius:50%;
+ transform:translate(-50%,-50%);box-shadow:0 0 12px #fff0ae,0 0 25px #ff8b31;animation:cbImpactFixed .42s ease-out forwards}
+.cbfx-hit-label{position:fixed;transform:translate(-50%,-50%);font:900 10px/1 Georgia,serif;letter-spacing:.12em;color:#ffe6a3;
+ text-shadow:0 2px 4px #4b150e;animation:cbImpactLabel .48s ease-out forwards}
+@keyframes cbImpactFixed{from{opacity:1;scale:.25}to{opacity:0;scale:5}}
+@keyframes cbImpactLabel{0%{opacity:0;translate:0 6px}25%{opacity:1;translate:0 -10px}100%{opacity:0;translate:0 -24px}}
+
 </style>
 </head>
 <body>
@@ -13076,8 +13092,8 @@ const SORTS_DEFAUT = [
   {id:"sort:recherche", nom:"Recherche approfondie", texte:"Piochez 2 cartes.", cout:3, effet:{type:"pioche", n:2}},
   {id:"sort:suppression", nom:"Suppression de page", texte:"Inflige 5 dégâts à un serviteur.", cout:4, effet:{type:"degats", n:5, cible:"serviteur"}}
 ];
-const CB = {onglet:"jouer", profil:null, id:null, v:null, attente:null, erreur:"", envoi:false, mode:null, mull:new Set(),
-            niveau:"normal", code:"", dernierType:null, demarre:false, sorts:null, sig:"", recu:0, hors:0, cle:null, filtre:"", filtreT:""};
+const CB = {onglet:"jouer", profil:null, id:null, v:null, attente:null, erreur:"", envoi:false, lecture:false, mode:null, mull:new Set(),
+            niveau:"normal", code:"", dernierType:null, demarre:false, sorts:null, sig:"", recu:0, hors:0, cle:null, filtre:"", filtreT:"", fxPending:[]};
 
 /* ---- outils ---- */
 const cbEsc = esc;
@@ -13233,7 +13249,7 @@ function cbRegleCarte(p){
 /* ---- serveur ---- */
 function cbFxSnapshot(v){
   if(!v || !v.moi || !v.adv) return null;
-  const out = {units:{}, heroes:{}};
+  const out = {units:{}, heroes:{}, journal:Array.isArray(v.journal)?v.journal:[]};
   const mk = v.moi_k, ak = 3 - mk;
   [[v.moi,mk],[v.adv,ak]].forEach(([side,k])=>{
     out.heroes[k] = {pv:side.pv, max:side.pvmax};
@@ -13262,6 +13278,18 @@ function cbAppliquer(r){
             hits.push({id:id+":heros", damage:a.pv-b.pv, dead:b.pv<=0, hero:true});
         });
       }
+      if(before && after){
+        const oldN = before.journal.length;
+        after.journal.slice(oldN).filter(e=>e && e.type==="attaque").forEach(e=>{
+          const attacker = e.attaquant || e.source || e.iid_attaquant;
+          const targetId = e.cible;
+          if(attacker && targetId){
+            const j = e.j == null ? null : e.j;
+            const attackerKey = (j == null ? (3-r.moi_k) : j) + ":" + attacker;
+            CB.fxAttacks = (CB.fxAttacks||[]).concat([{attacker:attackerKey,target:targetId}]).slice(-6);
+          }
+        });
+      }
       if(hits.length) CB.fxPending = (CB.fxPending||[]).concat(hits).slice(-12);
     }
     if(!same){ CB.mode = null; CB.mull = new Set(); CB.vuJournal = 0; CB.fxPending = []; }
@@ -13278,15 +13306,26 @@ async function cbProfilCharger(){
 let cbBoucle = null;
 async function cbVeille(){
   const actif = (CB.id && CB.v && CB.v.statut === "ACTIVE") || CB.attente;
-  if(!actif || ongletFige || !nuageConnecte() || CB.envoi) return;
+  if(!actif || ongletFige || !nuageConnecte() || CB.envoi || CB.lecture) return;
+  CB.lecture = true;
   const avant = JSON.stringify([CB.attente && CB.attente.type, CB.attente && CB.attente.code, CB.id, CB.erreur, CB.v && CB.v.version]);
   try{ cbAppliquer(await cbAppel("combat_etat", {p_combat:CB.id || null})); }
   catch(e){ CB.hors++; if(regRefus(e)){ CB.erreur = regRaison(e); CB.attente = null; } }
+  finally{ CB.lecture = false; }
   if(state.view !== "duel") return;
   if(avant !== JSON.stringify([CB.attente && CB.attente.type, CB.attente && CB.attente.code, CB.id, CB.erreur, CB.v && CB.v.version])) viewDuel();
   else cbChrono();
 }
-function cbDemarrerVeille(){ if(!cbBoucle) cbBoucle = setInterval(cbVeille, 1000); }
+function cbDemarrerVeille(){
+  if(cbBoucle) return;
+  // Cadence plus réactive en partie active, sans empiler plusieurs requêtes Supabase.
+  const tick = async ()=>{
+    await cbVeille();
+    const actif = (CB.id && CB.v && CB.v.statut === "ACTIVE") || CB.attente;
+    cbBoucle = setTimeout(tick, document.hidden ? 1800 : actif ? 650 : 1400);
+  };
+  cbBoucle = setTimeout(tick, 250);
+}
 
 async function cbLancer(type){
   if(CB.envoi) return;
@@ -13516,7 +13555,59 @@ function cbFond(contenu, classe){
   </div>`;
 }
 
+
+function cbFxAttack(attackerId, targetId){
+  const root = document.querySelector(".cbpartie");
+  if(!root || !attackerId || !targetId) return;
+  const find = id => root.querySelector(`[data-fxid="${CSS.escape(id)}"]`);
+  const src = find(attackerId), dst = find(targetId);
+  if(!src || !dst) return;
+  const a = src.getBoundingClientRect(), b = dst.getBoundingClientRect();
+  if(!a.width || !b.width) return;
+  const ax=a.left+a.width/2, ay=a.top+a.height/2, bx=b.left+b.width/2, by=b.top+b.height/2;
+  const overlay=document.createElement("div");
+  overlay.className="cbfx-flight-layer";
+  Object.assign(overlay.style,{position:"fixed",inset:"0",zIndex:"99999",pointerEvents:"none",overflow:"hidden"});
+  document.body.appendChild(overlay);
+  const trail=document.createElement("i");
+  trail.className="cbfx-attack-trail";
+  const dx=bx-ax,dy=by-ay,len=Math.hypot(dx,dy);
+  Object.assign(trail.style,{left:ax+"px",top:ay+"px",width:len+"px",transform:`rotate(${Math.atan2(dy,dx)}rad)`});
+  overlay.appendChild(trail);
+  const clone=document.createElement("div");
+  clone.className="cbfx-flyer "+src.className;
+  clone.innerHTML=src.innerHTML;
+  Object.assign(clone.style,{left:a.left+"px",top:a.top+"px",width:a.width+"px",height:a.height+"px"});
+  clone.querySelectorAll("[id]").forEach(el=>el.removeAttribute("id"));
+  clone.querySelectorAll("img").forEach(img=>{img.loading="eager";img.draggable=false;});
+  overlay.appendChild(clone);
+  const mx=bx-ax, my=by-ay;
+  const duration=Math.min(430,Math.max(260,len*.42));
+  const reduce=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(!reduce && clone.animate){
+    clone.animate([
+      {transform:"translate(0,0) scale(1)",filter:"brightness(1)"},
+      {transform:`translate(${mx*.68}px,${my*.68-12}px) scale(1.08)`,filter:"brightness(1.25)",offset:.72},
+      {transform:`translate(${mx}px,${my}px) scale(.72)`,filter:"brightness(1.8)"}
+    ],{duration,easing:"cubic-bezier(.2,.75,.2,1)",fill:"forwards"});
+    trail.animate([{opacity:0,scale:"0 1"},{opacity:.95,scale:"1 1",offset:.18},{opacity:0,scale:"1 .4"}],{duration:duration*.9,easing:"ease-out",fill:"forwards"});
+  }else{
+    clone.style.transform=`translate(${mx}px,${my}px) scale(.8)`;
+  }
+  const impact=()=>{
+    const flash=document.createElement("i");flash.className="cbfx-impact-fixed";
+    Object.assign(flash.style,{left:bx+"px",top:by+"px"});overlay.appendChild(flash);
+    const label=document.createElement("b");label.className="cbfx-hit-label";label.textContent="IMPACT";
+    Object.assign(label.style,{left:bx+"px",top:by+"px"});overlay.appendChild(label);
+    setTimeout(()=>overlay.remove(),500);
+  };
+  setTimeout(impact,reduce?0:duration*.76);
+}
+
 function cbFxRun(){
+  const attacks = CB.fxAttacks || [];
+  CB.fxAttacks = [];
+  attacks.forEach(a=>cbFxAttack(a.attacker,a.target));
   const pending = CB.fxPending || [];
   if(!pending.length) return;
   CB.fxPending = [];
@@ -13677,7 +13768,11 @@ function cbPeindre(force){
     ev.stopPropagation();
     const m = CB.mode, cible = el.dataset.cible;
     if(m.action === "jouer") cbAgir({type:"jouer", iid:m.iid, cible});
-    else if(m.action === "attaquer") cbAgir({type:"attaquer", attaquant:m.attaquant, cible});
+    else if(m.action === "attaquer"){
+      const attackerId = v.moi_k + ":" + (m.attaquant === "heros" ? "heros" : m.attaquant);
+      cbFxAttack(attackerId, cible);
+      cbAgir({type:"attaquer", attaquant:m.attaquant, cible});
+    }
     else if(m.action === "pouvoir") cbAgir({type:"pouvoir", cible});
   }; });
   const st = view.querySelector("#cbstop"); if(st) st.onclick = ()=>{ CB.mode = null; cbPeindre(true); };
