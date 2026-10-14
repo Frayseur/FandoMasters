@@ -6866,12 +6866,79 @@ function viewCompte(){
     </div>
 
 
-    ${admin ? `<details class="fold info" style="margin-top:1.2rem">
+    ${admin ? `<div class="panel" id="fm-storage-panel" style="margin-top:1rem">
+      <div class="row" style="align-items:center;justify-content:space-between;gap:.6rem">
+        <h3 style="margin:0">Stockage serveur</h3>
+        <button class="btn small ghost" id="fm-storage-refresh">Actualiser</button>
+      </div>
+      <p class="sub" style="margin:.35rem 0 .8rem">Taille réelle de la base Supabase · actualisation automatique toutes les 30 s</p>
+      <div style="height:12px;border-radius:999px;overflow:hidden;background:var(--line,#ded8cf);box-shadow:inset 0 1px 2px #0001">
+        <div id="fm-storage-bar" style="height:100%;width:0%;border-radius:999px;background:linear-gradient(90deg,#69b58a,#d8b15c);transition:width .4s ease"></div>
+      </div>
+      <div class="row" style="align-items:baseline;justify-content:space-between;gap:.5rem;margin-top:.6rem">
+        <b id="fm-storage-used" style="font-size:1.2rem">Mesure du serveur…</b>
+        <span class="sub" id="fm-storage-pct">—</span>
+      </div>
+      <p class="sub" id="fm-storage-remain" style="margin:.2rem 0 0">Lecture de la taille de la base en cours.</p>
+      <p class="sub err" id="fm-storage-error" hidden style="margin:.6rem 0 0"></p>
+      <details style="margin-top:.8rem"><summary class="sub">Activer la mesure réelle (une seule fois)</summary>
+        <p class="sub" style="margin:.5rem 0">Dans Supabase → SQL Editor, exécute ce SQL. La mesure sera ensuite actualisée automatiquement ici.</p>
+        <pre class="sql" style="white-space:pre-wrap;overflow-wrap:anywhere">create or replace function public.fm_storage_usage()
+returns json
+language sql
+security definer
+set search_path = ''
+as $$
+  select json_build_object(
+    'used_bytes', pg_catalog.pg_database_size(current_database()),
+    'limit_bytes', 524288000
+  );
+$$;
+revoke all on function public.fm_storage_usage() from public, anon;
+grant execute on function public.fm_storage_usage() to authenticated;</pre>
+        <button class="btn small ghost" id="fm-storage-copy-sql">Copier le SQL</button>
+      </details>
+    </div>
+    <details class="fold info" style="margin-top:1.2rem">
       <summary>Diagnostic</summary>
       <div class="in"><pre class="sql" id="diag" style="white-space:pre-wrap;margin:0"></pre></div>
     </details>` : ""}`;
 
   const dg = view.querySelector("#diag"); if(dg){ dg.textContent = diagnosticNuage(); idbMesurer(); }
+  if(admin){
+    const sql = `create or replace function public.fm_storage_usage()
+returns json
+language sql
+security definer
+set search_path = ''
+as $$
+  select json_build_object('used_bytes', pg_catalog.pg_database_size(current_database()), 'limit_bytes', 524288000);
+$$;
+revoke all on function public.fm_storage_usage() from public, anon;
+grant execute on function public.fm_storage_usage() to authenticated;`;
+    const fmt = n => { const mb=n/1048576; return mb>=100 ? mb.toFixed(0)+' MB' : mb.toFixed(1)+' MB'; };
+    let storageTimer = null;
+    const loadStorage = async()=>{
+      const usedEl=view.querySelector('#fm-storage-used'), pctEl=view.querySelector('#fm-storage-pct'), remainEl=view.querySelector('#fm-storage-remain'), errEl=view.querySelector('#fm-storage-error'), bar=view.querySelector('#fm-storage-bar');
+      if(!usedEl || !pctEl || !remainEl || !bar) return;
+      errEl.hidden=true; usedEl.textContent='Mesure du serveur…';
+      try{
+        const sess=nuageSession(); if(!sess || !sess.jeton) throw new Error('Connectez-vous pour mesurer le stockage.');
+        const r=await fetch(NUAGE.url+'/rest/v1/rpc/fm_storage_usage',{method:'POST',headers:{apikey:NUAGE.cle,Authorization:'Bearer '+sess.jeton,'Content-Type':'application/json'},body:'{}',cache:'no-store'});
+        const data=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(data.message || data.error || 'Fonction SQL absente : exécutez le SQL ci-dessous dans Supabase.');
+        const used=Number(data.used_bytes), limit=Number(data.limit_bytes)||524288000;
+        if(!Number.isFinite(used)||used<0) throw new Error('La réponse du serveur est invalide.');
+        const pct=Math.min(100,used/limit*100), rest=Math.max(0,limit-used);
+        usedEl.textContent=fmt(used)+' utilisés'; pctEl.textContent=pct.toFixed(1)+' % de '+fmt(limit);
+        remainEl.textContent=rest>0 ? fmt(rest)+' restants · dernière mesure : '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}) : 'Limite atteinte ou dépassée.';
+        bar.style.width=pct+'%'; bar.style.background=pct>=90?'linear-gradient(90deg,#d8a34b,#d65b52)':'linear-gradient(90deg,#69b58a,#d8b15c)';
+      }catch(err){ usedEl.textContent='Mesure indisponible'; pctEl.textContent='—'; remainEl.textContent='Le graphique attend l’accès à la mesure serveur.'; errEl.textContent=err.message||'Erreur de lecture'; errEl.hidden=false; }
+    };
+    view.querySelector('#fm-storage-refresh')?.addEventListener('click',loadStorage);
+    view.querySelector('#fm-storage-copy-sql')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(sql);toast('SQL copié','Collez-le dans Supabase → SQL Editor.','info')}catch(e){toast('Copie impossible','Sélectionnez le SQL et copiez-le manuellement.','info')}});
+    loadStorage(); storageTimer=setInterval(()=>{if(!document.body.contains(view.querySelector('#fm-storage-panel'))){clearInterval(storageTimer);return;}loadStorage();},30000);
+  }
   view.querySelector("#c-sortir").onclick = async ()=>{
     try{ await registreEnvoyer(); }catch(e){}   // ce qui n'est pas encore parti part avant de fermer la session
     await nuageDeconnecter();
