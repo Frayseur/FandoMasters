@@ -13411,7 +13411,7 @@ function combatProfil(c){
   const extra = role === "ninja" ? COMBAT_REG.cout_charge : role === "tank" ? COMBAT_REG.cout_provoc : COMBAT_REG.cout_cri;
   const cout = Math.min(10, Math.max(1, arrondiSql((a + p - 1) / 2 + extra)));
   const trait = combatTraitHash(c.id);
-  const extraTexte = (trait % 11 === 0 ? " · Furtivité" : "") + (trait % 7 === 0 ? " · Râle de mort : piochez 1 carte" : "");
+  const extraTexte = (trait % 11 === 0 ? " · Furtivité" : "") + (trait % 7 === 0 ? " · Râle de mort : piochez 1 carte" : "") + (trait % 13 === 0 ? " · Vol de vie" : "");
   return {id:c.id, type:"serviteur", nom:c.title, r, img:c.img, u:c.univ, cout, atq:a, pv:p, role, texte:COMBAT_TEXTE[role] + extraTexte};
 }
 
@@ -13768,7 +13768,7 @@ function viewDuel(){
 }
 function cbRegles(){
   return info("Règles du combat", `<p class='sub' style='margin:0 0 .5rem'>Chaque joueur a un héros à 30 PV et un deck de 30 cartes. À votre tour, votre mana maximum augmente de 1 (jusqu'à 10) et se remplit ; vous piochez une carte. Jouez des serviteurs et des sorts, attaquez, puis terminez votre tour. Le premier héros à 0 PV perd.</p>
-    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Un deck est limité à <b>3 serviteurs avec Provocation</b> pour éviter les plateaux verrouillés. <b>Ruée</b> permet d’attaquer les serviteurs dès l’arrivée, <b>Furtivité</b> empêche d’être ciblé par l’adversaire avant sa première attaque, et <b>Râle de mort</b> déclenche un effet à la mort. Les sorts de zone touchent plusieurs serviteurs, le Silence retire les capacités, et la Transformation remplace les statistiques et capacités par celles d’un serviteur simple. Entre serviteurs, les dégâts sont simultanés.</p>
+    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Un deck est limité à <b>3 serviteurs avec Provocation</b> pour éviter les plateaux verrouillés. <b>Ruée</b> permet d’attaquer les serviteurs dès l’arrivée, <b>Furtivité</b> empêche d’être ciblé par l’adversaire avant sa première attaque, et <b>Râle de mort</b> déclenche un effet à la mort. <b>Vol de vie</b> rend au héros les PV correspondant aux dégâts infligés par le serviteur. Les sorts de zone touchent plusieurs serviteurs, le Silence retire les capacités (dont Râle de mort, Ruée et Vol de vie), et la Transformation remplace les statistiques et capacités par celles d’un serviteur simple. Entre serviteurs, les dégâts sont simultanés.</p>
     <p class='sub' style='margin:0'>Pouvoir de héros : 2 mana, 1 dégât, une fois par tour. Main de 10 cartes au plus (au-delà, la carte piochée brûle) ; deck vide : fatigue de 1, puis 2, puis 3… Le second joueur reçoit « Élan » (+1 mana une fois).</p>`);
 }
 function cbVueJouer(corps){
