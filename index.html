@@ -4006,6 +4006,14 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
   .topbar .purse,.topbar .freebox{font-size:.78rem;padding:4px 8px}
 }
 
+
+/* FandoMasters — nouveaux états tactiques */
+.cbkw.bouclier{color:#ffe6a0;border-color:#e7c86d;background:#6f5929}
+.cbkw.furtif{color:#b7c9ff;border-color:#8ea8ef;background:#28365b}
+.cbkw.gele{color:#aeeaff;border-color:#78d7f0;background:#17465a}
+.cbkw.rush{color:#ffe0a1;border-color:#d6a44e;background:#60451e}
+.cbkw.deathrattle{color:#f0b8ff;border-color:#b985ce;background:#47274f}
+.cbarmure{position:absolute;left:-7px;top:4px;z-index:4;display:inline-flex;align-items:center;gap:2px;padding:2px 5px;border:1px solid #93c6e5;border-radius:999px;background:#163b53;color:#d9f3ff;font-size:.72rem;font-weight:800;box-shadow:0 2px 7px #0008}
 </style>
 </head>
 <body>
@@ -13387,8 +13395,9 @@ const SOON = {
 const COMBAT_REG = {atq_base:1, atq_palier:0.8, atq_echelle:3, pv_base:1, pv_palier:1, pv_echelle:4, cout_charge:0.5, cout_provoc:0, cout_cri:0.5};
 const COMBAT_BANDES = {"Commun":[900,2800], "Peu commun":[2400,4200], "Rare":[4000,5800], "Super rare":[5600,7000], "Ultra rare":[6900,8300], "Légendaire":[8400,9700]};
 const COMBAT_PALIER = {"Commun":0, "Peu commun":1, "Rare":2, "Super rare":3, "Ultra rare":4, "Légendaire":5};
-const COMBAT_TEXTE = {tank:"Provocation", ninja:"Charge", magicien:"Cri d'arrivée : inflige 1 dégât", soigneur:"Cri d'arrivée : rend 2 PV"};
+const COMBAT_TEXTE = {tank:"Provocation", ninja:"Ruée · attaque les serviteurs immédiatement", magicien:"Cri d'arrivée : inflige 1 dégât", soigneur:"Cri d'arrivée : rend 2 PV"};
 const arrondiSql = x => Math.sign(x) * Math.round(Math.abs(x));      // round() de Postgres : demi vers l'extérieur
+function combatTraitHash(id){ return [...String(id || "")].reduce((n, ch) => n + ch.charCodeAt(0), 0); }
 function combatProfil(c){
   const r = c.rarity || "Commun";
   if(r === "Relique") return {id:c.id, type:"arme", nom:c.title, r, img:c.img, u:c.univ, cout:3, atq:3, dur:2, texte:"Arme : votre héros attaque avec 3 ATQ (2 utilisations)."};
@@ -13401,7 +13410,9 @@ function combatProfil(c){
   const role = roleOf({id:c.id, atk, def});
   const extra = role === "ninja" ? COMBAT_REG.cout_charge : role === "tank" ? COMBAT_REG.cout_provoc : COMBAT_REG.cout_cri;
   const cout = Math.min(10, Math.max(1, arrondiSql((a + p - 1) / 2 + extra)));
-  return {id:c.id, type:"serviteur", nom:c.title, r, img:c.img, u:c.univ, cout, atq:a, pv:p, role, texte:COMBAT_TEXTE[role]};
+  const trait = combatTraitHash(c.id);
+  const extraTexte = (trait % 11 === 0 ? " · Furtivité" : "") + (trait % 7 === 0 ? " · Râle de mort : piochez 1 carte" : "");
+  return {id:c.id, type:"serviteur", nom:c.title, r, img:c.img, u:c.univ, cout, atq:a, pv:p, role, texte:COMBAT_TEXTE[role] + extraTexte};
 }
 
 /* ======================================================================
@@ -13429,7 +13440,16 @@ const SORTS_DEFAUT = [
   {id:"sort:soin", nom:"Restauration", texte:"Rend 4 PV à un personnage.", cout:2, effet:{type:"soin", n:4, cible:"personnage"}},
   {id:"sort:une", nom:"Mise à la une", texte:"Donne +2/+2 à un de vos serviteurs.", cout:2, effet:{type:"bonus", atq:2, pv:2, cible:"allie"}},
   {id:"sort:recherche", nom:"Recherche approfondie", texte:"Piochez 2 cartes.", cout:3, effet:{type:"pioche", n:2}},
-  {id:"sort:suppression", nom:"Suppression de page", texte:"Inflige 5 dégâts à un serviteur.", cout:4, effet:{type:"degats", n:5, cible:"serviteur"}}
+  {id:"sort:suppression", nom:"Suppression de page", texte:"Inflige 5 dégâts à un serviteur.", cout:4, effet:{type:"degats", n:5, cible:"serviteur"}},
+  {id:"sort:purge-silencieuse", nom:"Effacement total", texte:"Retire les capacités et effets d’un serviteur.", cout:2, effet:{type:"silence", cible:"serviteur"}},
+  {id:"sort:banissement", nom:"Bannissement", texte:"Détruit un serviteur adverse, même protégé par un Bouclier.", cout:5, effet:{type:"detruire", cible:"ennemi_serviteur"}},
+  {id:"sort:gel", nom:"Stase", texte:"Gèle un serviteur adverse : il ne pourra pas attaquer à son prochain tour.", cout:2, effet:{type:"gel", cible:"ennemi_serviteur"}},
+  {id:"sort:egide", nom:"Égide de collectionneur", texte:"Donne un Bouclier à un serviteur allié : le prochain dégât est annulé.", cout:1, effet:{type:"bouclier"}},
+  {id:"sort:armure", nom:"Archive blindée", texte:"Gagne 5 points d’armure qui absorbent les prochains dégâts subis par votre héros.", cout:2, effet:{type:"armure", n:5}},
+  {id:"sort:affaiblissement", nom:"Désindexation", texte:"Réduit l’attaque d’un serviteur adverse de 2 et son maximum de PV de 1.", cout:2, effet:{type:"affaiblir", cible:"ennemi_serviteur", atq:2, pv:1}},
+  {id:"sort:onde", nom:"Onde de choc", texte:"Inflige 2 dégâts à tous les serviteurs.", cout:4, effet:{type:"zone_tous", n:2}},
+  {id:"sort:rafale", nom:"Rafale de données", texte:"Inflige 3 dégâts à un personnage adverse.", cout:3, effet:{type:"degats", n:3, cible:"ennemi"}},
+  {id:"sort:renfort", nom:"Renfort tactique", texte:"Donne +1 ATQ et +3 PV à un serviteur allié.", cout:2, effet:{type:"bonus", atq:1, pv:3}}
 ];
 const CB = {onglet:"jouer", profil:null, id:null, v:null, attente:null, erreur:"", envoi:false, lecture:false, mode:null, mull:new Set(),
             niveau:"normal", code:"", dernierType:null, demarre:false, sorts:null, sig:"", recu:0, hors:0, cle:null, filtre:"", filtreT:"", fxPending:[]};
@@ -13527,7 +13547,7 @@ function cbCarteHTML(p, opts = {}){
 function cbServHTML(m, k, opts = {}){
   return `<div class="cbserv ${m.provocation ? "provoc" : ""} ${opts.pret ? "pret" : ""} ${opts.cible ? "cible" : ""} ${opts.choisi ? "choisi" : ""}" data-r="${cbEsc(m.r || "")}" data-fxid="${k}:${cbEsc(m.iid)}" data-cible="${k}:${cbEsc(m.iid)}" ${opts.clic ? `data-serv="${cbEsc(m.iid)}"` : ""} data-zoom="${k}:${cbEsc(m.iid)}" title="${cbEsc(m.nom + " — " + (m.texte || ""))}">
     <div class="cbsart">${cbArtHTML(m)}</div>
-    ${m.provocation ? `<span class="cbkw provoc" title="Provocation">🛡</span>` : m.charge ? `<span class="cbkw" title="Charge">⚡</span>` : ""}
+    ${m.provocation ? `<span class="cbkw provoc" title="Provocation">🛡</span>` : ""}${m.charge ? `<span class="cbkw" title="Charge : peut attaquer le héros dès son arrivée">⚡</span>` : ""}${m.ruée ? `<span class="cbkw rush" title="Ruée : peut attaquer les serviteurs dès son arrivée">➤</span>` : ""}${m.bouclier ? `<span class="cbkw bouclier" title="Bouclier : annule le prochain dégât">✧</span>` : ""}${m.furtif ? `<span class="cbkw furtif" title="Furtivité : ne peut pas être ciblé par l’adversaire jusqu’à sa première attaque">◌</span>` : ""}${m.mort ? `<span class="cbkw deathrattle" title="Râle de mort : piochez 1 carte quand ce serviteur meurt">☠</span>` : ""}${m.gele ? `<span class="cbkw gele" title="Gelé">❄</span>` : ""}
     <span class="cbst a">${m.atq}</span><span class="cbst p ${m.pv < m.pvmax ? "blesse" : ""}">${m.pv}</span>
   </div>`;
 }
@@ -13546,6 +13566,7 @@ function cbHerosHTML(cote, k, moi, opts = {}){
   return `<div class="cbheros ${moi ? "moi" : "adv"} ${opts.cible ? "cible" : ""} ${opts.pret ? "pret" : ""}" data-fxid="${k}:heros" data-cible="${k}:heros" ${opts.clic ? `data-herosatt="1"` : ""} title="${cbEsc(nom)}">
     <div class="cbportrait">${cbPortrait(moi, cote)}</div>
     <span class="cbst p heros ${cote.pv < cote.pvmax ? "blesse" : ""}">${cote.pv}</span>
+    ${cote.armure > 0 ? `<span class="cbarmure" title="Armure : absorbe les prochains dégâts">⬟ ${cote.armure}</span>` : ""}
     ${cote.arme ? `<span class="cbarme" title="${cbEsc(cote.arme.nom)}"><b>⚔ ${cote.arme.atq}</b><i>${cote.arme.dur}</i></span>` : ""}
   </div>`;
 }
@@ -13567,20 +13588,24 @@ function cbZoom(p){
 function cbCibles(regle){
   const v = CB.v; if(!v) return new Set();
   const mk = v.moi_k, ak = 3 - mk, out = new Set();
-  const ajouter = (k, cote, heros, servs) => { if(heros) out.add(k + ":heros"); if(servs) cote.plateau.forEach(m => out.add(k + ":" + m.iid)); };
+  const ajouter = (k, cote, heros, servs) => { if(heros) out.add(k + ":heros"); if(servs) cote.plateau.forEach(m => { if(k === mk || !m.furtif) out.add(k + ":" + m.iid); }); };
   if(regle === "personnage"){ ajouter(mk, v.moi, true, true); ajouter(ak, v.adv, true, true); }
   else if(regle === "serviteur"){ ajouter(mk, v.moi, false, true); ajouter(ak, v.adv, false, true); }
+  else if(regle === "ennemi_serviteur") ajouter(ak, v.adv, false, true);
   else if(regle === "ennemi") ajouter(ak, v.adv, true, true);
   else if(regle === "allie") ajouter(mk, v.moi, true, true);
   else if(regle === "allie_serviteur") ajouter(mk, v.moi, false, true);
   else if(regle === "attaque"){
     const prov = v.adv.plateau.filter(m => m.provocation);
-    if(prov.length) prov.forEach(m => out.add(ak + ":" + m.iid)); else ajouter(ak, v.adv, true, true);
+    const attaquant = CB.mode && CB.mode.attaquant !== "heros" ? v.moi.plateau.find(m => m.iid === CB.mode.attaquant) : null;
+    if(prov.length) prov.forEach(m => out.add(ak + ":" + m.iid));
+    else if(attaquant && attaquant.ruée && !(attaquant.attaques > 0)) ajouter(ak, v.adv, false, true);
+    else ajouter(ak, v.adv, true, true);
   }
   return out;
 }
 function cbRegleCarte(p){
-  if(p.type === "sort"){ const t = p.eff.type; return t === "degats" ? (p.eff.cible || "personnage") : t === "soin" ? "personnage" : t === "bonus" ? "allie_serviteur" : null; }
+  if(p.type === "sort"){ const t = p.eff.type; return t === "degats" ? (p.eff.cible || "personnage") : t === "soin" ? (p.eff.cible || "personnage") : t === "bonus" || t === "bouclier" ? "allie_serviteur" : t === "silence" ? "serviteur" : ["detruire","gel","affaiblir"].includes(t) ? (p.eff.cible || "ennemi_serviteur") : null; }
   if(p.type === "serviteur" && p.eff && p.eff.cri) return p.eff.cri.type === "degats" ? "ennemi" : "allie";
   return null;
 }
@@ -13867,6 +13892,13 @@ function cbJournalTexte(e, v){
     case "temps": return "Temps écoulé pour " + qui(e.j).toLowerCase();
     case "arme_brisee": return e.nom + " se brise";
     case "bonus": return nomCible(e.cible) + " reçoit +" + e.atq + "/+" + e.pv;
+    case "bouclier": return nomCible(e.cible) + " gagne un Bouclier";
+    case "bouclier_brise": return "Le Bouclier de " + nomCible(e.cible) + " absorbe le coup";
+    case "silence": return nomCible(e.cible) + " est réduit au silence";
+    case "detruit": return nomCible(e.cible) + " est banni";
+    case "gel": return nomCible(e.cible) + " est gelé";
+    case "armure": return qui(e.j) + " gagne " + e.n + " points d’armure";
+    case "affaiblir": return nomCible(e.cible) + " est affaibli";
     default: return "";
   }
 }
