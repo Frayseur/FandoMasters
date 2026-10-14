@@ -5322,7 +5322,7 @@ const egalJ = (a, b) => stable(a) === stable(b);
 /* Réglages de profil : chacun porte la date de sa dernière modification
    (persoMaj). Entre deux appareils, le réglage le plus récent gagne, quoi
    qu'il arrive au reste de la partie. */
-const PERSO = ["banner","bannerImg","title","titresAff","fav","slots","avatar","avatarImg","avatarCrop","pseudo"];
+const PERSO = ["banner","bannerImg","title","titresAff","fav","slots","avatar","avatarImg","avatarCrop","pseudo","pseudoStyle"];
 let persoVu = null;
 function persoInstantane(p){ persoVu = Object.fromEntries(PERSO.map(k => [k, stable(p[k])])); }
 function tamponnerPerso(p){
@@ -7241,10 +7241,19 @@ function possede(cartes){
   });
 }
 
+function pseudoAffiche(p){
+  const nom = (p && p.pseudo) || "";
+  if(!vipActif()) return plainName(nom);
+  if(p && p.pseudoStyle === "frak") return toScript(nom, FRAK);
+  if(p && p.pseudoStyle === "bfrak") return toScript(nom, BFRAK);
+  return plainName(nom);
+}
+
 /* ---- vitrine publique ---- */
 let profilPublie = "", profilPublieA = 0, profilMinuteur = null;
 function vitrinePublique(){
   const p = state.profile;
+  if(!vipActif()) p.pseudoStyle = "normal";
   const lv = levelFromXP(playerXP());
   /* la dernière fiche connue de chaque carte exposée est gardée : une vitrine
      publiée ne se vide plus parce qu'une carte manque un instant à la collection */
@@ -7259,6 +7268,8 @@ function vitrinePublique(){
   return {
     niveau: lv.lvl, xp: lv.left, xpMax: lv.need,
     titre: titresAffiches()[0] || null, titres: titresAffiches(), titresV: 2,
+    pseudoStyle: vipActif() ? (p.pseudoStyle || "normal") : "normal",
+    vip: vipActif(), vip_jusqua: p.vip_jusqua || FM_VIP_JUSQUA || null,
     fav: p.fav || null,
     avatar: av, crop: p.avatarCrop || null,
     banniere: p.banner ? bannerSrc(p.banner) : "",
@@ -8025,7 +8036,8 @@ async function viewJoueur(){
     const c = v.crop || {z:1, x:50, y:50};
     const avSt = v.avatar ? `background-image:url('${cssUrl(v.avatar)}');background-size:${(c.z*100).toFixed(0)}% auto;background-position:${c.x}% ${c.y}%;background-repeat:no-repeat` : "";
     const nice = v.depuis ? new Date(v.depuis).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
-    const slots = (v.vitrine || []).slice(0, 10);
+    const publicVip = !!(v.vip && v.vip_jusqua && new Date(v.vip_jusqua) > new Date());
+    const slots = (v.vitrine || []).slice(0, publicVip ? 10 : 3);
     const ami = amis.liste.includes(id);
     view.innerHTML = `
       <div class="row" style="justify-content:space-between;align-items:center;position:relative;z-index:2">
@@ -8043,10 +8055,10 @@ async function viewJoueur(){
             <div class="avatar halo${halo}" style="display:grid;place-items:center;${esc(avSt)}">${v.avatar ? "" : esc((pr.pseudo || "?").slice(0, 1).toUpperCase())}</div>
           </div>
           <div style="min-width:0;flex:1">
-            <h3 style="font-size:1.4rem">${esc(pr.pseudo)}</h3>
+            <h3 style="font-size:1.4rem">${esc(v.pseudoStyle === "frak" && v.vip ? toScript(pr.pseudo, FRAK) : v.pseudoStyle === "bfrak" && v.vip ? toScript(pr.pseudo, BFRAK) : plainName(pr.pseudo))}</h3>
             <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
               <span class="lvlbadge">Niv. ${lvl}</span>
-              ${(v.titresV ? (v.titres || []) : (v.titre ? [v.titre] : [])).slice(0, 3).map(titreTag).join("")}
+              ${(v.titresV ? (v.titres || []) : (v.titre ? [v.titre] : [])).filter(t => (v.vip && v.vip_jusqua && new Date(v.vip_jusqua) > new Date()) || !["VIP", "Riche"].includes(t)).slice(0, v.vip && v.vip_jusqua && new Date(v.vip_jusqua) > new Date() ? 3 : 1).map(titreTag).join("")}
             </div>
             ${v.xpMax ? `<div class="lvlbar" title="${v.xp} / ${v.xpMax} points"><i style="width:${Math.round((v.xp || 0) / v.xpMax * 100)}%"></i></div>
             <p class="sub" style="margin:.15rem 0 0;font-size:.78rem">${v.xp} / ${v.xpMax} points vers le niveau ${lvl + 1}</p>` : ""}
@@ -8074,10 +8086,10 @@ async function viewJoueur(){
 
       <div class="row" style="justify-content:space-between;align-items:baseline">
         <h3 style="font-size:1.15rem">Vitrine</h3>
-        <span class="sub">${slots.length} / 10</span>
+        <span class="sub">${slots.length} / ${publicVip ? 10 : 3}</span>
       </div>
       <div class="slots" style="margin-top:.7rem">
-        ${Array.from({length:10}, (_, i) => slots[i]
+        ${Array.from({length:publicVip ? 10 : 3}, (_, i) => slots[i]
           ? `<div class="slot full">${cardHTML(slots[i])}</div>`
           : `<div class="slot" style="cursor:default"></div>`).join("")}
       </div>`;
@@ -14074,17 +14086,29 @@ function viewBoutique(){
       ${vip ? `<p style="margin:.9rem 0 0">Votre VIP est actif jusqu'au <b>${dateVip}</b>.</p>` : `<p class="sub" style="margin:.9rem 0 0">Votre VIP est activé pour un an après achat. Solde actuel : <b>${soldeCristaux().toLocaleString("fr-FR")} Cristaux</b>.</p>`}
       <button class="btn" id="vip-achat" ${vip || btq.achat || soldeCristaux() < 1000 ? "disabled" : ""} style="width:100%;margin-top:1rem;${vip || btq.achat || soldeCristaux() < 1000 ? "opacity:.7;cursor:not-allowed" : ""}">${vip ? "Abonnement actif" : "Acheter le VIP · 1 000 Cristaux"}</button>
     </section>
-    <h3 style="font-size:1.15rem;margin:1.2rem 0 .65rem">Ce que comprend le VIP</h3>
-    <div class="btqgrille">
-      <article class="btqart"><b>♛ Profil personnalisé</b><p class="sub">Titres VIP exclusifs dont « VIP » et « Riche », jusqu'à 3 titres affichés, polices de pseudo personnalisées, cadres d'avatar prédéfinis, jusqu'à 10 cartes en vitrine et badges de succès affichables.</p></article>
-      <article class="btqart"><b>✎ Contributions illimitées</b><p class="sub">Soumissions de raretés, de recadrages et de nouvelles cartes sans limite VIP. Les joueurs non VIP restent limités à 5 soumissions par jour.</p></article>
-      <article class="btqart"><b>🂠 Collection personnalisée</b><p class="sub">Dos de cartes prédéfinis et porte-vues personnalisés, consultables par les autres joueurs depuis le profil.</p></article>
-      <article class="btqart"><b>⚔ Combats personnalisés</b><p class="sub">Animations et effets visuels cosmétiques exclusifs pendant les combats, sans avantage de gameplay.</p></article>
-      <article class="btqart"><b>▤ Statistiques et titres</b><p class="sub">Historique des 3 dernières ouvertures de boosters, accès au classement mondial des combats et au moins 50 titres VIP supplémentaires.</p></article>
-      <article class="btqart"><b>▣ Ouvertures groupées</b><p class="sub">Ouverture de jusqu'à 100 boosters simultanément.</p></article>
-      <article class="btqart"><b>♟ Guildes</b><p class="sub">Possibilité de créer une guilde et de rassembler une communauté.</p></article>
+    <h3 style="font-size:1.15rem;margin:1.2rem 0 .65rem">Comparatif des accès</h3>
+    <div style="overflow-x:auto">
+      <table class="cbtab" style="width:100%;min-width:510px">
+        <thead><tr><th>Fonctionnalité</th><th>Non-VIP</th><th>VIP</th></tr></thead>
+        <tbody>
+          <tr><td>Prix / durée</td><td>Gratuit</td><td>1 000 Cristaux / an</td></tr>
+          <tr><td>Ajouts de cartes</td><td>5 par jour</td><td>10 par jour</td></tr>
+          <tr><td>Recadrages</td><td>5 par jour</td><td>10 par jour</td></tr>
+          <tr><td>Ouvertures groupées</td><td>1 et 10</td><td>1, 10 et 100</td></tr>
+          <tr><td>Titres affichés</td><td>1</td><td>3</td></tr>
+          <tr><td>Titres</td><td>Titres de base</td><td>« VIP », « Riche » et titres de quêtes VIP</td></tr>
+          <tr><td>Police du pseudo</td><td>Normale</td><td>Gothique / médiévale</td></tr>
+          <tr><td>Vitrine du profil</td><td>3 cartes</td><td>10 cartes</td></tr>
+          <tr><td>Album depuis un profil public</td><td>Non accessible</td><td>Accessible</td></tr>
+          <tr><td>Combats</td><td>Classiques</td><td>Classiques et classés</td></tr>
+          <tr><td>Classement mondial classé</td><td>Non accessible</td><td>Top 100</td></tr>
+          <tr><td>Historique des ouvertures</td><td>Historique simple</td><td>5 dernières ouvertures détaillées</td></tr>
+          <tr><td>Effets de combat</td><td>Effets classiques</td><td>Particules épiques et explosions magiques</td></tr>
+          <tr><td>Création de guilde</td><td>Non</td><td>Oui</td></tr>
+        </tbody>
+      </table>
     </div>
-    <p class="sub" style="margin-top:.9rem;font-size:.82rem">Les ouvertures groupées de plus de 10 boosters sont vérifiées côté serveur et réservées aux VIP. Les autres avantages sont activés progressivement.</p>`;
+    <p class="sub" style="margin-top:.9rem;font-size:.82rem">Les droits VIP doivent être retirés automatiquement à expiration. Les contrôles serveur protègent déjà le mode classé, le classement, la création de guilde et les limites de contributions ; les contrôles d'interface restants doivent être déployés avec cette version.</p>`;
   const vipBuy = view.querySelector("#vip-achat");
   if(vipBuy && !vip) vipBuy.onclick = () => acheterVipAnnuel();
   if(btq.articles === null) boutiqueCharger();
@@ -16758,7 +16782,9 @@ function bannerSrc(id){
 }
 function unlockedTitles(){
   const owned = new Set(state.profile.ach||[]);
-  const l = TITLES.filter(t=>owned.has(t.id));
+  const vip = vipActif();
+  const vipNames = new Set(["VIP", "Riche"]);
+  const l = TITLES.filter(t=>owned.has(t.id) && (vip || !vipNames.has(t.name)));
   if(estAdmin()) l.unshift({id:"dev", name:"DEV", dev:true});   // réservé aux développeurs
   const g = state.profile.guilde;
   if(g && g.nom){
@@ -16771,7 +16797,7 @@ function unlockedTitles(){
 function titresAffiches(){
   const p = state.profile, dispo = new Set(unlockedTitles().map(t => t.name));
   let l = Array.isArray(p.titresAff) ? p.titresAff : (p.title ? [p.title] : []);
-  return l.filter(t => dispo.has(t)).slice(0, 3);
+  return l.filter(t => dispo.has(t) && (vipActif() || !["VIP", "Riche"].includes(t))).slice(0, vipActif() ? 3 : 1);
 }
 function titreTag(t){ return `<span class="titletag ${t === "DEV" ? "dev" : ""}">${esc(t)}</span>`; }
 
@@ -16781,7 +16807,9 @@ function viewProfil(){
   const av = p.avatar ? state.collection.find(c=>c.id===p.avatar) : null;
   /* Une carte absente de la collection à l'instant (chargement en cours, synchro)
      ne vide plus son emplacement : on montre la dernière image connue. */
-  p.slots = (p.slots||[]).filter(Boolean).slice(0, 10);
+  const plafondVitrine = vipActif() ? 10 : 3;
+  p.slots = (p.slots||[]).filter(Boolean).slice(0, plafondVitrine);
+  if (!vipActif() && Array.isArray(p.titresAff)) { p.titresAff = p.titresAff.slice(0,1); p.title = p.titresAff[0] || null; }
   const slots = p.slots.map(id=>state.collection.find(c=>c.id===id) || (p.vitrineCache || {})[id] || null);
   const lv0 = levelFromXP(playerXP());
   const since = p.since ? new Date(p.since) : new Date();
@@ -16807,7 +16835,7 @@ function viewProfil(){
         <div style="min-width:0;flex:1">
           <div class="row" style="gap:.5rem">
             <h3 style="font-size:1.4rem">${esc(p.pseudo)}</h3>
-            <button class="btn small ghost" id="rename">Renommer</button>
+
           </div>
           <div class="row" style="gap:.4rem;align-items:center;margin-top:.15rem">
             <span class="lvlbadge">Niv. ${lv0.lvl}</span>
@@ -16828,8 +16856,7 @@ function viewProfil(){
       <div class="row" style="margin:.8rem 0 0;position:relative;z-index:2">
         <span class="sub">Écriture du pseudo :</span>
         <button class="btn small ghost" data-font="normal">Normal</button>
-        <button class="btn small ghost" data-font="frak">𝔊𝔬𝔱𝔥𝔦𝔮𝔲𝔢</button>
-        <button class="btn small ghost" data-font="bfrak">𝕸𝖊́𝖉𝖎𝖊́𝖛𝖆𝖑</button>
+        ${vipActif() ? `<button class="btn small ghost" data-font="frak">𝔊𝔬𝔱𝔥𝔦𝔮𝔲𝔢</button><button class="btn small ghost" data-font="bfrak">𝕸𝖊́𝖉𝖎𝖊́𝖛𝖆𝖑</button>` : `<span class="sub">Les polices personnalisées sont réservées aux VIP.</span>`}
       </div>
       <div class="statgrid">
         <div class="st"><b>${state.collection.length}</b><span>cartes distinctes</span></div>
@@ -16843,9 +16870,9 @@ function viewProfil(){
 
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <h3 style="font-size:1.15rem;margin-bottom:.4rem">Titres</h3>
-      <span class="sub">${titresAffiches().length} / 3 affichés</span>
+      <span class="sub">${titresAffiches().length} / ${vipActif() ? 3 : 1} affiché${vipActif() ? "s" : ""}</span>
     </div>
-    <p class="sub" style="margin:0 0 .5rem;font-size:.8rem">Touchez jusqu'à trois titres à montrer sur votre profil. Les autres restent privés.</p>
+    <p class="sub" style="margin:0 0 .5rem;font-size:.8rem">${vipActif() ? "Touchez jusqu'à trois titres à montrer sur votre profil. Les autres restent privés." : "Les comptes non-VIP peuvent afficher un seul titre de base."}</p>
     <div class="row" style="margin-bottom:1.2rem">
       ${unlockedTitles().length
         ? unlockedTitles().map(t=>`<button class="chip ${t.dev ? "devchip" : ""}" data-title="${esc(t.name)}" aria-pressed="${titresAffiches().includes(t.name)}">${esc(t.name)}</button>`).join("")
@@ -16854,10 +16881,10 @@ function viewProfil(){
 
     <div class="row" style="justify-content:space-between;align-items:baseline">
       <h3 style="font-size:1.15rem">Vitrine</h3>
-      <span class="sub">${slots.length} / 10</span>
+      <span class="sub">${slots.length} / ${plafondVitrine}</span>
     </div>
     <div class="slots" id="slots">
-      ${Array.from({length:10}, (_,i)=>{
+      ${Array.from({length:plafondVitrine}, (_,i)=>{
         const c = slots[i];
         return c
           ? `<div class="slot full" data-i="${i}">${cardHTML(c)}<span class="x" data-rm="${i}">✕</span></div>`
@@ -16882,10 +16909,8 @@ function viewProfil(){
   const recadre = view.querySelector("#recadre");
   if(recadre) recadre.onclick = ()=>cropAvatar();
   view.querySelectorAll("[data-font]").forEach(b=>b.onclick = async ()=>{
-    const f = b.dataset.font;
-    p.pseudo = f === "frak" ? toScript(p.pseudo, FRAK)
-             : f === "bfrak" ? toScript(p.pseudo, BFRAK)
-             : plainName(p.pseudo);
+    if(b.dataset.font !== "normal" && !vipActif()) return toast("Fonctionnalité VIP", "Cette police nécessite un VIP actif.", "info");
+    p.pseudoStyle = b.dataset.font;
     sfx.tick();
     await sset("fm:profile", p);
     paintMe();
@@ -16923,17 +16948,17 @@ function viewProfil(){
   view.querySelectorAll("[data-title]").forEach(b=>b.onclick = async ()=>{
     const l = titresAffiches(), t = b.dataset.title;
     if(l.includes(t)) l.splice(l.indexOf(t), 1);
-    else{ if(l.length >= 3){ toast("Trois titres au plus", "retirez-en un d'abord", "info"); return; } l.push(t); }
+    else if(!vipActif()){
+      if(["VIP", "Riche"].includes(t)){ toast("Titre réservé", "Les titres VIP nécessitent un VIP actif.", "info"); return; }
+      if(l.length >= 1){ toast("Un titre au maximum", "Les trois emplacements sont réservés aux VIP.", "info"); return; }
+      l.push(t);
+    } else { if(l.length >= 3){ toast("Trois titres au plus", "retirez-en un d'abord", "info"); return; } l.push(t); }
     p.titresAff = l;
     p.title = l[0] || null;
     sfx.tick();
     await sset("fm:profile", p);
     viewProfil();
   });
-  view.querySelector("#rename").onclick = ()=>{
-    const v = prompt("Votre pseudo", p.pseudo);
-    if(v && v.trim()){ p.pseudo = v.trim().slice(0,18); sset("fm:profile", p); viewProfil(); }
-  };
   view.querySelectorAll("[data-add]").forEach(el=>el.onclick = ()=>pickCard({
     title:"Ajouter à la vitrine",
     filter:c=>!(p.slots||[]).includes(c.id),
@@ -18225,10 +18250,10 @@ function paintMe(){
   const p = state.profile;
   const pic = document.getElementById("mepic"), nm = document.getElementById("mename");
   if(!pic || !nm) return;
-  nm.textContent = p.pseudo || "";
+  nm.textContent = pseudoAffiche(p);
   const c = p.avatar ? state.collection.find(x=>x.id===p.avatar) : null;
   if(c && c.img){ pic.innerHTML = ""; pic.setAttribute("style", avatarStyle()); }
-  else { pic.removeAttribute("style"); pic.innerHTML = esc((p.pseudo||"?").slice(0,1).toUpperCase()); }
+  else { pic.removeAttribute("style"); pic.innerHTML = esc((pseudoAffiche(p)||"?").slice(0,1).toUpperCase()); }
 }
 document.getElementById("wikitag").onclick = openSettings;
 const soundBtn = document.getElementById("sound");
