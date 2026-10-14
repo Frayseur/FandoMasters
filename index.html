@@ -3548,177 +3548,145 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .cbligne .cbcout{position:relative;top:auto;left:auto;width:26px;font-size:.8rem}
 
 
-/* FandoMasters — STEP-UP visuel des cartes, en conservant leur architecture d'origine.
-   Objectif : finition de jeu commercial, pas ajout d'ornements gratuits. */
-
-/* Cadre : métal vert plus profond, arêtes mieux hiérarchisées, reflet maîtrisé. */
+/* FandoMasters STEP-UP : composition plus éditoriale, inspirée des vrais TCG premium.
+   On garde la silhouette et les données de la carte, mais on refond la finition. */
 .card{
-  border-radius:6.8% / 4.9%;
-  background-image:
-    linear-gradient(135deg,#FFFFFF58 0%,#FFFFFF08 12%,#00000024 35%,#FFFFFF22 58%,#00000035 82%,#FFFFFF28 100%),
-    repeating-linear-gradient(54deg,#FFFFFF0B 0 1px,transparent 1px 4px),
+  --fm-accent:var(--g1);
+  isolation:isolate;
+  background:
+    linear-gradient(135deg,#FFFFFF65 0%,#FFFFFF0A 9%,#00000055 28%,#FFFFFF22 48%,#00000066 74%,#FFFFFF32 100%),
+    repeating-linear-gradient(45deg,#FFFFFF0A 0 1px,transparent 1px 3px),
     var(--grain),
-    linear-gradient(145deg,color-mix(in srgb,var(--g1) 78%,#fff),var(--g2) 42%,var(--g1) 72%,color-mix(in srgb,var(--g2) 75%,#000));
-  box-shadow:
-    0 1.4cqw 2.8cqw -1.1cqw #000,
-    0 4.5cqw 7cqw -4cqw #000D,
-    inset 0 .65cqw 0 #FFFFFF90,
-    inset 0 -.9cqw 1.5cqw -.5cqw #000000A0,
-    inset 0 0 0 .48cqw #00000055,
+    linear-gradient(145deg,color-mix(in srgb,var(--g1) 85%,#fff),var(--g2) 32%,#17110e 49%,var(--g1) 77%,var(--g2));
+  box-shadow:0 2cqw 4cqw -1.2cqw #000D,
+    0 0 0 .28cqw #0a0807,
+    inset 0 .7cqw 0 #FFFFFF99,
+    inset 0 0 0 .65cqw #00000070,
+    inset 0 0 0 1.15cqw var(--g1),
     var(--glow);
 }
 .card .inner{
-  inset:1.9cqw;
-  border-radius:4.65cqw;
-  background-image:
-    linear-gradient(180deg,#29211C 0%,#17110E 46%,#211914 100%),
-    var(--grain);
-  box-shadow:
-    inset 0 0 0 .45cqw #080605,
-    inset 0 0 0 .83cqw var(--g2),
-    inset 0 0 0 1.25cqw var(--g1),
-    inset 0 0 0 1.65cqw #080605A8;
+  inset:2.1cqw;
+  border-radius:4.4cqw;
+  background:linear-gradient(180deg,#201812,#0c0908 65%,#201711);
+  box-shadow:inset 0 0 0 .5cqw #080605,
+    inset 0 0 0 .95cqw var(--g2),
+    inset 0 0 0 1.35cqw var(--g1),
+    inset 0 0 0 1.7cqw #080605B5;
 }
-
-/* Plaque du nom : plus nette et mieux proportionnée, sans changer sa forme biseautée. */
 .card .plate{
-  margin:3.25cqw 3.25cqw 2.7cqw;
-  padding:1.8cqw 4.5cqw;
-  min-height:12.2cqw;
+  margin:3.6cqw 3.8cqw 2.5cqw;
+  padding:1.7cqw 4.8cqw;
+  min-height:12.6cqw;
 }
 .card .plate::before{
   background:
-    linear-gradient(180deg,#514137 0%,#28201B 16%,#17110E 58%,#2B211A 100%);
-  box-shadow:
-    inset 0 .38cqw 0 #FFFFFF35,
-    inset 0 -.45cqw 0 #00000080,
+    linear-gradient(100deg,#0C100D 0%,#29342A 18%,#171713 49%,#242D26 82%,#0A0D0B 100%);
+  box-shadow:inset 0 .45cqw 0 #FFFFFF42,
+    inset 0 -.55cqw 0 #000000A8,
     inset 0 0 0 .48cqw var(--g1),
-    0 1cqw 2cqw -1.4cqw #000;
+    inset 0 0 0 .95cqw #090807,
+    0 1.1cqw 1.8cqw -1cqw #000;
 }
 .card .plate .name{
   font-size:5.8cqw;
-  line-height:1.1;
+  line-height:1.08;
   letter-spacing:.025em;
   overflow-wrap:normal;
   word-break:normal;
-  hyphens:none;
-  text-shadow:0 .35cqw 0 #000,0 0 2cqw #000A;
+  hyphens:auto;
+  text-shadow:0 .4cqw 0 #000,0 0 1.8cqw #000D;
 }
-
-/* Fenêtre d'art : séparation plus propre entre métal et image, contraste périphérique subtil. */
 .card .art{
-  margin:0 3.25cqw;
-  background:#100D0B;
-  box-shadow:
-    inset 0 0 0 .65cqw var(--g1),
-    inset 0 0 0 1.25cqw #090706,
-    inset 0 4.5cqw 8cqw -6cqw #000,
-    inset 0 -5cqw 9cqw -6cqw #000;
+  margin:0 3.8cqw;
+  box-shadow:inset 0 0 0 .55cqw var(--g1),
+    inset 0 0 0 1.15cqw #070605,
+    inset 0 0 0 1.65cqw #FFFFFF15,
+    inset 0 7cqw 11cqw -8cqw #000,
+    inset 0 -7cqw 12cqw -8cqw #000;
+  clip-path:polygon(0 3.8cqw,3.8cqw 0,calc(100% - 3.8cqw) 0,100% 3.8cqw,100% calc(100% - 3.8cqw),calc(100% - 3.8cqw) 100%,3.8cqw 100%,0 calc(100% - 3.8cqw));
 }
-.card .art img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-  filter:saturate(1.035) contrast(1.025);
-}
-
-/* Zone descriptive : vrai panneau éditorial, avec niveaux de lecture distincts. */
+.card .art img{filter:saturate(1.08) contrast(1.04);transition:transform .35s ease,filter .35s ease}
+.card:hover .art img{transform:scale(1.025);filter:saturate(1.13) contrast(1.06)}
 .card .body{
-  margin:2.6cqw 3.25cqw 0;
-  padding:2.45cqw 3.6cqw 2.8cqw;
-  gap:.65cqw;
+  margin:2.7cqw 3.8cqw 0;
+  padding:2.5cqw 3.5cqw 2.7cqw;
+  gap:.7cqw;
   background:
-    linear-gradient(180deg,#FFFFFF0A 0%,transparent 23%),
+    linear-gradient(115deg,#FFFFFF09,transparent 34%,#00000012 100%),
     linear-gradient(180deg,var(--t1),var(--t2));
-  box-shadow:
-    inset 0 .35cqw 0 #FFFFFF12,
-    inset 0 0 0 .48cqw #00000090,
-    inset 0 0 0 .9cqw #FFFFFF10;
+  border:0;
+  box-shadow:inset 0 .4cqw 0 #FFFFFF22,
+    inset 0 0 0 .5cqw #000000A0,
+    inset 0 0 0 .95cqw #FFFFFF12,
+    0 1cqw 1.5cqw -1cqw #000;
 }
 .card .univ{
-  font-size:4.35cqw;
-  letter-spacing:.16em;
-  padding-bottom:1.45cqw;
-  border-bottom:.35cqw solid #FFFFFF32;
-  text-shadow:0 .3cqw .9cqw #0009;
+  font-size:4.3cqw;
+  letter-spacing:.17em;
+  padding-bottom:1.3cqw;
+  border-bottom:.42cqw solid color-mix(in srgb,var(--g1) 50%,#FFFFFF20);
 }
 .card .desc{
   font-size:5.35cqw;
-  line-height:1.27;
-  margin-top:.55cqw;
-  color:#F7F0E5D9;
-  text-shadow:0 .25cqw .8cqw #0008;
+  line-height:1.24;
+  margin-top:.45cqw;
+  color:#FFF8E8E0;
+  text-shadow:0 .35cqw 1cqw #000A;
 }
-
-/* Barre de statistiques : séparation nette, chiffres calés sur une grille symétrique. */
 .card .band{
-  margin:2.6cqw 3.25cqw .8cqw;
+  margin:2.7cqw 3.8cqw .8cqw;
   display:grid;
-  grid-template-columns:minmax(0,1fr) 13.5cqw minmax(0,1fr);
+  grid-template-columns:minmax(0,1fr) 13.8cqw minmax(0,1fr);
   align-items:center;
-  gap:1.3cqw;
-  padding:1.25cqw 2.8cqw;
-  font-size:6.2cqw;
+  gap:1.2cqw;
+  padding:1.2cqw 2.8cqw;
+  font-size:6.4cqw;
 }
 .card .band::before{
-  background:
-    linear-gradient(180deg,#45372E 0%,#251A14 24%,#130F0D 70%,#2A2019 100%);
-  box-shadow:
-    inset 0 .4cqw 0 #FFFFFF32,
-    inset 0 -.35cqw 0 #0000008C,
-    inset 0 0 0 .48cqw var(--g1);
+  background:linear-gradient(180deg,#34302A 0%,#17120F 35%,#090807 68%,#2B2119 100%);
+  box-shadow:inset 0 .4cqw 0 #FFFFFF45,
+    inset 0 -.4cqw 0 #000000B0,
+    inset 0 0 0 .5cqw var(--g1),
+    inset 0 0 0 .95cqw #080706;
 }
-.card .band .atk{
-  justify-self:start;
-  gap:1.7cqw;
-  min-width:0;
-  white-space:nowrap;
-}
-.card .band .def{
-  justify-self:end;
-  gap:1.7cqw;
-  min-width:0;
-  white-space:nowrap;
-}
+.card .band .atk{justify-self:start;gap:1.8cqw;white-space:nowrap}
+.card .band .def{justify-self:end;gap:1.8cqw;white-space:nowrap}
 .card .band .role{
   justify-self:center;
-  display:grid;
-  place-items:center;
-  width:10.6cqw;
-  height:10.6cqw;
+  width:10.8cqw;height:10.8cqw;
+  display:grid;place-items:center;
   border-radius:50%;
-  background:linear-gradient(145deg,#FFFFFF18,#00000035);
-  box-shadow:
-    inset 0 .35cqw 0 #FFFFFF26,
-    inset 0 0 0 .42cqw #FFFFFF16,
-    0 .5cqw 1cqw #0005;
+  background:radial-gradient(circle at 35% 25%,#51453A,#15110F 70%);
+  border:.55cqw solid var(--g1);
+  box-shadow:0 0 0 .45cqw #090706,inset 0 .35cqw .6cqw #FFFFFF25,0 .8cqw 1.2cqw #000A;
 }
-
-/* La brillance suit la rareté, mais reste fine pour ne pas laver l'illustration. */
-.card .inner::before{
-  background:linear-gradient(105deg,transparent 43%,#FFFFFF22 49.5%,transparent 56%);
-  animation-duration:5.2s;
+/* Chaque rareté gagne une identité chromatique discrète mais visible. */
+.card[data-r="Commun"]{--g1:#B9AC9E;--g2:#6E6155}
+.card[data-r="Peu commun"]{--g1:#80C8A1;--g2:#2C7555;--fm-accent:#80C8A1}
+.card[data-r="Rare"]{--g1:#8DB9F0;--g2:#315D9D;--fm-accent:#8DB9F0}
+.card[data-r="Super rare"]{--g1:#C49BEE;--g2:#7141A0;--fm-accent:#C49BEE}
+.card[data-r="Ultra rare"]{--g1:#F0A16C;--g2:#A94625;--fm-accent:#F0A16C}
+.card[data-r="Légendaire"]{--g1:#F3D27D;--g2:#99702A;--fm-accent:#F3D27D}
+.card[data-r="Relique"]{--g1:var(--g1);--g2:var(--g2)}
+.card[data-r="Peu commun"] .plate::before,
+.card[data-r="Rare"] .plate::before,
+.card[data-r="Super rare"] .plate::before,
+.card[data-r="Ultra rare"] .plate::before,
+.card[data-r="Légendaire"] .plate::before{
+  box-shadow:inset 0 .45cqw 0 #FFFFFF42,inset 0 -.55cqw 0 #000000A8,
+    inset 0 0 0 .48cqw var(--g1),inset 0 0 0 .95cqw #090807,
+    0 0 2.4cqw color-mix(in srgb,var(--g1) 25%,transparent);
 }
-.card[data-r="Super rare"] .inner::before{
-  background:linear-gradient(105deg,transparent 43%,#FFFFFF35 49.5%,transparent 56%);
-  animation-duration:4.6s;
+.card .inner::before{background:linear-gradient(100deg,transparent 43%,#FFFFFF22 49.5%,transparent 56%);animation-duration:5.5s}
+.card[data-r="Super rare"] .inner::before{background:linear-gradient(100deg,transparent 42%,#E8D6FF55 50%,transparent 58%);animation-duration:4.5s}
+.card[data-r="Ultra rare"] .inner::before{background:linear-gradient(100deg,transparent 42%,#FFE0C65E 50%,transparent 58%);animation-duration:4s}
+.card[data-r="Légendaire"] .inner::before{background:linear-gradient(100deg,transparent 40%,#FFF0C27A 50%,transparent 60%);animation-duration:3.4s}
+@media(max-width:480px){
+ .card .plate .name{font-size:5.5cqw}
+ .card .desc{font-size:5.2cqw}
 }
-.card[data-r="Ultra rare"] .inner::before{
-  background:linear-gradient(105deg,transparent 42%,#FFFFFF45 49.5%,transparent 57%);
-  animation-duration:4.1s;
-}
-.card[data-r="Légendaire"] .inner::before{
-  background:linear-gradient(105deg,transparent 41%,#FFF0C25A 49.5%,transparent 58%);
-  animation-duration:3.7s;
-}
-@media (max-width:480px){
-  .card .plate .name{font-size:5.55cqw}
-  .card .desc{font-size:5.2cqw}
-}
-@media (prefers-reduced-motion:reduce){
-  .card .inner::before{animation:none}
-}
+@media(prefers-reduced-motion:reduce){.card .art img{transition:none}.card .inner::before{animation:none}}
 
 </style>
 </head>
