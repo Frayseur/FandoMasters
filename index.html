@@ -3548,98 +3548,68 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .cbligne .cbcout{position:relative;top:auto;left:auto;width:26px;font-size:.8rem}
 
 
-/* FandoMasters — finition professionnelle discrète, basée sur le design original */
-.card{
-  /* Le format, la structure et les couleurs de rareté d'origine restent intacts. */
-  box-shadow:
-    0 12px 24px -18px #000,
-    inset 0 .55cqw 0 #FFFFFF70,
-    inset 0 -.7cqw 1.2cqw -.5cqw #00000070,
-    inset 0 0 0 .42cqw #00000040,
-    var(--glow);
-}
-.card .inner{
-  border-radius:4.35cqw;
-  box-shadow:
-    inset 0 0 0 .48cqw #00000099,
-    inset 0 0 0 .88cqw var(--g2),
-    inset 0 0 0 1.25cqw var(--g1);
-}
-.card .plate{
-  margin:3.05cqw 3.05cqw 2.45cqw;
-  padding:1.55cqw 4cqw;
-}
-.card .plate::before{
-  box-shadow:
-    inset 0 .42cqw 0 #FFFFFF2B,
-    inset 0 0 0 .46cqw var(--g1),
-    0 .65cqw 1.8cqw -1.2cqw #000;
-}
+/* FandoMasters — retouches ciblées après observation d'une vraie carte mobile.
+   On conserve le style original : mêmes couleurs, formes, textures et ornements. */
+
+/* 1. Titres longs : éviter les coupures artificielles au milieu des mots. */
 .card .plate .name{
-  letter-spacing:.008em;
-  text-shadow:0 .35cqw 0 #000,0 0 2.5cqw #0008;
+  overflow-wrap:normal;
+  word-break:normal;
+  hyphens:none;
+  font-size:5.55cqw;
+  line-height:1.12;
+  padding-inline:.5cqw;
 }
+
+/* 2. Image : bordure interne plus régulière, sans changer la découpe. */
 .card .art{
-  margin:0 3.05cqw;
+  background-color:#1A1512;
   box-shadow:
-    inset 0 0 0 .65cqw var(--g1),
-    inset 0 0 0 1.3cqw #0000009C,
-    inset 0 4.8cqw 9cqw -7cqw #000,
-    inset 0 -5.6cqw 10cqw -7cqw #000;
+    inset 0 0 0 .72cqw var(--g1),
+    inset 0 0 0 1.45cqw #000000A8,
+    inset 0 5.8cqw 11.8cqw -8cqw #000,
+    inset 0 -6.8cqw 12.8cqw -8.4cqw #000;
 }
+.card .art img{display:block}
+
+/* 3. Texte : une marge respirable et une ligne de séparation moins lourde. */
 .card .body{
-  margin:2.45cqw 3.05cqw 0;
-  padding:2.25cqw 3.45cqw 2.7cqw;
-  box-shadow:
-    inset 0 0 0 .42cqw #00000078,
-    inset 0 0 0 .85cqw #FFFFFF12;
+  padding:2.35cqw 3.6cqw 2.7cqw;
+  gap:.65cqw;
 }
 .card .univ{
-  letter-spacing:.12em;
-  padding-bottom:1.1cqw;
-  border-bottom:.42cqw solid #FFFFFF24;
+  padding-bottom:1.05cqw;
+  border-bottom:.38cqw solid #FFFFFF24;
 }
 .card .desc{
-  line-height:1.27;
-  text-shadow:0 .35cqw 1.2cqw #0008;
+  line-height:1.26;
+  margin-top:.55cqw;
 }
+
+/* 4. Statistiques : trois colonnes stables pour équilibrer attaque, rôle et défense.
+   Le rôle reste centré, même si les nombres n'ont pas la même longueur. */
 .card .band{
-  margin:2.45cqw 3.05cqw .45cqw;
-  padding:1.05cqw 3.25cqw;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);
+  align-items:center;
+  gap:1.4cqw;
+  padding:1.15cqw 2.8cqw;
 }
-.card .band::before{
+.card .band .atk{justify-self:start;min-width:0;gap:1.6cqw;white-space:nowrap}
+.card .band .role{justify-self:center}
+.card .band .def{justify-self:end;min-width:0;gap:1.6cqw;white-space:nowrap}
+
+/* 5. Finition du cadre : garder la texture existante, adoucir uniquement l'ombre. */
+.card{
   box-shadow:
-    inset 0 .42cqw 0 #FFFFFF26,
-    inset 0 0 0 .46cqw var(--g1);
+    0 16px 27px -20px #000,
+    inset 0 .7cqw 0 #FFFFFF70,
+    inset 0 -.9cqw 1.5cqw -.5cqw #00000075,
+    inset 0 0 0 .48cqw #00000042,
+    var(--glow);
 }
-.card .band .atk,.card .band .def{
-  gap:1.9cqw;
-  text-shadow:0 .35cqw 0 #000,0 0 2.5cqw #0009;
-}
-/* Le reflet est conservé, mais devient plus doux pour ne pas masquer l'illustration. */
-.card .inner::before{
-  background:linear-gradient(100deg,transparent 45%,#ffffff20 50%,transparent 55%);
-  animation-duration:5.8s;
-}
-.card[data-r="Super rare"] .inner::before{
-  background:linear-gradient(100deg,transparent 45%,#ffffff2B 50%,transparent 55%);
-  animation-duration:5.2s;
-}
-.card[data-r="Ultra rare"] .inner::before{
-  background:linear-gradient(100deg,transparent 44%,#ffffff35 50%,transparent 56%);
-  animation-duration:4.8s;
-}
-.card[data-r="Légendaire"] .inner::before{
-  background:linear-gradient(100deg,transparent 43%,#FFF0C25C 50%,transparent 57%);
-  animation-duration:4.4s;
-}
-/* Bordures de rareté inchangées ; uniquement des lueurs un peu mieux contenues. */
-.card[data-r="Rare"]{--glow:0 0 16px -11px #3C3C86}
-.card[data-r="Super rare"]{--glow:0 0 18px -10px #C77FA8}
-.card[data-r="Ultra rare"]{--glow:0 0 24px -9px #FF5E22}
-.card[data-r="Légendaire"]{--glow:0 0 30px -9px #E8B44C}
-@media (prefers-reduced-motion:reduce){
-  .card .inner::before{animation:none}
+@media (max-width:480px){
+  .card .plate .name{font-size:5.35cqw}
 }
 
 </style>
