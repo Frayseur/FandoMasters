@@ -3976,7 +3976,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
       <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Héros, serviteurs et sorts</small></button>
       <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
-      <button data-view="shop"><span class="ic">⬢</span><b>Boutique</b><small>Cristaux et boosters</small></button>
+      <button data-view="shop"><span class="ic">♛</span><b>Boutique VIP</b><small>Abonnement annuel</small></button>
       <button data-view="camp"><span class="ic">⚑</span><b>Campagnes</b><small>Expéditions et boss d'univers</small></button>
     </div>
   </div>
@@ -14038,63 +14038,42 @@ const btq = {articles:null, historique:[], erreur:"", achat:false};
 function soldeCristaux(){ return Math.max(0, Math.floor(+((state.profile || {}).cristaux) || 0)); }
 function lignesRpc(r, nom){ return (Array.isArray(r) ? r : r ? [r] : []).map(x => x && typeof x === "object" && nom in x && Object.keys(x).length === 1 ? x[nom] : x); }
 async function boutiqueCharger(){
-  try{
-    const [a, h] = await Promise.all([
-      nuageRest("boutique?select=id,nom,description,prix,contenu&order=ordre.asc,prix.asc"),
-      nuageRest("achats?select=type,article,cristaux,motif,cree&order=cree.desc&limit=20")
-    ]);
-    btq.articles = Array.isArray(a) ? a : [];
-    btq.historique = Array.isArray(h) ? h : [];
-    btq.erreur = "";
-  }catch(e){ btq.erreur = String(e && e.message || e); if(!btq.articles) btq.articles = []; }
+  /* La boutique ne charge plus le catalogue d'articles ou les achats en Cristaux.
+     Aucun achat de cartes, boosters ou objets n'est proposé depuis l'interface. */
+  btq.articles = [];
+  btq.historique = [];
+  btq.erreur = "";
 }
 function viewBoutique(){
-  const solde = soldeCristaux();
-  const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
-  const art = btq.articles;
+  const vip = !!(state.profile && state.profile.vip_jusqua && new Date(state.profile.vip_jusqua) > new Date());
+  const dateVip = vip ? new Date(state.profile.vip_jusqua).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
   view.innerHTML = `
-    <h2 class="vuetitre">Boutique</h2>
-    <div class="panel btqsolde">
-      <div class="montant"><span class="sub">Vos Cristaux</span><b id="btq-solde">${CRISTAL} ${solde.toLocaleString("fr-FR")}</b></div>
-      <p class="sub">Les Cristaux servent à acheter des boosters et des Fandominus. Chaque achat est réglé par le serveur : débité une seule fois, même en cas de double clic ou de coupure, et ce que vous achetez arrive tout de suite. L'achat de Cristaux en ligne arrive bientôt.</p>
-    </div>
-    ${btq.erreur ? `<div class="panel" style="margin-bottom:1rem"><b>Boutique indisponible pour l'instant</b><p class="sub" style="margin:.3rem 0 0">${esc(btq.erreur)}</p></div>` : ""}
-    ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
-    ${art === null ? `<p class="sub">Chargement des articles…</p>` : art.length ? `<div class="btqgrille">${art.map(a => `
-      <div class="btqart">
-        <b>${esc(a.nom)}</b>
-        <p class="sub">${esc(a.description || "")}</p>
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <span class="prix">${CRISTAL} ${(+a.prix).toLocaleString("fr-FR")}</span>
-          <button class="btn small" data-acheter="${esc(a.id)}" ${!enLigne || btq.achat || solde < a.prix ? "disabled" : ""}>${solde < a.prix ? "Cristaux insuffisants" : "Acheter"}</button>
+    <h2 class="vuetitre">Boutique VIP</h2>
+    <p class="sub" style="margin:-.35rem 0 1rem">Un abonnement annuel pour soutenir FandoMasters et débloquer des options de personnalisation et des fonctionnalités communautaires. Les cartes et boosters ne sont pas à vendre.</p>
+    <section class="panel" style="padding:clamp(1rem,3vw,1.6rem);margin-bottom:1rem;border-color:color-mix(in srgb,var(--brass) 65%,var(--line));background:linear-gradient(145deg,color-mix(in srgb,var(--brass) 13%,var(--panel)),var(--panel) 60%)">
+      <div class="row" style="align-items:center;gap:1rem;flex-wrap:nowrap">
+        <div aria-hidden="true" style="font-size:3rem;line-height:1">♛</div>
+        <div style="min-width:0;flex:1">
+          <h3 style="font-size:1.5rem;margin:0 0 .25rem">FandoMasters VIP</h3>
+          <p class="sub" style="margin:0">Abonnement annuel · tarif à définir</p>
         </div>
-      </div>`).join("")}</div>` : `<p class="sub">Aucun article pour le moment.</p>`}
-    <h3 style="font-size:1.05rem;margin-bottom:.5rem">Vos mouvements de Cristaux</h3>
-    ${btq.historique.length ? `<ul class="btqhist">${btq.historique.map(h => `
-      <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
-        <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul>`
-      : `<p class="sub">Aucun mouvement pour l'instant.</p>`}`;
-  view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{
-    const a = (btq.articles || []).find(x => x.id === b.dataset.acheter);
-    if(a) acheterArticle(a);
-  });
-  if(art === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
-}
-function demanderConfirmation(titre, texte, bouton){
-  return new Promise(res => {
-    const m = document.createElement("div");
-    m.className = "modal";
-    m.innerHTML = `<div class="inner" style="max-width:400px">
-      <h3 style="font-size:1.15rem;margin-bottom:.4rem">${esc(titre)}</h3>
-      <p class="sub" style="margin:0 0 1rem">${esc(texte)}</p>
-      <div class="row" style="justify-content:flex-end;gap:.5rem">
-        <button class="btn small ghost" id="non">Annuler</button>
-        <button class="btn small" id="oui">${esc(bouton)}</button>
-      </div></div>`;
-    document.body.appendChild(m);
-    m.querySelector("#non").onclick = ()=>{ m.remove(); res(false); };
-    m.querySelector("#oui").onclick = ()=>{ m.remove(); res(true); };
-  });
+        ${vip ? `<span class="chip" style="border-color:var(--brass);color:var(--brass)">VIP actif</span>` : ""}
+      </div>
+      ${vip ? `<p style="margin:.9rem 0 0">Votre VIP est actif jusqu'au <b>${dateVip}</b>.</p>` : `<p class="sub" style="margin:.9rem 0 0">Le paiement n'est pas encore activé. Aucun débit ne peut être effectué depuis cette page pour le moment.</p>`}
+      <button class="btn" id="vip-achat" disabled style="width:100%;margin-top:1rem;opacity:.7;cursor:not-allowed">${vip ? "Abonnement actif" : "Bientôt disponible"}</button>
+    </section>
+    <h3 style="font-size:1.15rem;margin:1.2rem 0 .65rem">Ce que comprend le VIP</h3>
+    <div class="btqgrille">
+      <article class="btqart"><b>♛ Profil personnalisé</b><p class="sub">Titres VIP exclusifs dont « VIP » et « Riche », jusqu'à 3 titres affichés, polices de pseudo personnalisées, cadres d'avatar prédéfinis, jusqu'à 10 cartes en vitrine et badges de succès affichables.</p></article>
+      <article class="btqart"><b>✎ Contributions illimitées</b><p class="sub">Soumissions de raretés, de recadrages et de nouvelles cartes sans limite VIP. Les joueurs non VIP restent limités à 5 soumissions par jour.</p></article>
+      <article class="btqart"><b>🂠 Collection personnalisée</b><p class="sub">Dos de cartes prédéfinis et porte-vues personnalisés, consultables par les autres joueurs depuis le profil.</p></article>
+      <article class="btqart"><b>⚔ Combats personnalisés</b><p class="sub">Animations et effets visuels cosmétiques exclusifs pendant les combats, sans avantage de gameplay.</p></article>
+      <article class="btqart"><b>▤ Statistiques et titres</b><p class="sub">Historique des 3 dernières ouvertures de boosters, accès au classement mondial des combats et au moins 50 titres VIP supplémentaires.</p></article>
+      <article class="btqart"><b>▣ Ouvertures groupées</b><p class="sub">Ouverture de jusqu'à 100 boosters simultanément.</p></article>
+      <article class="btqart"><b>♟ Guildes</b><p class="sub">Possibilité de créer une guilde et de rassembler une communauté.</p></article>
+    </div>
+    <p class="sub" style="margin-top:.9rem;font-size:.82rem">Certaines fonctionnalités VIP restent à développer ou à vérifier avant activation. Le tarif annuel et le moyen de paiement doivent être définis avant toute vente.</p>`;
+  if(btq.articles === null) boutiqueCharger();
 }
 async function acheterArticle(a){
   if(btq.achat) return;
