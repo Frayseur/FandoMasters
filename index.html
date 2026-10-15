@@ -4014,6 +4014,25 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .cbkw.rush{color:#ffe0a1;border-color:#d6a44e;background:#60451e}
 .cbkw.deathrattle{color:#f0b8ff;border-color:#b985ce;background:#47274f}
 .cbarmure{position:absolute;left:-7px;top:4px;z-index:4;display:inline-flex;align-items:center;gap:2px;padding:2px 5px;border:1px solid #93c6e5;border-radius:999px;background:#163b53;color:#d9f3ff;font-size:.72rem;font-weight:800;box-shadow:0 2px 7px #0008}
+
+/* Communauté — accueil fusionné Amis + outils communautaires */
+.commhome{display:grid;gap:1rem;max-width:980px;margin:0 auto;padding-bottom:1rem}
+.commhero{position:relative;overflow:hidden;min-height:230px;border:1px solid #ffffff30;border-radius:24px;padding:clamp(1.25rem,4vw,2.5rem);display:flex;flex-direction:column;justify-content:flex-end;color:#fff;background:radial-gradient(ellipse at 85% 18%,#7b4df777,transparent 35%),radial-gradient(ellipse at 10% 10%,#f1ad4e88,transparent 35%),linear-gradient(135deg,#211a38 0%,#3a285a 48%,#174b52 100%);box-shadow:0 14px 36px #090b1c35}
+.commhero:before{content:"♧";position:absolute;right:4%;top:-.3em;font-size:clamp(9rem,28vw,17rem);line-height:1;color:#ffffff0d;transform:rotate(-12deg);pointer-events:none}
+.commhero .eyebrow{font-size:.75rem;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:#d9c6ff;margin-bottom:.45rem}
+.commhero h2{font-size:clamp(2rem,7vw,3.4rem);line-height:1.02;margin:0 0 .65rem;letter-spacing:-.04em;position:relative}
+.commhero p{max-width:36rem;color:#f0eafa;margin:0;line-height:1.5;position:relative}
+.commtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.8rem}
+.commtiles button{min-width:0;min-height:130px;text-align:left;border:1px solid var(--line, #ffffff20);border-radius:20px;padding:1rem;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:.75rem;background:linear-gradient(145deg,var(--panel, #ffffff0b),#ffffff04);color:var(--text,inherit);box-shadow:0 8px 22px #00000012;cursor:pointer;transition:transform .16s,border-color .16s}
+.commtiles button:active{transform:scale(.985)}
+.commtiles button:hover{border-color:var(--accent,#bba0ff)}
+.commtiles .tileicon{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:linear-gradient(135deg,#8e6ee8,#55c8a8);color:white;font-size:1.6rem;box-shadow:0 6px 16px #0002}
+.commtiles b{font-size:1rem;line-height:1.2}.commtiles small{display:block;font-size:.78rem;opacity:.72;line-height:1.35;margin-top:.25rem}
+.commsubhead{display:flex;align-items:center;justify-content:space-between;gap:.6rem;margin:.25rem 0 0}
+.commsubhead h3{margin:0;font-size:1rem}
+.commquick{display:flex;gap:.45rem;flex-wrap:wrap}
+.commquick button{border:1px solid var(--line,#ffffff20);border-radius:999px;background:transparent;color:inherit;padding:.55rem .8rem;font:inherit;font-size:.82rem;cursor:pointer}
+@media(max-width:520px){.commhero{min-height:200px;border-radius:19px}.commtiles{gap:.6rem}.commtiles button{min-height:124px;padding:.8rem;border-radius:16px}.commtiles .tileicon{width:42px;height:42px;border-radius:13px}.commquick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.commquick button{width:100%}}
 </style>
 </head>
 <body>
@@ -4045,7 +4064,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
       <button data-view="inv"><span class="ic">▦</span><b>Inventaire</b><small>Potions et armements</small></button>
       <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Vos trophées et primes</small></button>
       <button data-view="duel"><span class="ic">⚔</span><b>Combat</b><small>Héros, serviteurs et sorts</small></button>
-      <button data-view="communaute"><span class="ic">✎</span><b>Communauté</b><small>Proposer des corrections</small></button>
+      <button data-view="communaute"><span class="ic">♧</span><b>Communauté</b><small>Joueurs, échanges et propositions</small></button>
       <button data-view="shop"><span class="ic">♛</span><b>Boutique VIP</b><small>Abonnement annuel</small></button>
       <button data-view="camp"><span class="ic">⚑</span><b>Campagnes</b><small>Expéditions et boss d'univers</small></button>
     </div>
@@ -4057,7 +4076,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
     <button data-view="hub"><span class="ic">⌂</span><span class="lb">Accueil</span></button>
     <button data-view="pack"><span class="ic">▣</span><span class="lb">Ouvertures</span></button>
     <button data-view="album"><span class="ic">⿴</span><span class="lb">Album</span></button>
-    <button data-view="amis"><span class="ic">♢</span><span class="lb">Amis</span></button>
+    <button data-view="communaute"><span class="ic">♧</span><span class="lb">Communauté</span></button>
     <button data-view="market"><span class="ic">⇄</span><span class="lb">Marché</span></button>
     <button data-view="farm"><span class="ic">◉</span><span class="lb">Atelier</span></button>
     <button id="more"><span class="ic">⋯</span><span class="lb">Menu</span></button>
@@ -4068,7 +4087,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.0.2";
+const BUILD = "V2.0.3";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -6833,7 +6852,7 @@ const SURTITRES = {
   village:"Comptoir",
   theme:  "Réglages · habillage",
   compte: "Réglages · sauvegarde",
-  amis:   "Communauté",
+  amis:   "Communauté · joueurs",
   joueur: "Joueur",
   communaute: "Corrections",
   shop:   "Boutique",
@@ -8037,8 +8056,8 @@ function viewAmis(){
   }
 
   view.innerHTML = `
-    <h2 class="vuetitre">Amis</h2>
-    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
+    <div class="row" style="justify-content:space-between;align-items:center;gap:.6rem;flex-wrap:wrap"><h2 class="vuetitre">Amis</h2><button class="btn small ghost" id="retourcommu">‹ Communauté</button></div>
+    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem;flex-wrap:wrap">
       ${tab("amis", "Amis", amis.liste.length)}
       ${tab("demandes", "Demandes", amis.recus.length)}
       ${tab("chercher", "Rechercher", 0)}
@@ -8048,6 +8067,7 @@ function viewAmis(){
     </div>
     ${corps}`;
 
+  const retourCommu = view.querySelector("#retourcommu"); if(retourCommu) retourCommu.onclick = ()=>{ commu.onglet="accueil"; go("communaute"); };
   view.querySelectorAll("[data-ong]").forEach(b => b.onclick = ()=>{
     amis.onglet = b.dataset.ong;
     if(amis.onglet === "classement") guilde.classeCharge = false;
@@ -9616,7 +9636,7 @@ function choisirDansCatalogue({titre, univ, filtre, multi, max}){
 }
 
 
-const commu = {historique:[], onglet:"votes", carte:null, carteObj:null, cadrage:{x:50, y:50, z:1}, note:"",
+const commu = {historique:[], onglet:"accueil", carte:null, carteObj:null, cadrage:{x:50, y:50, z:1}, note:"",
                miennes:[], toutes:[], votes:[], mesVoix:{}, charge:false, erreur:""};
 
 /* fiche minimale envoyée au serveur : de quoi afficher la carte, rien de plus */
@@ -9879,6 +9899,46 @@ function blocGroupe(liste){
 }
 
 function viewCommu(){
+  if(commu.onglet === "accueil"){
+    const socialN = amis.liste.length;
+    const demandeN = amis.recus.length;
+    const echangeN = amis.echanges.filter(e => e.a === moiId() && e.statut === "proposee").length;
+    view.innerHTML = `
+      <section class="commhome">
+        <div class="commhero">
+          <div class="eyebrow">FandoMasters · communauté</div>
+          <h2>Votre univers,<br>vos joueurs.</h2>
+          <p>Retrouvez les autres collectionneurs, partagez vos trouvailles, échangez des cartes et participez à l’amélioration du jeu.</p>
+        </div>
+        <div class="commtiles">
+          <button data-caction="vitrines"><span class="tileicon">▣</span><span><b>Mes amis</b><small>Retrouvez vos amis et ouvrez leurs profils</small></span></button>
+          <button data-caction="partager"><span class="tileicon">↗</span><span><b>Partager une correction</b><small>Proposez un recadrage ou une amélioration des cartes</small></span></button>
+          <button data-caction="echanges"><span class="tileicon">⇄</span><span><b>Échanges</b><small>Propositions en cours${echangeN ? ` · ${echangeN} à traiter` : ""}</small></span></button>
+          <button data-caction="amis"><span class="tileicon">♧</span><span><b>Amis</b><small>${socialN} ami${socialN===1?"":"s"}${demandeN ? ` · ${demandeN} demande${demandeN===1?"":"s"}` : ""}</small></span></button>
+        </div>
+        <div class="commsubhead"><h3>Participer à la communauté</h3></div>
+        <div class="commquick">
+          <button data-caction="votes">Votes de cartes</button>
+          <button data-caction="ajouts">Proposer une carte</button>
+          <button data-caction="demandes">Demandes d’amis</button>
+          <button data-caction="guilde">Guildes et classement</button>
+          <button data-caction="chercher">Rechercher un joueur</button>
+        </div>
+      </section>`;
+    view.querySelectorAll('[data-caction]').forEach(b=>b.onclick=()=>{
+      const a=b.dataset.caction;
+      if(["vitrines","amis","demandes","echanges","guilde","classement","chercher"].includes(a)){
+        amis.onglet = ({vitrines:"amis",amis:"amis",demandes:"demandes",echanges:"echanges",guilde:"guilde",classement:"classement",chercher:"chercher"})[a];
+        go("amis");
+      }else{
+        commu.onglet = ({partager:"recadrer",votes:"votes",ajouts:"ajouts"})[a] || "votes";
+        viewCommu();
+      }
+    });
+    if(!amis.charge) amisCharger().then(()=>{ if(state.view==="communaute" && commu.onglet==="accueil") viewCommu(); }).catch(()=>{});
+    if(!commu.charge) commuCharger();
+    return;
+  }
   const admin = estAdmin();
   const moi = moiId();
   const ong = commu.onglet;
@@ -9966,7 +10026,8 @@ function viewCommu(){
 
   view.innerHTML = `
     <h2 class="vuetitre">Communauté</h2>
-    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem">
+    <div class="row" style="gap:.4rem;margin:.2rem 0 1rem;flex-wrap:wrap">
+      ${tab("accueil", "‹ Communauté", 0)}
       ${tab("votes", "Votes", aVoter)}
       ${tab("recadrer", "Recadrer", 0)}
       ${tab("ajouts", "Ajouts", aVoterAj)}
@@ -18613,7 +18674,7 @@ function viewMenu(){
 }
 SCRIM.onclick = ()=>setMenu(false);
 document.querySelectorAll("#nav button[data-view], #menupanel button[data-view]").forEach(b=>{
-  b.onclick = ()=>{ setMenu(false); sfx.tick(); go(b.dataset.view); };
+  b.onclick = ()=>{ if(b.dataset.view === "communaute") commu.onglet = "accueil"; setMenu(false); sfx.tick(); go(b.dataset.view); };
 });
 function paintNav(){
   const vueNav = state.view === "cat" ? "album" : state.view === "joueur" ? "amis" : state.view;
