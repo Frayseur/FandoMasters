@@ -3105,6 +3105,12 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:color-mix(in s
 .nav button[aria-current="true"] .ic{background:var(--p4);color:var(--sur-a2);box-shadow:0 8px 20px -8px var(--halo)}
 .nav button[aria-current="true"]::after,.nav button.on::after{content:none !important}
 
+
+/* Icônes de navigation en traits, comme les icônes d'une application, sans emoji. */
+.nav button .ic svg{width:1.45rem;height:1.45rem;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.nav button .ic svg circle{fill:currentColor;stroke:none}
+.nav button[aria-current="true"] .ic svg circle{fill:var(--sur-a2)}
+
 /* ---- accueil : l'affiche ---- */
 .hhero{position:relative;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:center;gap:1.2rem;isolation:isolate;
   min-height:clamp(340px,56vh,540px);padding:clamp(1.3rem,4vw,3rem);border-radius:30px;overflow:hidden;margin:0 0 2.2rem;
@@ -4048,6 +4054,26 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .commquick button{border:1px solid var(--line,#ffffff20);border-radius:999px;background:transparent;color:inherit;padding:.55rem .8rem;font:inherit;font-size:.82rem;cursor:pointer}
 @media(max-width:520px){.commhero{min-height:200px;border-radius:19px}.commtiles{gap:.6rem}.commtiles button{min-height:124px;padding:.8rem;border-radius:16px}.commtiles .tileicon{width:42px;height:42px;border-radius:13px}.commquick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.commquick button{width:100%}}
 
+/* Ajustement de la navigation regroupée : reprendre strictement la palette du jeu. */
+.pagehero,.commhero{background:radial-gradient(ellipse at 85% 18%,color-mix(in srgb,var(--p4) 22%,transparent),transparent 38%),linear-gradient(145deg,var(--surface),var(--surface-2));border:1px solid color-mix(in srgb,var(--text) 10%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 8%,transparent),0 24px 48px -32px rgba(0,0,0,.7);color:var(--text)}
+.pagehero .eyebrow,.commhero .eyebrow{color:var(--p4)}
+.pagehero p,.commhero p{color:var(--muted)}
+.featurecard,.commtiles button{background:var(--surface);border:1px solid color-mix(in srgb,var(--text) 9%,transparent);border-radius:var(--rayon);box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 6%,transparent)}
+.featurecard .featureicon,.commtiles .tileicon{background:var(--creux);color:var(--p4);box-shadow:none;border:1px solid color-mix(in srgb,var(--text) 7%,transparent);border-radius:14px}
+.commhero:before{color:color-mix(in srgb,var(--text) 4%,transparent)}
+.featurecard p,.commtiles small{display:none!important}
+.pagehub .sectionhead p{display:none!important}
+/* Les nouvelles pages restent compactes : titre, indicateurs utiles et actions. */
+.pagehub .pagehero{min-height:140px;padding:clamp(1.1rem,3vw,1.8rem);border-radius:var(--rayon)}
+.pagehub .pagehero h2{font-size:clamp(1.65rem,5vw,2.7rem);margin:0;max-width:none}
+.commhome .statrow{margin-top:.1rem}
+.commhome .featuregrid{gap:.7rem}
+.commhome .featurecard{min-height:104px;padding:1rem;display:grid;grid-template-columns:44px 1fr;grid-template-rows:auto auto;align-items:center;gap:.55rem .8rem}
+.commhome .featurecard .featureicon{grid-row:1/3;width:44px;height:44px;display:grid;place-items:center;font-size:1.35rem}
+.commhome .featurecard h3{align-self:end;font-size:.98rem}
+.commhome .featurecard .commcount{grid-column:2;align-self:start;color:var(--muted);font-size:.8rem}
+@media(max-width:520px){.pagehub .pagehero{min-height:118px}.commhome .featurecard{min-height:90px;padding:.75rem;grid-template-columns:36px 1fr;gap:.4rem .6rem}.commhome .featurecard .featureicon{width:36px;height:36px;font-size:1.1rem}.commhome .featurecard h3{font-size:.9rem}}
+
 /* Écran d'attente initial : évite d'afficher une interface incomplète pendant le démarrage. */
 #fm-startup{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:24px;background:radial-gradient(ellipse at 50% 36%,#49352a 0%,#29211d 42%,#171311 78%,#100e0c 100%);color:#f7eadb;opacity:1;visibility:visible;transition:opacity .36s ease,visibility .36s ease;font-family:inherit;isolation:isolate}
 #fm-startup:before,#fm-startup:after{content:"";position:absolute;z-index:-1;pointer-events:none;border-radius:50%;border:1px solid #d6b27b16;width:min(82vw,620px);aspect-ratio:1;box-shadow:0 0 90px #d6b27b08,inset 0 0 80px #d6b27b06}
@@ -4056,6 +4082,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .fm-startup-card{position:relative;width:min(100%,390px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:36px 26px 30px;border:1px solid #d8b98242;border-radius:26px;background:linear-gradient(145deg,#ffffff0d,#ffffff04);box-shadow:0 24px 90px #0008,inset 0 1px #ffffff0b;backdrop-filter:blur(8px)}
 .fm-startup-brand{display:flex;flex-direction:column;align-items:center;gap:13px}
 .fm-startup-mark{width:96px;height:96px;border-radius:26px;display:block;background-image:var(--logo);background-position:center;background-repeat:no-repeat;background-size:contain;filter:drop-shadow(0 9px 18px #0008);animation:fm-startup-float 2.8s ease-in-out infinite}
+.fm-startup-mark:before{content:"";display:block;width:100%;height:100%;background:var(--logo) center/contain no-repeat}
 .fm-startup-title{font-family:var(--f-marque,var(--f-titre,inherit));font-size:clamp(1.9rem,7vw,2.35rem);font-weight:900;letter-spacing:-.055em;line-height:1.05;text-shadow:0 3px 18px #0005}.fm-startup-title em{font-style:normal;color:#e3bd80}
 .fm-startup-kicker{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:#d9b77f;font-weight:800;margin-top:1px}
 .fm-startup-sub{max-width:280px;font-size:.91rem;color:#d4c4b2;line-height:1.55;margin-top:1px}
@@ -4107,22 +4134,22 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
   <div class="mp">
     <div class="grab"></div>
     <div class="mpgrid">
-      <button data-view="aventure"><span class="ic">⚔</span><b>Combats & campagnes</b><small>Choisir un mode et suivre les expéditions</small></button>
-      <button data-view="collection"><span class="ic">▤</span><b>Decks & équipement</b><small>Decks, sacoche et objets</small></button>
-      <button data-view="farm"><span class="ic">⚒</span><b>Atelier</b><small>Améliorations et progression</small></button>
-      <button data-view="ach"><span class="ic">✦</span><b>Succès</b><small>Trophées et récompenses</small></button>
-      <button data-view="shop"><span class="ic">♛</span><b>Boutique VIP</b><small>Abonnement et avantages</small></button>
+      <button data-view="aventure"><span class="ic">⚔</span><b>Combats & campagnes</b></button>
+      <button data-view="collection"><span class="ic">▤</span><b>Decks & équipement</b></button>
+      <button data-view="farm"><span class="ic">⚒</span><b>Atelier</b></button>
+      <button data-view="ach"><span class="ic">✦</span><b>Succès</b></button>
+      <button data-view="shop"><span class="ic">♛</span><b>Boutique VIP</b></button>
     </div>
   </div>
 </div>
 
 <nav class="nav" id="nav" aria-label="Navigation principale">
   <div class="navin">
-    <button data-view="pack"><span class="ic">▣</span><span class="lb">Paquets</span></button>
-    <button data-view="album"><span class="ic">▤</span><span class="lb">Collection</span></button>
-    <button data-view="communaute"><span class="ic">♧</span><span class="lb">Communauté</span></button>
-    <button data-view="market"><span class="ic">⇄</span><span class="lb">Marché</span></button>
-    <button id="more" aria-label="Ouvrir le menu"><span class="ic">☰</span><span class="lb">Plus</span></button>
+    <button data-view="pack"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5z"/><path d="m4.5 7.7 7.5 4.2 7.5-4.2M12 12v9"/></svg></span><span class="lb">Paquets</span></button>
+    <button data-view="album"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5A3.5 3.5 0 0 1 7.5 4H20v16H7.5A3.5 3.5 0 0 0 4 23z"/><path d="M4 4.5v16A3.5 3.5 0 0 1 7.5 17H20M8 8h8M8 11h8"/></svg></span><span class="lb">Collection</span></button>
+    <button data-view="communaute"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0Z"/><path d="M3 21v-1.5A5.5 5.5 0 0 1 8.5 14h3A5.5 5.5 0 0 1 17 19.5V21M17 4.5a4 4 0 0 1 0 7.5M19 14.5a4.8 4.8 0 0 1 2 4V21"/></svg></span><span class="lb">Communauté</span></button>
+    <button data-view="market"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h13l-3-3M20 7l-3 3M17 17H4l3 3M4 17l3-3"/></svg></span><span class="lb">Marché</span></button>
+    <button id="more" aria-label="Ouvrir le menu"><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></svg></span><span class="lb">Plus</span></button>
   </div>
 </nav>
   </div>
@@ -4130,7 +4157,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.2";
+const BUILD = "V2.1.3";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -18733,12 +18760,12 @@ function viewAventure(){
   try{ const cs=camps(); actifs=cs.filter(c=>Date.now()<c.endsAt).length; termines=cs.filter(c=>Date.now()>=c.endsAt).length; }catch(e){}
   let debloquee=false; try{debloquee=!!campUnlocked();}catch(e){}
   view.innerHTML=`<div class="pagehub">
-    <section class="pagehero" data-symbol="⚔"><div class="eyebrow">FandoMasters · jouer</div><h2>Choisissez votre prochaine aventure.</h2><p>Affrontez un bot pour tester votre deck, défiez un joueur en ligne ou préparez une expédition contre les boss des univers. Les deux modes ont leur espace et leurs règles : choisissez simplement votre prochaine étape.</p></section>
-    <div class="sectionhead"><div><h3>Combat de cartes</h3><p>Des décisions tactiques, des serviteurs, des sorts et des affrontements au tour par tour.</p></div></div>
-    <section class="longsection"><div class="statrow"><div class="statbox"><b>30 cartes</b><span>Format du deck de combat</span></div><div class="statbox"><b>4 modes</b><span>Entraînement, en ligne, classé et entre amis</span></div><div class="statbox"><b>${p.vip_jusqua&&new Date(p.vip_jusqua)>new Date()||p.vip?"VIP":"Libre"}</b><span>Le mode classé est réservé aux VIP</span></div></div><p class="pageintro" style="margin:1rem 0">Préparez votre liste, vérifiez sa validité et choisissez le type d’adversaire. Vous pouvez aussi rejoindre un salon privé avec un code.</p><button class="btn" data-go="duel">Entrer dans l’arène</button></section>
-    <div class="sectionhead"><div><h3>Campagnes et expéditions</h3><p>Envoyez une escouade, équipez-la et revenez récupérer son rapport.</p></div></div>
+    <section class="pagehero" data-symbol="⚔"><div class="eyebrow">FandoMasters</div><h2>Combats & campagnes</h2></section>
+    <div class="sectionhead"><div><h3>Combat de cartes</h3></div></div>
+    <section class="longsection"><div class="statrow"><div class="statbox"><b>30 cartes</b><span>Format du deck de combat</span></div><div class="statbox"><b>4 modes</b><span>Entraînement, en ligne, classé et entre amis</span></div><div class="statbox"><b>${p.vip_jusqua&&new Date(p.vip_jusqua)>new Date()||p.vip?"VIP":"Libre"}</b><span>Le mode classé est réservé aux VIP</span></div></div><button class="btn" data-go="duel">Entrer dans l’arène</button></section>
+    <div class="sectionhead"><div><h3>Campagnes et expéditions</h3></div></div>
     <section class="featuregrid"><article class="featurecard"><span class="featureicon">⚑</span><h3>${debloquee?"Théâtres d’opérations":"Débloquer les campagnes"}</h3><p>${debloquee?"Parcourez les théâtres disponibles, préparez une escouade et suivez vos expéditions en cours.":"Améliorez votre atelier et réunissez les cartes de rareté requise pour accéder aux campagnes."}</p><button class="btn" data-go="camp">${debloquee?"Voir les campagnes":"Voir les conditions"}</button></article><article class="featurecard"><span class="featureicon">⏳</span><h3>Expéditions en cours</h3><p>${actifs?`${actifs} expédition${actifs>1?"s":""} en cours. Revenez consulter le compte rendu lorsqu’elle sera terminée.`:"Aucune expédition en cours pour le moment."}${termines?` ${termines} rapport${termines>1?"s":""} peut${termines>1?"vent":""} être disponible.`:""}</p><button class="btn ghost" data-go="camp">Consulter mes expéditions</button></article></section>
-    <div class="longsection"><div class="sectionhead"><div><h3>Avant de partir</h3><p>Un parcours simple pour préparer votre partie.</p></div></div><ol style="padding-left:1.25rem;line-height:1.9;margin:.8rem 0 0"><li>Composez ou vérifiez votre deck.</li><li>Choisissez le combat ou la campagne selon votre envie.</li><li>Après une expédition, revenez récupérer les récompenses disponibles.</li></ol><button class="btn ghost" style="margin-top:1rem" data-go="collection">Préparer mes decks et mon équipement</button></div>
+    
   </div>`;
   view.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 }
@@ -18747,11 +18774,11 @@ function viewCollection(){
   let stacks=[]; try{stacks=inv();}catch(e){}
   let nbObjets=0; stacks.forEach(x=>nbObjets+=Number(x.n)||0);
   view.innerHTML=`<div class="pagehub">
-    <section class="pagehero" data-symbol="▤"><div class="eyebrow">FandoMasters · collection et équipement</div><h2>Tout votre matériel, au même endroit.</h2><p>Organisez vos escouades et préparez votre équipement depuis une seule page. Les decks de combat, les decks de campagne et la sacoche gardent chacun leurs outils dédiés, sans mélanger leurs fonctions.</p></section>
+    <section class="pagehero" data-symbol="▤"><div class="eyebrow">FandoMasters</div><h2>Decks & équipement</h2></section>
     <div class="statrow"><div class="statbox"><b>${all.length}</b><span>deck${all.length===1?"":"s"} enregistré${all.length===1?"":"s"}</span></div><div class="statbox"><b>${combat.length}</b><span>deck${combat.length===1?"":"s"} de combat</span></div><div class="statbox"><b>${nbObjets}</b><span>objet${nbObjets===1?"":"s"} dans la sacoche</span></div></div>
-    <div class="sectionhead"><div><h3>Préparer votre partie</h3><p>Deux espaces distincts : les decks pour jouer, les objets pour vous équiper.</p></div></div>
+    <div class="sectionhead"><div><h3>Decks & inventaire</h3></div></div>
     <div class="featuregrid"><article class="featurecard"><span class="featureicon">⚔</span><h3>Decks</h3><p>${all.length?`${all.length} deck${all.length>1?"s":""} enregistré${all.length>1?"s":""}, dont ${combat.length} de combat et ${campagne.length} de campagne.`:"Créez vos premiers decks de combat ou de campagne."} Créez, modifiez et organisez toutes vos escouades depuis une seule page.</p><button class="btn" data-go="decks">Ouvrir mes decks</button></article><article class="featurecard"><span class="featureicon">🎒</span><h3>Inventaire</h3><p>${nbObjets} objet${nbObjets===1?"":"s"} dans votre sacoche, répartis sur ${stacks.length} pile${stacks.length===1?"":"s"}. Gérez vos potions, armements et raccourcis.</p><button class="btn" data-go="inv">Ouvrir l’inventaire</button></article></div>
-    <div class="longsection"><div class="sectionhead"><div><h3>Autres raccourcis</h3><p>Chaque bouton ouvre une destination différente.</p></div></div><div class="commquick"><button data-go="album">Voir ma collection</button><button data-go="pack">Ouvrir des paquets</button><button data-go="farm">Améliorer l’atelier</button></div></div>
+    
   </div>`;
   view.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 }
