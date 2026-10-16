@@ -4047,9 +4047,30 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .commquick{display:flex;gap:.45rem;flex-wrap:wrap}
 .commquick button{border:1px solid var(--line,#ffffff20);border-radius:999px;background:transparent;color:inherit;padding:.55rem .8rem;font:inherit;font-size:.82rem;cursor:pointer}
 @media(max-width:520px){.commhero{min-height:200px;border-radius:19px}.commtiles{gap:.6rem}.commtiles button{min-height:124px;padding:.8rem;border-radius:16px}.commtiles .tileicon{width:42px;height:42px;border-radius:13px}.commquick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.commquick button{width:100%}}
+
+/* Écran d'attente initial : évite d'afficher une interface incomplète pendant le démarrage. */
+#fm-startup{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,#352923 0%,#201b18 58%,#151210 100%);color:#f7eadb;opacity:1;visibility:visible;transition:opacity .28s ease,visibility .28s ease;font-family:inherit}
+#fm-startup.fm-startup-hide{opacity:0;visibility:hidden;pointer-events:none}
+.fm-startup-card{width:min(100%,360px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:28px 22px;border:1px solid #c7a16b40;border-radius:22px;background:#ffffff08;box-shadow:0 18px 60px #0005}
+.fm-startup-mark{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#e0bd83,#a87942);color:#261b13;font-size:30px;font-weight:900;box-shadow:0 8px 28px #0004}
+.fm-startup-title{font-size:1.55rem;font-weight:900;letter-spacing:-.04em}.fm-startup-title em{font-style:normal;color:#e3bd80}
+.fm-startup-sub{font-size:.9rem;color:#d4c4b2;line-height:1.5}
+.fm-startup-track{height:5px;width:min(100%,220px);overflow:hidden;border-radius:99px;background:#ffffff18;margin-top:3px}
+.fm-startup-track:after{content:"";display:block;width:38%;height:100%;border-radius:99px;background:#e3bd80;animation:fm-startup-progress 1.25s ease-in-out infinite}
+@keyframes fm-startup-progress{0%{transform:translateX(-110%)}100%{transform:translateX(370%)}}
+@media(prefers-reduced-motion:reduce){.fm-startup-track:after{animation:none;width:65%}#fm-startup{transition:none}}
+
 </style>
 </head>
 <body>
+<div id="fm-startup" role="status" aria-live="polite" aria-label="Chargement de FandoMasters">
+  <div class="fm-startup-card">
+    <div class="fm-startup-mark" aria-hidden="true">F</div>
+    <div class="fm-startup-title">Fando<em>M</em>asters</div>
+    <div class="fm-startup-sub">Préparation de votre collection et connexion au jeu…</div>
+    <div class="fm-startup-track" aria-hidden="true"></div>
+  </div>
+</div>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
   <filter id="fmblanc" color-interpolation-filters="sRGB">
     <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 1 0"/>
@@ -4203,6 +4224,7 @@ const UNIVERSES = [
   {label:"Star Wars",          host:"starwars.fandom.com",      cat:"Films & séries"},   // Wookieepedia
   {label:"Marvel",             host:"marvelcinematicuniverse.fandom.com", cat:"Films & séries"},
   {label:"DC",                 host:"dc.fandom.com",            cat:"Films & séries"},
+  {label:"Joker (Joaquin Phoenix)", host:"superhero-films.fandom.com", cat:"Films & séries", path:"", pages:["Joker (Joaquin Phoenix)"], includePages:true},
   {label:"Le Seigneur des Anneaux", host:"lotr.fandom.com",     cat:"Films & séries"},
   {label:"Le Hobbit",          host:"lotr.fandom.com",          cat:"Films & séries", path:"",
    pages:["The Hobbit"]},                          // seulement ce que relie cette page
@@ -4218,6 +4240,7 @@ const UNIVERSES = [
   {label:"Stranger Things",    host:"strangerthings.fandom.com",cat:"Films & séries"},
   {label:"Breaking Bad",       host:"breakingbad.fandom.com",   cat:"Films & séries"},
   {label:"Doctor Who",         host:"tardis.fandom.com",        cat:"Films & séries"},
+  {label:"Code Lyoko",         host:"codelyoko.fandom.com",     cat:"Films & séries", path:"/fr"},
   {label:"Studio Ghibli",      host:"ghibli.fandom.com",        cat:"Films & séries"},
   {label:"Disney",             host:"disney.fandom.com",        cat:"Films & séries"},
 
@@ -4296,6 +4319,14 @@ const UNIVERSES = [
   {label:"Linkin Park",        host:"linkinpark.fandom.com",    cat:"Musique"},
   {label:"Twenty One Pilots",  host:"twentyonepilots.fandom.com", cat:"Musique"},
   {label:"Queen",              host:"queen.fandom.com",         cat:"Musique"},
+  {label:"Narnia",             host:"narnia.fandom.com",       cat:"Films & séries"},
+  {label:"Radiohead",          host:"radiohead.fandom.com",     cat:"Musique"},
+  {label:"Nirvana",            host:"nirvana.fandom.com",       cat:"Musique"},
+  {label:"The Rolling Stones", host:"rollingstones.fandom.com",  cat:"Musique"},
+  {label:"Pink Floyd",         host:"pinkfloyd.fandom.com",      cat:"Musique"},
+  {label:"The Velvet Underground", host:"velvetunderground.fandom.com", cat:"Musique"},
+  {label:"Arctic Monkeys",     host:"arcticmonkeys.fandom.com",  cat:"Musique"},
+  {label:"Metallica",          host:"metallica.fandom.com",      cat:"Musique"},
   {label:"The Beatles",        host:"beatles.fandom.com",       cat:"Musique"},
   {label:"Daft Punk",          host:"daftpunk.fandom.com",      cat:"Musique"},
   {label:"Vocaloid",           host:"vocaloid.fandom.com",      cat:"Musique"},
@@ -6059,6 +6090,7 @@ async function titresAutorises(w){
     if(!d.continue) break;
     suite = d.continue;
   }
+  if(w.includePages) for(const titre of w.pages) vus.add(titre);
   const l = [...vus];
   if(l.length){ listesBlanches.set(cle, l); await sset("fm:liste:" + cle, {v:2, t:Date.now(), l}, true); }
   return l;
@@ -10670,7 +10702,7 @@ function viewHub(){
 
     <div class="betabox">
       <h3 style="font-size:1rem;margin-bottom:.35rem">Version bêta</h3>
-      <p class="sub" style="margin:0">Vous êtes donc bêta-testeurs : bugs, idées, équilibrage, tout retour est utile. Écrivez au créateur sur Discord — <b style="color:var(--brass)">Frayseur</b>.</p>
+      <p class="sub" style="margin:0">Une question/Un bug ?<br><a href="https://discord.gg/BSJxUqQc" target="_blank" rel="noopener noreferrer" style="color:var(--brass);font-weight:700;text-decoration:underline">Rejoignez le Discord de FandoMasters</a></p>
     </div>
 
     <div class="credit">
@@ -18910,6 +18942,15 @@ function openSettings(){
   fmPret = true;
   paintSound();
   render();
+  // L'écran de chargement ne disparaît qu'une fois le premier rendu prêt.
+  const fmStartup = document.getElementById("fm-startup");
+  if(fmStartup){
+    const fmReveal = ()=>fmStartup.classList.add("fm-startup-hide");
+    if(document.readyState === "complete") setTimeout(fmReveal, 180);
+    else window.addEventListener("load", ()=>setTimeout(fmReveal, 180), {once:true});
+    // Évite de laisser l'écran devant le jeu si une ressource externe tarde à finir.
+    setTimeout(fmReveal, 2200);
+  }
   installerHistorique();
   annoncerOnglet();
   setTimeout(()=>{ try{ recompenserNiveaux(); }catch(e){} }, 2500);
