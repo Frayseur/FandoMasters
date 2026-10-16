@@ -4049,40 +4049,38 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 @media(max-width:520px){.commhero{min-height:200px;border-radius:19px}.commtiles{gap:.6rem}.commtiles button{min-height:124px;padding:.8rem;border-radius:16px}.commtiles .tileicon{width:42px;height:42px;border-radius:13px}.commquick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.commquick button{width:100%}}
 
 /* Écran d'attente initial : évite d'afficher une interface incomplète pendant le démarrage. */
-#fm-startup{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,#352923 0%,#201b18 58%,#151210 100%);color:#f7eadb;opacity:1;visibility:visible;transition:opacity .28s ease,visibility .28s ease;font-family:inherit}
+#fm-startup{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:24px;background:radial-gradient(ellipse at 50% 36%,#49352a 0%,#29211d 42%,#171311 78%,#100e0c 100%);color:#f7eadb;opacity:1;visibility:visible;transition:opacity .36s ease,visibility .36s ease;font-family:inherit;isolation:isolate}
+#fm-startup:before,#fm-startup:after{content:"";position:absolute;z-index:-1;pointer-events:none;border-radius:50%;border:1px solid #d6b27b16;width:min(82vw,620px);aspect-ratio:1;box-shadow:0 0 90px #d6b27b08,inset 0 0 80px #d6b27b06}
+#fm-startup:after{width:min(65vw,470px);border-color:#d6b27b12}
 #fm-startup.fm-startup-hide{opacity:0;visibility:hidden;pointer-events:none}
-.fm-startup-card{width:min(100%,360px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:28px 22px;border:1px solid #c7a16b40;border-radius:22px;background:#ffffff08;box-shadow:0 18px 60px #0005}
-.fm-startup-mark{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#e0bd83,#a87942);color:#261b13;font-size:30px;font-weight:900;box-shadow:0 8px 28px #0004}
-.fm-startup-title{font-size:1.55rem;font-weight:900;letter-spacing:-.04em}.fm-startup-title em{font-style:normal;color:#e3bd80}
-.fm-startup-sub{font-size:.9rem;color:#d4c4b2;line-height:1.5}
-.fm-startup-track{height:5px;width:min(100%,220px);overflow:hidden;border-radius:99px;background:#ffffff18;margin-top:3px}
-.fm-startup-track:after{content:"";display:block;width:38%;height:100%;border-radius:99px;background:#e3bd80;animation:fm-startup-progress 1.25s ease-in-out infinite}
-@keyframes fm-startup-progress{0%{transform:translateX(-110%)}100%{transform:translateX(370%)}}
-@media(prefers-reduced-motion:reduce){.fm-startup-track:after{animation:none;width:65%}#fm-startup{transition:none}}
+.fm-startup-card{position:relative;width:min(100%,390px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:36px 26px 30px;border:1px solid #d8b98242;border-radius:26px;background:linear-gradient(145deg,#ffffff0d,#ffffff04);box-shadow:0 24px 90px #0008,inset 0 1px #ffffff0b;backdrop-filter:blur(8px)}
+.fm-startup-brand{display:flex;flex-direction:column;align-items:center;gap:13px}
+.fm-startup-mark{width:96px;height:96px;border-radius:26px;display:block;background-image:var(--logo);background-position:center;background-repeat:no-repeat;background-size:contain;filter:drop-shadow(0 9px 18px #0008);animation:fm-startup-float 2.8s ease-in-out infinite}
+.fm-startup-title{font-family:var(--f-marque,var(--f-titre,inherit));font-size:clamp(1.9rem,7vw,2.35rem);font-weight:900;letter-spacing:-.055em;line-height:1.05;text-shadow:0 3px 18px #0005}.fm-startup-title em{font-style:normal;color:#e3bd80}
+.fm-startup-kicker{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:#d9b77f;font-weight:800;margin-top:1px}
+.fm-startup-sub{max-width:280px;font-size:.91rem;color:#d4c4b2;line-height:1.55;margin-top:1px}
+.fm-startup-track{height:5px;width:min(100%,240px);overflow:hidden;border-radius:99px;background:#ffffff18;margin-top:5px;box-shadow:inset 0 1px 2px #0004}
+.fm-startup-track:after{content:"";display:block;width:36%;height:100%;border-radius:99px;background:linear-gradient(90deg,#b68a54,#f0d6a2,#b68a54);box-shadow:0 0 12px #e3bd8050;animation:fm-startup-progress 1.35s ease-in-out infinite}
+.fm-startup-foot{font-size:.72rem;color:#a99888;letter-spacing:.035em;margin-top:0}
+@keyframes fm-startup-progress{0%{transform:translateX(-110%)}100%{transform:translateX(390%)}}
+@keyframes fm-startup-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@media(max-width:420px){.fm-startup-card{padding:30px 20px 25px;border-radius:23px}.fm-startup-mark{width:82px;height:82px;border-radius:22px}.fm-startup-sub{font-size:.86rem}}
+@media(prefers-reduced-motion:reduce){.fm-startup-track:after{animation:none;width:65%}.fm-startup-mark{animation:none}#fm-startup{transition:none}}
 
-
-/* Navigation clarifiée : cinq destinations principales et un menu secondaire lisible. */
-.menuplus{max-width:860px;margin:0 auto;padding-bottom:1rem;gap:1.25rem}
-.menuplus .mgroupe{margin:0}
-.menuplus .mgroupe h3{font-family:var(--f-corps);font-size:1.05rem;letter-spacing:0;text-transform:none;color:var(--text);margin:0}
-.menuplus .mgrille{grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
-.menuplus .mgrille button{min-height:116px;padding:1rem 3rem 1rem 1rem;border:1px solid var(--line,#ffffff20);border-radius:18px;background:linear-gradient(145deg,var(--panel,#ffffff0b),#ffffff03);color:var(--text);box-shadow:none;justify-content:center;gap:.45rem;transition:border-color .16s,transform .16s}
-.menuplus .mgrille button:hover{border-color:var(--accent,var(--p4));transform:translateY(-1px)}
-.menuplus .mgrille button .ic{position:static;font-size:1.35rem;line-height:1;color:var(--p4);opacity:1}
-.menuplus .mgrille button b{font-family:var(--f-corps);font-size:1rem;letter-spacing:0;text-transform:none;line-height:1.25}
-.menuplus .mgrille button small{font-size:.82rem;line-height:1.4;color:var(--muted);max-width:32ch}
-.menuplus .mgrille button .menuarrow{position:absolute;right:1rem;bottom:1rem;font-size:1.1rem;color:var(--muted)}
-@media(max-width:520px){.menuplus .mgrille{grid-template-columns:1fr}.menuplus .mgrille button{min-height:92px;padding:1rem 3rem 1rem 1rem}.menuplus .pagehero{min-height:170px}}
 
 </style>
 </head>
 <body>
 <div id="fm-startup" role="status" aria-live="polite" aria-label="Chargement de FandoMasters">
   <div class="fm-startup-card">
-    <div class="fm-startup-mark" aria-hidden="true">F</div>
-    <div class="fm-startup-title">Fando<em>M</em>asters</div>
+    <div class="fm-startup-brand">
+      <div class="fm-startup-mark" role="img" aria-label="Logo FandoMasters"></div>
+      <div class="fm-startup-title">Fando<em>M</em>asters</div>
+      <div class="fm-startup-kicker">Collection · Univers · Combats</div>
+    </div>
     <div class="fm-startup-sub">Préparation de votre collection et connexion au jeu…</div>
     <div class="fm-startup-track" aria-hidden="true"></div>
+    <div class="fm-startup-foot">Un instant, les univers se rassemblent.</div>
   </div>
 </div>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -4132,7 +4130,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.1";
+const BUILD = "V2.1.2";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -9965,36 +9963,35 @@ function viewCommu(){
     const enCours = commu.votes.filter(v=>v.statut === "ouvert").length;
     view.innerHTML = `
       <div class="pagehub commhome">
-        <section class="pagehero" data-symbol="♧">
-          <div class="eyebrow">FandoMasters · espace communautaire</div>
-          <h2>La collection se partage.</h2>
-          <p>Retrouvez vos amis, découvrez les autres collectionneurs, échangez et contribuez à faire grandir l’album. Chaque activité dispose de son propre espace, sans tout mélanger sur un seul écran.</p>
+        <section class="pagehero commhero" data-symbol="♧">
+          <div class="eyebrow">FandoMasters</div>
+          <h2>Communauté</h2>
         </section>
         <div class="statrow">
-          <div class="statbox"><b>${socialN}</b><span>ami${socialN===1?"":"s"} dans votre réseau</span></div>
-          <div class="statbox"><b>${demandeN}</b><span>demande${demandeN===1?"":"s"} à examiner</span></div>
-          <div class="statbox"><b>${enCours}</b><span>participation${enCours===1?"":"s"} communautaire en cours</span></div>
+          <div class="statbox"><b>${socialN}</b><span>Amis</span></div>
+          <div class="statbox"><b>${demandeN}</b><span>Demandes reçues</span></div>
+          <div class="statbox"><b>${enCours}</b><span>Votes ouverts</span></div>
         </div>
-        <div class="sectionhead"><div><h3>Votre cercle</h3><p>Gérez vos relations et retrouvez les joueurs avec lesquels vous souhaitez jouer.</p></div></div>
+        <div class="sectionhead"><div><h3>Joueurs</h3></div></div>
         <div class="featuregrid">
-          <article class="featurecard"><span class="featureicon">♧</span><h3>Amis et joueurs</h3><p>${socialN} ami${socialN===1?"":"s"}${demandeN?` · ${demandeN} demande${demandeN===1?"":"s"} reçue${demandeN===1?"":"s"}`:""}. Consultez les profils, recherchez un joueur et gérez vos demandes.</p><button class="btn" data-caction="amis">Ouvrir mes amis</button></article>
-          <article class="featurecard"><span class="featureicon">⇄</span><h3>Échanges</h3><p>${echangeN?`${echangeN} proposition${echangeN===1?"":"s"} en attente de votre réponse.`:"Consultez vos propositions d’échange et retrouvez leur historique."} Gardez vos échanges regroupés dans un espace dédié.</p><button class="btn" data-caction="echanges">Gérer les échanges</button></article>
+          <button type="button" class="featurecard commtile" data-caction="amis"><span class="featureicon">♧</span><h3>Amis</h3><span class="commcount">${socialN}</span></button>
+          <button type="button" class="featurecard commtile" data-caction="chercher"><span class="featureicon">⌕</span><h3>Rechercher un joueur</h3></button>
+          <button type="button" class="featurecard commtile" data-caction="demandes"><span class="featureicon">♙</span><h3>Demandes d’amis</h3><span class="commcount">${demandeN}</span></button>
+          <button type="button" class="featurecard commtile" data-caction="echanges"><span class="featureicon">⇄</span><h3>Échanges</h3><span class="commcount">${echangeN}</span></button>
+          <button type="button" class="featurecard commtile" data-caction="guilde"><span class="featureicon">♜</span><h3>Guildes</h3></button>
+          <button type="button" class="featurecard commtile" data-caction="classement"><span class="featureicon">🏆</span><h3>Classement</h3></button>
         </div>
-        <div class="sectionhead"><div><h3>Faire vivre l’album</h3><p>Participez aux décisions et aidez à améliorer les cartes de FandoMasters.</p></div></div>
+        <div class="sectionhead"><div><h3>Contributions</h3></div></div>
         <div class="featuregrid">
-          <article class="featurecard"><span class="featureicon">✦</span><h3>Votes de cartes</h3><p>Donnez votre avis sur les propositions ouvertes et consultez les décisions précédentes.</p><button class="btn" data-caction="votes">Voir les votes</button></article>
-          <article class="featurecard"><span class="featureicon">▧</span><h3>Proposer une carte</h3><p>Signalez une carte manquante dans l’album et suivez le traitement de votre proposition.</p><button class="btn" data-caction="ajouts">Faire une proposition</button></article>
-          <article class="featurecard"><span class="featureicon">⌖</span><h3>Améliorer un visuel</h3><p>Proposez un recadrage, ajustez l’image et ajoutez une remarque si nécessaire.</p><button class="btn" data-caction="partager">Proposer un recadrage</button></article>
-          <article class="featurecard"><span class="featureicon">♜</span><h3>Guildes et classement</h3><p>Retrouvez les espaces sociaux et les classements disponibles dans le jeu.</p><button class="btn" data-caction="guilde">Explorer les joueurs</button></article>
+          <button type="button" class="featurecard commtile" data-caction="ajouts"><span class="featureicon">＋</span><h3>Proposer une carte</h3></button>
+          <button type="button" class="featurecard commtile" data-caction="partager"><span class="featureicon">▧</span><h3>Proposer un recadrage</h3></button>
+          <button type="button" class="featurecard commtile" data-caction="votes"><span class="featureicon">✦</span><h3>Votes de cartes</h3><span class="commcount">${enCours}</span></button>
         </div>
-        <div class="longsection"><div class="sectionhead"><div><h3>Raccourcis</h3><p>Accédez directement à une activité précise.</p></div></div><div class="commquick">
-          <button data-caction="chercher">Rechercher un joueur</button><button data-caction="demandes">Demandes d’amis</button><button data-caction="echanges">Mes échanges</button><button data-caction="votes">Tous les votes</button>
-        </div></div>
       </div>`;
     view.querySelectorAll('[data-caction]').forEach(b=>b.onclick=()=>{
       const a=b.dataset.caction;
-      if(["vitrines","amis","demandes","echanges","guilde","classement","chercher"].includes(a)){
-        amis.onglet = ({vitrines:"amis",amis:"amis",demandes:"demandes",echanges:"echanges",guilde:"guilde",classement:"classement",chercher:"chercher"})[a];
+      if(["amis","demandes","echanges","guilde","classement","chercher"].includes(a)){
+        amis.onglet = ({amis:"amis",demandes:"demandes",echanges:"echanges",guilde:"guilde",classement:"classement",chercher:"chercher"})[a];
         go("amis");
       }else{
         commu.onglet = ({partager:"recadrer",votes:"votes",ajouts:"ajouts"})[a] || "votes";
@@ -18761,24 +18758,25 @@ function viewCollection(){
 
 function viewMenu(){
   const groupes = [
-    {titre:"Jouer", desc:"Choisissez votre activité.", items:[
-      ["aventure","⚔","Combats & campagnes","Arène, parties en ligne et expéditions"]
+    {titre:"Jouer", items:[
+      ["aventure","⚔","Combats & campagnes"]
     ]},
-    {titre:"Préparer", desc:"Organisez vos decks et votre équipement.", items:[
-      ["collection","▤","Decks & équipement","Decks, sacoche et objets"],
-      ["farm","⚒","Atelier","Améliorations et progression"]
+    {titre:"Préparer", items:[
+      ["collection","▤","Decks & équipement"],
+      ["farm","⚒","Atelier"]
     ]},
-    {titre:"Progression", desc:"Suivez vos récompenses et vos avantages.", items:[
-      ["ach","✦","Succès","Trophées et récompenses"],
-      ["shop","♛","Boutique VIP","Abonnement et avantages"]
+    {titre:"Progression", items:[
+      ["ach","✦","Succès"],
+      ["shop","♛","Boutique VIP"]
     ]}
   ];
   view.innerHTML = `<div class="pagehub menuplus">
-    <section class="pagehero" data-symbol="☰"><div class="eyebrow">FandoMasters · navigation</div><h2>Tout au bon endroit.</h2><p>Les cinq destinations principales restent dans la barre du bas. Ici, retrouvez uniquement les fonctions complémentaires.</p></section>
-    ${groupes.map(g=>`<section class="mgroupe"><div class="sectionhead"><div><h3>${g.titre}</h3><p>${g.desc}</p></div></div><div class="mgrille">${g.items.map(([v,ic,t,d])=>`<button type="button" data-menu-go="${v}"><span class="ic" aria-hidden="true">${ic}</span><b>${t}</b><small>${d}</small><span class="menuarrow" aria-hidden="true">→</span></button>`).join("")}</div></section>`).join("")}
+    <h2 class="vuetitre">Plus</h2>
+    ${groupes.map(g=>`<section class="mgroupe"><div class="sectionhead"><div><h3>${g.titre}</h3></div></div><div class="mgrille">${g.items.map(([v,ic,t])=>`<button type="button" data-menu-go="${v}"><span class="ic" aria-hidden="true">${ic}</span><b>${t}</b><span class="menuarrow" aria-hidden="true">→</span></button>`).join("")}</div></section>`).join("")}
   </div>`;
   view.querySelectorAll("[data-menu-go]").forEach(b => b.onclick = ()=>{ sfx.tick(); go(b.dataset.menuGo); });
 }
+
 SCRIM.onclick = ()=>setMenu(false);
 document.querySelectorAll("#nav button[data-view], #menupanel button[data-view]").forEach(b=>{
   b.onclick = ()=>{ if(b.dataset.view === "communaute") commu.onglet = "accueil"; setMenu(false); sfx.tick(); go(b.dataset.view); };
