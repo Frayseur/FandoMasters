@@ -4176,7 +4176,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.6";
+const BUILD = "V2.1.7";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -14620,7 +14620,7 @@ setInterval(()=>{
    coupure réseau ne débite jamais deux fois.
    ====================================================================== */
 const CRISTAL = "⬢";
-const btq = {articles:null, historique:[], erreur:"", achat:false, roue:null, tourne:false, angle:0, livraison:false};
+const btq = {articles:null, historique:[], erreur:"", achat:false, roue:null, tourne:false, angle:0, livraison:false, onglet:"articles"};
 function soldeCristaux(){ return Math.max(0, Math.floor(+((state.profile || {}).cristaux) || 0)); }
 function lignesRpc(r, nom){ return (Array.isArray(r) ? r : r ? [r] : []).map(x => x && typeof x === "object" && nom in x && Object.keys(x).length === 1 ? x[nom] : x); }
 async function boutiqueCharger(){
@@ -14800,6 +14800,22 @@ async function roueTourner(){
   if(lot.t === "renard") try{ majRenards(); }catch(e){}
   if(state.view === "shop") viewBoutique();
 }
+/* onglets de la boutique : les articles, et la roue à part */
+function shopOnglets(){
+  const r = btq.roue, pret = r && r.dispo;
+  return `<div class="shoptabs" role="tablist">
+    <button type="button" class="shoptab ${btq.onglet !== "roue" ? "on" : ""}" data-shoptab="articles" role="tab" aria-selected="${btq.onglet !== "roue"}">Articles</button>
+    <button type="button" class="shoptab ${btq.onglet === "roue" ? "on" : ""}" data-shoptab="roue" role="tab" aria-selected="${btq.onglet === "roue"}">Roue de la fortune${pret ? `<span class="shoptab-pastille" title="Un tour disponible">1</span>` : ""}</button>
+  </div>`;
+}
+function roueMiniHTML(){
+  const r = btq.roue; if(!r) return "";
+  return `<button type="button" class="shoproue-mini" data-shoptab="roue">
+    <span class="shoproue-mini-roue" aria-hidden="true"></span>
+    <span class="shoproue-mini-t"><b>Roue de la fortune</b><small>${r.dispo ? "Un tour gratuit vous attend" : "Prochain tour " + roueQuand(r.prochaine)}</small></span>
+    <span class="shoproue-mini-go">${r.dispo ? "Tourner" : "Voir"} →</span>
+  </button>`;
+}
 function viewBoutique(){
   const vip = vipActif();
   const fin = state.profile && state.profile.vip_jusqua && new Date(state.profile.vip_jusqua) > new Date()
@@ -14835,7 +14851,8 @@ function viewBoutique(){
     <div class="shopsolde"><span>Votre solde</span><b>${CRISTAL} ${solde.toLocaleString("fr-FR")}</b><small>Cristaux</small></div>
     ${btq.erreur ? `<div class="panel" style="margin-bottom:1rem"><b>Boutique indisponible pour l'instant</b><p class="sub" style="margin:.3rem 0 0">${esc(btq.erreur)}</p></div>` : ""}
     ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
-    ${roueHTML()}
+    ${shopOnglets()}
+    ${btq.onglet === "roue" ? roueHTML() || `<p class="sub">Chargement de la roue…</p>` : `${roueMiniHTML()}
 
     <section class="panel shopvip ${vip ? "actif" : ""}">
       <div class="shopvip-txt">
@@ -14864,7 +14881,8 @@ function viewBoutique(){
 
     ${btq.historique.length ? `<details class="fold shopcomp"><summary>Vos derniers achats</summary><ul class="btqhist">${btq.historique.map(h => `
       <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
-        <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`;
+        <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`}`;
+  view.querySelectorAll("[data-shoptab]").forEach(b => b.onclick = ()=>{ btq.onglet = b.dataset.shoptab; viewBoutique(); window.scrollTo({top:0, behavior:"smooth"}); });
   const vb = view.querySelector("#vip-achat"); if(vb) vb.onclick = ()=>acheterVipAnnuel(vip);
   const rg = view.querySelector("#roue-go"); if(rg) rg.onclick = roueTourner;
   if(!btq.roue && enLigne) regRpc("roue_etat").then(r => { btq.roue = r; if(state.view === "shop" && !btq.tourne) viewBoutique(); roueLivrerCartes(); }).catch(()=>{});
@@ -19594,6 +19612,23 @@ function openSettings(){
 @keyframes rouelotTourne{to{transform:translate(-50%,-50%) rotate(360deg)}}
 @keyframes rouelotPop{from{transform:scale(.3);opacity:0}60%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.rouelot-rayons,.roue-go{animation:none}}
+
+/* ---- boutique : onglets ---- */
+.shoptabs{display:flex;gap:.4rem;margin:0 0 1.1rem;padding:.3rem;border-radius:999px;background:var(--creux);width:max-content;max-width:100%;overflow-x:auto}
+.shoptab{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.1rem;border-radius:999px;border:none;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:.9rem;cursor:pointer;white-space:nowrap}
+.shoptab.on{background:var(--p4);color:var(--sur-a2,#1a0f16)}
+.shoptab-pastille{min-width:1.15rem;height:1.15rem;padding:0 .3rem;border-radius:999px;display:inline-grid;place-items:center;font-size:.68rem;font-weight:900;background:#fff;color:var(--p4)}
+.shoptab:not(.on) .shoptab-pastille{background:var(--p4);color:#fff;animation:rouePulse 2s ease-in-out infinite}
+.shoproue-mini{display:flex;align-items:center;gap:.9rem;width:100%;margin:0 0 1rem;padding:.75rem 1rem;border-radius:var(--rayon);cursor:pointer;text-align:left;font:inherit;color:var(--text);
+  border:1px solid color-mix(in srgb,var(--p4) 30%,transparent);background:linear-gradient(90deg,color-mix(in srgb,var(--p4) 12%,var(--surface)),var(--surface-2))}
+.shoproue-mini:hover{border-color:var(--p4)}
+.shoproue-mini-roue{width:2.6rem;height:2.6rem;flex:none;border-radius:50%;border:2px solid color-mix(in srgb,var(--p4) 70%,#fff);
+  background:conic-gradient(#4a8fe8 0 45deg,#2f9e8f 45deg 90deg,#c76f9c 90deg 135deg,#e2ae3c 135deg 180deg,#4a8fe8 180deg 225deg,#2f9e8f 225deg 270deg,#7d8796 270deg 315deg,#d64fa0 315deg)}
+.shoproue-mini:hover .shoproue-mini-roue{animation:roueMini 1.2s cubic-bezier(.2,.7,.2,1)}
+@keyframes roueMini{to{transform:rotate(360deg)}}
+.shoproue-mini-t{flex:1;display:flex;flex-direction:column;min-width:0}
+.shoproue-mini-t b{font-size:.95rem}.shoproue-mini-t small{font-size:.8rem;color:var(--muted)}
+.shoproue-mini-go{font-weight:800;color:var(--p4);white-space:nowrap}
 /* Noms longs des cartes de combat : retour à la ligne plutôt que coupés. */
 .cbbandeau span{overflow-wrap:anywhere;hyphens:auto}
 /* Barre du haut sur téléphone : une seule ligne, le pseudo se raccourcit au besoin. */
