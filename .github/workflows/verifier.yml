@@ -1,0 +1,22 @@
+name: Vérification du jeu
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer le navigateur de test
+        working-directory: outils
+        run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - name: Vérifier le site et la version de test
+        run: |
+          fichiers="index.html"
+          [ -f test/index.html ] && fichiers="$fichiers test/index.html"
+          NODE_PATH=outils/node_modules node outils/verifier.mjs $fichiers
