@@ -4175,7 +4175,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.9";
+const BUILD = "V2.1.10";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -7102,6 +7102,66 @@ async function traiterLienAuth(){
   return h.get("type") || "lien";
 }
 
+
+/* ---- Capacités (développeurs uniquement) : Supabase et GitHub face aux limites de l'offre gratuite ---- */
+const CAPA = {sb:null, gh:null, errSb:"", errGh:"", le:0, minuteur:null, charge:false};
+const CAPA_DEPOT = "Frayseur/FandoMasters";
+function capaOctets(o){
+  o = +o || 0;
+  if(o >= 1073741824) return (o / 1073741824).toFixed(2).replace(".", ",") + " Go";
+  if(o >= 1048576) return (o / 1048576).toFixed(o >= 104857600 ? 0 : 1).replace(".", ",") + " Mo";
+  if(o >= 1024) return Math.round(o / 1024) + " Ko";
+  return o + " o";
+}
+function capaJauge(nom, utilise, limite, fmt, note){
+  const p = limite ? Math.min(100, utilise / limite * 100) : 0;
+  const niv = p >= 85 ? "rouge" : p >= 60 ? "orange" : "vert";
+  const pc = p < 1 && utilise > 0 ? "< 1" : p < 10 ? p.toFixed(1).replace(".", ",") : Math.round(p);
+  return `<div class="capa-l ${niv}">
+    <div class="capa-t"><b>${esc(nom)}</b><span>${esc(fmt(utilise))} / ${esc(fmt(limite))} · <strong>${pc} %</strong></span></div>
+    <div class="capa-barre"><i style="width:${Math.max(p, utilise > 0 ? 1.2 : 0)}%"></i></div>
+    ${note ? `<small>${note}</small>` : ""}
+  </div>`;
+}
+function capaHTML(){
+  const sb = CAPA.sb, gh = CAPA.gh, n = x => (+x || 0).toLocaleString("fr-FR");
+  const quand = CAPA.le ? new Date(CAPA.le).toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit", second:"2-digit"}) : "";
+  return `<div class="capa-tete"><h3>Capacités</h3><span class="sub">${CAPA.charge ? "mesure…" : quand ? "mesuré à " + quand + " · toutes les minutes" : ""}</span>
+      <button type="button" class="btn small ghost" id="capa-maj">Actualiser</button></div>
+    <p class="sub capa-qui">Visible uniquement par les développeurs.</p>
+    <h4>Supabase <small>${sb ? "offre " + esc(sb.offre || "") : ""}</small></h4>
+    ${sb ? capaJauge("Base de données", sb.base.utilise, sb.base.limite, capaOctets,
+        (sb.tables || []).length ? "Plus grosses tables : " + sb.tables.slice(0, 4).map(t => esc(t.nom) + " " + capaOctets(t.octets)).join(" · ") : "")
+      + capaJauge("Fichiers (Storage)", sb.fichiers.utilise, sb.fichiers.limite, capaOctets)
+      + capaJauge("Joueurs actifs sur 30 jours", sb.comptes.actifs30, sb.comptes.limite, n, n(sb.comptes.total) + " compte" + (sb.comptes.total > 1 ? "s" : "") + " au total")
+      : `<p class="sub">${CAPA.errSb ? "Mesure impossible : " + esc(CAPA.errSb) : "Mesure en cours…"}</p>`}
+    <h4>GitHub <small>${esc(CAPA_DEPOT)}</small></h4>
+    ${gh ? capaJauge("Taille du dépôt et du site", gh.size * 1024, 1073741824, capaOctets, "Limite d'un site GitHub Pages : 1 Go. La taille affichée par GitHub se met à jour avec un léger décalage.")
+      + capaJauge("Requêtes de mesure GitHub restantes", gh.restant, gh.quota, n, "Par heure et par connexion, pour cette page.")
+      : `<p class="sub">${CAPA.errGh ? "Mesure impossible : " + esc(CAPA.errGh) : "Mesure en cours…"}</p>`}
+    <p class="sub capa-note">Non mesurable d'ici : la bande passante Supabase (5 Go par mois) et GitHub Pages (100 Go par mois), à voir dans leurs tableaux de bord.</p>`;
+}
+function capaPeindre(){ const el = document.getElementById("capa"); if(!el){ capaArreter(); return; } el.innerHTML = capaHTML(); const b = el.querySelector("#capa-maj"); if(b) b.onclick = ()=>capaMesurer(true); }
+async function capaMesurer(force){
+  if(CAPA.charge) return;
+  if(!force && CAPA.le && Date.now() - CAPA.le < 55000){ capaPeindre(); return; }
+  CAPA.charge = true; capaPeindre();
+  await Promise.all([
+    regRpc("admin_capacites", {}).then(r => { CAPA.sb = lignesRpc(r, "admin_capacites")[0] || null; CAPA.errSb = CAPA.sb ? "" : "réponse vide"; })
+      .catch(e => { CAPA.errSb = String(e && e.message || e).replace(/^FM_REFUS:/, "").slice(0, 120); }),
+    fetch("https://api.github.com/repos/" + CAPA_DEPOT, {headers:{Accept:"application/vnd.github+json"}})
+      .then(async r => { const j = await r.json().catch(()=>({})); if(!r.ok) throw new Error(r.status === 403 ? "limite de requêtes GitHub atteinte, réessai plus tard" : "erreur " + r.status);
+        CAPA.gh = {size:+j.size || 0, restant:+r.headers.get("x-ratelimit-remaining") || 0, quota:+r.headers.get("x-ratelimit-limit") || 60}; CAPA.errGh = ""; })
+      .catch(e => { CAPA.errGh = String(e && e.message || e).slice(0, 120); })
+  ]);
+  CAPA.le = Date.now(); CAPA.charge = false; capaPeindre();
+}
+function capaArreter(){ if(CAPA.minuteur){ clearInterval(CAPA.minuteur); CAPA.minuteur = null; } }
+function capaBrancher(){
+  capaArreter();
+  capaMesurer(false);
+  CAPA.minuteur = setInterval(()=>{ if(state.view !== "compte" || document.hidden || !document.getElementById("capa")){ if(state.view !== "compte") capaArreter(); return; } capaMesurer(true); }, 60000);
+}
 function viewCompte(){
   const admin = estAdmin();
   view.innerHTML = `
@@ -7132,12 +7192,15 @@ function viewCompte(){
     </div>
 
 
+    ${admin ? `<div class="panel capa" id="capa" style="margin-top:1rem">${capaHTML()}</div>` : ""}
+
     ${admin ? `<details class="fold info" style="margin-top:1.2rem">
       <summary>Diagnostic</summary>
       <div class="in"><pre class="sql" id="diag" style="white-space:pre-wrap;margin:0"></pre></div>
     </details>` : ""}`;
 
   const dg = view.querySelector("#diag"); if(dg){ dg.textContent = diagnosticNuage(); idbMesurer(); }
+  if(admin) capaBrancher();
   view.querySelector("#c-sortir").onclick = async ()=>{
     try{ await registreEnvoyer(); }catch(e){}   // ce qui n'est pas encore parti part avant de fermer la session
     await nuageDeconnecter();
@@ -19322,6 +19385,8 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.1.10", titre:"Outils de l'équipe", points:[
+    "Améliorations internes pour surveiller la santé du jeu."]},
   {v:"V2.1.9", titre:"Un jeu bien plus rapide", points:[
     "Le jeu s'ouvre beaucoup plus vite, surtout sur téléphone : les images et les polices se chargent à part et restent en mémoire d'une visite à l'autre.",
     "Nouvelle page Nouveautés, ici même, pour suivre chaque mise à jour."]},
@@ -19872,6 +19937,25 @@ function openSettings(){
 .mgrille .nouv-pastille{margin-left:auto;margin-right:.4rem}
 #more{position:relative}
 #more.nouv .ic::after{content:"";position:absolute;top:.35rem;left:calc(50% + .55rem);width:.55rem;height:.55rem;border-radius:50%;background:var(--p4,#e0489b);box-shadow:0 0 0 2px var(--bg,#1b1518)}
+
+/* Capacités (développeurs) */
+.capa-tete{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.capa-tete h3{margin:0}
+.capa-tete .sub{flex:1;font-size:.8rem;margin:0}
+.capa-qui{font-size:.8rem;margin:.2rem 0 .6rem}
+.capa h4{margin:1rem 0 .5rem;font-size:.9rem;text-transform:uppercase;letter-spacing:.06em}
+.capa h4 small{font-weight:600;text-transform:none;letter-spacing:0;color:var(--muted,#aaa);margin-left:.35rem}
+.capa-l{margin:.55rem 0 .8rem}
+.capa-t{display:flex;justify-content:space-between;gap:.6rem;flex-wrap:wrap;font-size:.88rem;margin-bottom:.3rem}
+.capa-t span{color:var(--muted,#bbb)}
+.capa-t strong{color:var(--text,#fff)}
+.capa-barre{height:.55rem;border-radius:999px;background:color-mix(in srgb,var(--text,#fff) 10%,transparent);overflow:hidden}
+.capa-barre i{display:block;height:100%;border-radius:inherit;background:#3ecf8e;transition:width .6s ease}
+.capa-l.orange .capa-barre i{background:#f5a524}
+.capa-l.rouge .capa-barre i{background:#ef4444}
+.capa-l.rouge .capa-t strong{color:#ef4444}
+.capa-l small{display:block;margin-top:.3rem;font-size:.75rem;color:var(--muted,#aaa);line-height:1.4}
+.capa-note{font-size:.75rem;margin:.8rem 0 0}
 </style>
 <div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
