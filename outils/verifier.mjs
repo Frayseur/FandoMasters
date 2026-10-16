@@ -22,6 +22,9 @@ for (const f of fichiers) {
   dire(ok, `${f} : ${scripts.length} bloc(s) de code compilent`);
   const build = (html.match(/BUILD\s*=\s*"([^"]+)"/) || [])[1];
   dire(!!build, `${f} : numéro de version présent (${build || 'absent'})`);
+  const manquants = [...new Set([...html.matchAll(/(?:\.\.\/)?assets\/[0-9a-f]{12}\.[a-z0-9]+/g)].map(m => m[0]))]
+    .filter(r => !fs.existsSync(path.join(path.dirname(f), r)));
+  dire(!manquants.length, `${f} : toutes les images et polices existent${manquants.length ? ' (manquent : ' + manquants.join(', ') + ')' : ''}`);
   dire(fs.statSync(f).size < 25e6, `${f} : taille raisonnable (${(fs.statSync(f).size / 1e6).toFixed(1)} Mo)`);
 }
 
@@ -43,6 +46,7 @@ for (const f of fichiers) {
     const page = await nav.newPage({ viewport: { width: w, height: h } });
     const erreurs = [];
     page.on('pageerror', e => erreurs.push(String(e.message || e)));
+    page.on('response', r => { if (r.url().includes('/assets/') && r.status() >= 400) erreurs.push('fichier introuvable : ' + r.url()); });
     await page.route('**/*', r => r.request().url().startsWith(`http://127.0.0.1:${port}/`) ? r.continue() : r.abort());
     await page.goto(`http://127.0.0.1:${port}/${f}`, { waitUntil: 'load' });
     await page.waitForTimeout(3000);

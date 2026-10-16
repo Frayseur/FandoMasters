@@ -1,0 +1,27 @@
+name: 🐞 Bug
+description: Quelque chose ne marche pas ou s'affiche mal.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: probleme
+    attributes:
+      label: Ce qui se passe
+      description: Ce que tu as fait, ce que tu attendais, ce qui s'est passé. Une capture d'écran aide beaucoup.
+    validations:
+      required: true
+  - type: dropdown
+    id: appareil
+    attributes:
+      label: Appareil
+      options: ["Téléphone", "Ordinateur", "Les deux"]
+  - type: input
+    id: version
+    attributes:
+      label: Version du jeu (Plus → Nouveautés)
+      placeholder: "V2.1.9"
+  - type: dropdown
+    id: grave
+    attributes:
+      label: Des joueurs perdent-ils quelque chose ?
+      options: ["Non, c'est gênant mais rien n'est perdu", "Oui, cartes ou monnaie en jeu"]

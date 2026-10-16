@@ -1,0 +1,17 @@
+name: 💡 Idée
+description: Une nouveauté, une carte, un mode de jeu, une amélioration…
+title: "[Idée] "
+labels: ["idée"]
+body:
+  - type: textarea
+    id: idee
+    attributes:
+      label: L'idée
+      description: Décris ce que tu veux, avec tes mots. Une image ou un lien peut aider.
+    validations:
+      required: true
+  - type: dropdown
+    id: urgence
+    attributes:
+      label: Priorité
+      options: ["Quand tu peux", "Bientôt", "Urgent"]
