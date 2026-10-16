@@ -3728,7 +3728,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
     background-position:center center;
   }
   .cbscene {
-    --mw:min(15vw,8.8vh,92px);
+    --mw:min(12.4vw,8.8vh,92px);
     padding:max(.35rem,env(safe-area-inset-top)) .25rem max(.35rem,env(safe-area-inset-bottom));
     gap:.22rem .25rem;
   }
@@ -4176,7 +4176,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.3";
+const BUILD = "V2.1.4";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -5105,7 +5105,7 @@ async function regRecharger(ancien, ecraser){
 /* ---- envoi : ce qui a changé part, avec une clé unique ---- */
 function registrePlanifier(urgent){
   if(!REG.pret) return;
-  const dans = urgent === true ? 120 : urgent === "col" ? 350 : 450;
+  const dans = urgent === true ? 500 : urgent === "col" ? 1200 : 8000;
   const due = Date.now() + dans;
   if(REG.minuteur && REG.echeance <= due) return;          // un envoi plus proche est déjà prévu
   clearTimeout(REG.minuteur);
@@ -13578,7 +13578,7 @@ const SOON = {
 const COMBAT_REG = {atq_base:1, atq_palier:0.8, atq_echelle:3, pv_base:1, pv_palier:1, pv_echelle:4, cout_charge:0.5, cout_provoc:0, cout_cri:0.5};
 const COMBAT_BANDES = {"Commun":[900,2800], "Peu commun":[2400,4200], "Rare":[4000,5800], "Super rare":[5600,7000], "Ultra rare":[6900,8300], "Légendaire":[8400,9700]};
 const COMBAT_PALIER = {"Commun":0, "Peu commun":1, "Rare":2, "Super rare":3, "Ultra rare":4, "Légendaire":5};
-const COMBAT_TEXTE = {tank:"Provocation", ninja:"Ruée · attaque les serviteurs immédiatement", magicien:"Cri d'arrivée : inflige 1 dégât", soigneur:"Cri d'arrivée : rend 2 PV"};
+const COMBAT_TEXTE = {tank:"Provocation", ninja:"Ruée", magicien:"Cri d'arrivée : inflige 1 dégât", soigneur:"Cri d'arrivée : rend 2 PV"};
 const arrondiSql = x => Math.sign(x) * Math.round(Math.abs(x));      // round() de Postgres : demi vers l'extérieur
 function combatTraitHash(id){ return [...String(id || "")].reduce((n, ch) => n + ch.charCodeAt(0), 0); }
 function combatProfil(c){
@@ -13594,8 +13594,12 @@ function combatProfil(c){
   const extra = role === "ninja" ? COMBAT_REG.cout_charge : role === "tank" ? COMBAT_REG.cout_provoc : COMBAT_REG.cout_cri;
   const cout = Math.min(10, Math.max(1, arrondiSql((a + p - 1) / 2 + extra)));
   const trait = combatTraitHash(c.id);
-  const extraTexte = (trait % 11 === 0 ? " · Furtivité" : "") + (trait % 7 === 0 ? " · Râle de mort : piochez 1 carte" : "") + (trait % 13 === 0 ? " · Vol de vie" : "");
-  return {id:c.id, type:"serviteur", nom:c.title, r, img:c.img, u:c.univ, cout, atq:a, pv:p, role, texte:COMBAT_TEXTE[role] + extraTexte};
+  const provocation = role === "tank" && hashId(c.id) % 4 === 0;
+  const effets = [role === "tank" ? (provocation ? "Provocation" : "") : COMBAT_TEXTE[role]];
+  if(trait % 11 === 0) effets.push("Furtivité");
+  if(trait % 7 === 0) effets.push("Râle de mort : piochez 1 carte");
+  if(trait % 13 === 0) effets.push("Vol de vie");
+  return {id:c.id, type:"serviteur", nom:c.title, r, img:c.img, u:c.univ, cout, atq:a, pv:p, role, provocation, texte:effets.filter(Boolean).join(" · ")};
 }
 
 /* ======================================================================
@@ -13671,7 +13675,7 @@ function cbValider(ids){
     for(let i = 0; i < k; i++) cartes.push(x.p);
   }
   if(ids.length !== 30) erreurs.unshift(ids.length < 30 ? "il manque " + (30 - ids.length) + " carte" + (30 - ids.length > 1 ? "s" : "") : (ids.length - 30) + " carte(s) de trop");
-  const provocations = cartes.filter(p => p.type === "serviteur" && p.role === "tank").length;
+  const provocations = cartes.filter(p => p.type === "serviteur" && p.provocation).length;
   if(provocations > 3) erreurs.unshift("Deck trop défensif : 3 serviteurs avec Provocation maximum.");
   const courbe = [0, 0, 0, 0, 0, 0, 0, 0]; cartes.forEach(p => courbe[Math.min(7, p.cout)]++);
   return {ok:!erreurs.length, erreurs:[...new Set(erreurs)], cartes, courbe};
@@ -13686,7 +13690,7 @@ function cbDeckAuto(){
   const tranche = c => c <= 2 ? 2 : c <= 4 ? 4 : c <= 6 ? 6 : 10;
   for(const passe of [true, false]) for(const x of cat){
     for(let i = deck.filter(d => d === x.p.id).length; i < x.max && deck.length < 30; i++){
-      if(x.p.type === "serviteur" && x.p.role === "tank" && deck.filter(id => { const y = byId.get(id); return y && y.p.type === "serviteur" && y.p.role === "tank"; }).length >= 3) break;
+      if(x.p.type === "serviteur" && x.p.provocation && deck.filter(id => { const y = byId.get(id); return y && y.p.type === "serviteur" && y.p.provocation; }).length >= 3) break;
       const t = tranche(x.p.cout);
       if(passe && (parCout[t] || 0) >= quota(x.p.cout)) break;
       if(x.p.type === "sort" && deck.filter(d => d.startsWith("sort:")).length >= 12) break;   // au plus 12 sorts : le deck conserve une vraie présence de serviteurs
@@ -13906,7 +13910,7 @@ function cbDemarrerVeille(){
   const tick = async ()=>{
     await cbVeille();
     const actif = (CB.id && CB.v && CB.v.statut === "ACTIVE") || CB.attente;
-    cbBoucle = setTimeout(tick, document.hidden ? 1800 : actif ? 320 : 900);
+    cbBoucle = setTimeout(tick, document.hidden ? 3000 : actif ? 700 : 1500);
   };
   cbBoucle = setTimeout(tick, 250);
 }
@@ -13983,7 +13987,7 @@ function viewDuel(){
 }
 function cbRegles(){
   return info("Règles du combat", `<p class='sub' style='margin:0 0 .5rem'>Chaque joueur a un héros à 30 PV et un deck de 30 cartes. À votre tour, votre mana maximum augmente de 1 (jusqu'à 10) et se remplit ; vous piochez une carte. Jouez des serviteurs et des sorts, attaquez, puis terminez votre tour. Le premier héros à 0 PV perd.</p>
-    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Charge</b> ⚡. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Un deck est limité à <b>3 serviteurs avec Provocation</b> pour éviter les plateaux verrouillés. <b>Ruée</b> permet d’attaquer les serviteurs dès l’arrivée, <b>Furtivité</b> empêche d’être ciblé par l’adversaire avant sa première attaque, et <b>Râle de mort</b> déclenche un effet à la mort. <b>Vol de vie</b> rend au héros les PV correspondant aux dégâts infligés par le serviteur. Les sorts de zone touchent plusieurs serviteurs, le Silence retire les capacités (dont Râle de mort, Ruée et Vol de vie), et la Transformation remplace les statistiques et capacités par celles d’un serviteur simple. Entre serviteurs, les dégâts sont simultanés.</p>
+    <p class='sub' style='margin:0 0 .5rem'>Sur les cartes, le chiffre bronze correspond à l’<b>attaque (ATQ)</b> et le chiffre rouge aux <b>points de vie (PV)</b> : la défense de la carte d’origine sert à calculer les PV, elle n’est pas une seconde attaque. Un serviteur ne peut pas attaquer le tour de son arrivée, sauf avec <b>Ruée</b> ➤ : il peut alors attaquer un serviteur adverse, mais pas le héros. Un serviteur avec <b>Provocation</b> (bordure épaisse) doit être attaqué en premier. Un deck est limité à <b>3 serviteurs avec Provocation</b> pour éviter les plateaux verrouillés. <b>Ruée</b> permet d’attaquer les serviteurs dès l’arrivée, <b>Furtivité</b> empêche d’être ciblé par l’adversaire avant sa première attaque, et <b>Râle de mort</b> déclenche un effet à la mort. <b>Vol de vie</b> rend au héros les PV correspondant aux dégâts infligés par le serviteur. Les sorts de zone touchent plusieurs serviteurs, le Silence retire les capacités (dont Râle de mort, Ruée et Vol de vie), et la Transformation remplace les statistiques et capacités par celles d’un serviteur simple. Entre serviteurs, les dégâts sont simultanés.</p>
     <p class='sub' style='margin:0'>Pouvoir de héros : 2 mana, 1 dégât, une fois par tour. Main de 10 cartes au plus (au-delà, la carte piochée brûle) ; deck vide : fatigue de 1, puis 2, puis 3… Le second joueur reçoit « Élan » (+1 mana une fois).</p>`);
 }
 function cbVueJouer(corps){
@@ -13995,6 +13999,7 @@ function cbVueJouer(corps){
   corps.innerHTML = `
     <section class="panel cb-classes">
       <h3>Choisir sa classe</h3>
+      <p class="sub" style="margin:-.2rem 0 .6rem">Votre choix est enregistré. Les pouvoirs propres à chaque classe arriveront dans une prochaine version.</p>
       <div class="cb-class-grid">${[
         ["gardien","🛡","Gardien"],["duelliste","⚔","Duelliste"],["arcaniste","✦","Arcaniste"],["rodeur","➶","Rôdeur"]
       ].map(([id,ic,label])=>`<button type="button" class="cb-class-choice ${CB.classeChoisie===id?"active":""}" data-cbclasse="${id}" aria-pressed="${CB.classeChoisie===id}"><span>${ic}</span><b>${label}</b></button>`).join("")}</div>
@@ -14465,7 +14470,7 @@ function cbPeindre(force){
       if(ab.dataset.busy === "1") return;
       ab.dataset.busy = "1";
       try {
-        if(window.confirm("Abandonner le combat ?\nCette action compte comme une défaite.")) await cbAgir({type:"abandon"});
+        if(await demanderConfirmation("Abandonner la partie ?", "La partie se termine tout de suite et compte comme une défaite.", "Abandonner")) await cbAgir({type:"abandon"});
       } finally { if(ab.isConnected) ab.dataset.busy = "0"; }
     };
     ab.onclick = abandonner;
@@ -14570,6 +14575,26 @@ function viewBoutique(){
   const vipBuy = view.querySelector("#vip-achat"); if(vipBuy && !vip) vipBuy.onclick = buy;
   const vipBuyBottom = view.querySelector("#vip-achat-bas"); if(vipBuyBottom && !vip) vipBuyBottom.onclick = buy;
   if(btq.articles === null) boutiqueCharger();
+}
+function demanderConfirmation(titre, texte, bouton){
+  return new Promise(res => {
+    const m = document.createElement("div");
+    m.className = "modal fmconfirm";
+    m.style.zIndex = "100000";
+    m.style.placeItems = "center";
+    m.innerHTML = `<div class="inner" style="max-width:400px">
+      <h3 style="font-size:1.15rem;margin-bottom:.4rem">${esc(titre)}</h3>
+      <p class="sub" style="margin:0 0 1rem">${esc(texte)}</p>
+      <div class="row" style="justify-content:flex-end;gap:.5rem">
+        <button class="btn small ghost" id="non">Annuler</button>
+        <button class="btn small" id="oui">${esc(bouton)}</button>
+      </div></div>`;
+    document.body.appendChild(m);
+    const fin = v => { m.remove(); res(v); };
+    m.querySelector("#non").onclick = ()=>fin(false);
+    m.querySelector("#oui").onclick = ()=>fin(true);
+    m.onclick = e => { if(e.target === m) fin(false); };
+  });
 }
 async function acheterVipAnnuel(){
   if(btq.achat || vipActif()) return;
@@ -16859,11 +16884,22 @@ function achPending(){
   return ACHIEVEMENTS.filter(a=>owned.has(a.id) && !paid.has(a.id));
 }
 
-async function fmDateLocale(d=new Date()){
+function fmDateLocale(d=new Date()){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
+/* Les versions 2.1.0 à 2.1.3 enregistraient un objet vide à la place de la date :
+   on ne garde que les vraies dates (AAAA-MM-JJ). */
+function fmReparerDates(p){
+  const date = x => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x);
+  let n = 0;
+  for(const k of ["loginDays", "openDays"]) if(Array.isArray(p[k]) && p[k].some(x => !date(x))){ p[k] = p[k].filter(date); n++; }
+  for(const k of ["lastLoginDate", "openDay"]) if(p[k] != null && !date(p[k])){ delete p[k]; n++; }
+  if(n && !date(p.lastLoginDate)) p.loginStreak = 0;
+  return n;
+}
 function enregistrerConnexionQuotidienne(){
-  const p=state.profile, today=fmDateLocale();
+  const p=state.profile; fmReparerDates(p);
+  const today=fmDateLocale();
   if(p.lastLoginDate===today) return;
   const y=new Date(); y.setDate(y.getDate()-1);
   p.loginDays=[...new Set([...(p.loginDays||[]),today])].slice(-120);
@@ -19047,9 +19083,6 @@ function openSettings(){
   document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) chargerCorrectionsLive(); });
 })();
 </script>
-</body>
-</html>
-
 <style>
 .cbscene.cbvote{z-index:9999;display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:minmax(0,1fr)!important;grid-template-areas:"vote"!important;place-items:center!important;padding:calc(14px + env(safe-area-inset-top)) 12px calc(14px + env(safe-area-inset-bottom))!important;overflow-y:auto!important;background:rgba(12,9,8,.88)!important;backdrop-filter:blur(7px)}
 .cbscene.cbvote::before{content:none!important}
@@ -19079,5 +19112,21 @@ function openSettings(){
 }
 .cbz-amenu,.cbrond{z-index:999!important;position:relative;pointer-events:auto!important;touch-action:manipulation!important}
 .cbpartie:not(.cbvote){isolation:isolate}
+/* Noms longs des cartes de combat : retour à la ligne plutôt que coupés. */
+.cbbandeau span{overflow-wrap:anywhere;hyphens:auto}
+/* Barre du haut sur téléphone : une seule ligne, le pseudo se raccourcit au besoin. */
+@media (max-width:640px){
+  .topbar{flex-wrap:nowrap!important;gap:.3rem!important}
+  .topbar .me{flex:1 1 0!important;min-width:0!important;max-width:none!important;overflow:hidden}
+  .topbar .me #mename{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .topbar .purse,.topbar .freebox{flex:none!important;padding:.26rem .45rem!important}
+  .topbar .purse small,.topbar .freebox small{display:none}
+}
+@media (max-width:400px){
+  .topbar #sound{display:none!important}
+  .topbar .wikitag{padding:.3rem .45rem!important}
+}
 
 </style>
+</body>
+</html>
