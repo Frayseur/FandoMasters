@@ -4176,7 +4176,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.4";
+const BUILD = "V2.1.5";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -13663,7 +13663,44 @@ function cbCatalogue(){
   for(const s of cbSorts()) out.push({p:cbProfilSort(s), max:2, carte:null});
   return out;
 }
-function cbDeck(){ return Array.isArray(state.profile.deckCombat) ? state.profile.deckCombat.slice() : []; }
+/* ---- decks de combat : plusieurs decks de 30 cartes, rangés avec les autres decks ; un seul est actif ---- */
+function cbDecks(){ return decks("combat"); }
+function cbNouveauDeck(nom){
+  const col = DECK_COLORS[Math.floor(Math.random() * DECK_COLORS.length)];
+  const d = {id:"d" + Date.now() + Math.floor(Math.random() * 1000), kind:"combat", name:nom || "Nouveau deck", a:col.a, b:col.b,
+             glyph:DECK_GLYPHS[Math.floor(Math.random() * DECK_GLYPHS.length)], cards:[]};
+  decks().push(d);
+  if(!cbDeckObj()) state.profile.deckCombatActif = d.id;
+  return d;
+}
+/* Reprise des anciennes données, sans rien perdre : le deck de combat unique devient « Deck principal »,
+   les escouades de 5 cartes de l'ancienne arène deviennent des decks de combat à compléter. */
+function cbMigrerDecks(){
+  const p = state.profile, all = decks(); let change = false;
+  if(!p.decksCombatV2){                                   // une seule fois par compte
+    const principal = !all.some(d => d.kind === "combat") && Array.isArray(p.deckCombat) && p.deckCombat.length;
+    for(const d of all) if(d.kind === "bataille"){ d.kind = "combat"; d.ancien = true; }
+    if(principal){
+      const col = DECK_COLORS[0];
+      const d = {id:"d" + Date.now(), kind:"combat", name:"Deck principal", a:col.a, b:col.b, glyph:"🗡", cards:p.deckCombat.slice(0, 30)};
+      all.unshift(d); p.deckCombatActif = d.id;
+    }
+    p.decksCombatV2 = true; change = true;
+  }
+  if(!all.some(d => d.kind === "combat" && d.id === p.deckCombatActif)){
+    const d = all.find(x => x.kind === "combat"), id = d ? d.id : null;
+    if(p.deckCombatActif !== id){ p.deckCombatActif = id; change = true; }
+  }
+  if(change) sset("fm:profile", p);
+  return change;
+}
+function cbDeckObj(id){ const v = id || CB.deckId || state.profile.deckCombatActif; return cbDecks().find(d => d.id === v) || null; }
+function cbDeck(){ const d = cbDeckObj(); return d ? d.cards.slice() : (Array.isArray(state.profile.deckCombat) ? state.profile.deckCombat.slice() : []); }
+async function cbChoisirDeck(id){
+  const d = cbDeckObj(id); if(!d) return;
+  state.profile.deckCombatActif = d.id; state.profile.deckCombat = d.cards.slice();
+  await sset("fm:profile", state.profile);
+}
 function cbValider(ids){
   const cat = new Map(cbCatalogue().map(x => [x.p.id, x]));
   const n = {}; ids.forEach(i => n[i] = (n[i] || 0) + 1);
@@ -13681,25 +13718,54 @@ function cbValider(ids){
   return {ok:!erreurs.length, erreurs:[...new Set(erreurs)], cartes, courbe};
 }
 /* Deck conseillé : les cartes les plus efficaces pour leur coût, avec une courbe de mana jouable */
-function cbDeckAuto(){
-  const val = p => p.type === "sort" ? 2.8 + (p.eff && ["zone","zone_tous","silence","detruire","transformation","affaiblir"].includes(p.eff.type) ? 0.7 : 0) : p.type === "arme" ? 2.2 : (p.atq + p.pv + (p.role === "ninja" ? 1 : 0.6)) / (p.cout + 0.6);
+const CB_STYLES = {
+  equilibre:{nom:"Équilibré", ic:"⚖", desc:"Courbe de mana régulière, le meilleur rapport puissance / coût."},
+  agressif: {nom:"Agressif",  ic:"⚔", desc:"Petits serviteurs, Ruée et dégâts directs pour finir vite."},
+  controle: {nom:"Contrôle",  ic:"✋", desc:"Retraits, dégâts de zone et grosses cartes en fin de partie."},
+  defensif: {nom:"Défensif",  ic:"🛡", desc:"Provocation, soins, armure et serviteurs résistants."},
+  sorts:    {nom:"Sorts",     ic:"✦", desc:"Beaucoup de sorts, de la pioche et du mana en plus."}
+};
+/* Deck conseillé selon un style de jeu : les cartes les plus utiles au style, avec une courbe de mana jouable */
+function cbDeckAuto(style){
+  const ef = p => (p.eff && p.eff.type) || "";
+  const retrait = ["zone", "zone_tous", "silence", "detruire", "transformation", "affaiblir", "gel"];
+  const R = {
+    equilibre:{sorts:12, quota:[8, 12, 8, 4], val:p => p.type === "sort" ? 2.8 + (retrait.includes(ef(p)) ? 0.7 : 0)
+      : p.type === "arme" ? 2.2 : (p.atq + p.pv + (p.role === "ninja" ? 1 : 0.6)) / (p.cout + 0.6)},
+    agressif:{sorts:8, quota:[13, 12, 4, 1], val:p => p.type === "sort" ? (["degats", "combo", "bonus", "elan"].includes(ef(p)) ? 3.2 : 0.6) - p.cout * 0.3
+      : p.type === "arme" ? 3 : (p.atq * 1.6 + p.pv * 0.5 + (p.role === "ninja" ? 2 : 0) + (p.role === "magicien" ? 0.8 : 0)) / (p.cout + 0.4) - p.cout * 0.35},
+    controle:{sorts:14, quota:[5, 10, 9, 6], val:p => p.type === "sort" ? (retrait.includes(ef(p)) ? 4 : ef(p) === "pioche" ? 3 : ef(p) === "degats" ? 2.6 : 1)
+      : p.type === "arme" ? 1.2 : (p.atq + p.pv * 1.2) / (p.cout + 0.6) + (p.cout >= 6 ? 0.8 : 0)},
+    defensif:{sorts:10, quota:[7, 12, 8, 3], val:p => p.type === "sort" ? (["soin", "armure", "bouclier"].includes(ef(p)) ? 3.6 : retrait.includes(ef(p)) ? 2.4 : 1)
+      : p.type === "arme" ? 1 : (p.pv * 1.7 + p.atq * 0.6 + (p.provocation ? 3 : 0) + (p.role === "soigneur" ? 1.2 : 0)) / (p.cout + 0.6)},
+    sorts:{sorts:18, quota:[10, 12, 6, 2], val:p => p.type === "sort" ? 4 + (["pioche", "elan", "combo"].includes(ef(p)) ? 1 : 0) - p.cout * 0.2
+      : p.type === "arme" ? 1 : (p.atq + p.pv + (p.role === "magicien" ? 1.5 : 0)) / (p.cout + 0.6)}
+  }[style] || null;
+  const regle = R || {sorts:12, quota:[8, 12, 8, 4], val:p => 0};
+  const val = R ? regle.val : (p => p.type === "sort" ? 2.8 : p.type === "arme" ? 2.2 : (p.atq + p.pv + 0.6) / (p.cout + 0.6));
   const cat = cbCatalogue().sort((a, b) => val(b.p) - val(a.p));
-  const byId = new Map(cat.map(x => [x.p.id, x]));
-  const deck = [], parCout = {};
-  const quota = c => c <= 2 ? 8 : c <= 4 ? 12 : c <= 6 ? 8 : 4;
-  const tranche = c => c <= 2 ? 2 : c <= 4 ? 4 : c <= 6 ? 6 : 10;
+  const deck = [], parTranche = [0, 0, 0, 0];
+  const tranche = c => c <= 2 ? 0 : c <= 4 ? 1 : c <= 6 ? 2 : 3;
+  let provoc = 0, sorts = 0;
   for(const passe of [true, false]) for(const x of cat){
     for(let i = deck.filter(d => d === x.p.id).length; i < x.max && deck.length < 30; i++){
-      if(x.p.type === "serviteur" && x.p.provocation && deck.filter(id => { const y = byId.get(id); return y && y.p.type === "serviteur" && y.p.provocation; }).length >= 3) break;
+      if(x.p.type === "serviteur" && x.p.provocation && provoc >= 3) break;
+      if(x.p.type === "sort" && sorts >= regle.sorts) break;
       const t = tranche(x.p.cout);
-      if(passe && (parCout[t] || 0) >= quota(x.p.cout)) break;
-      if(x.p.type === "sort" && deck.filter(d => d.startsWith("sort:")).length >= 12) break;   // au plus 12 sorts : le deck conserve une vraie présence de serviteurs
-      deck.push(x.p.id); parCout[t] = (parCout[t] || 0) + 1;
+      if(passe && parTranche[t] >= regle.quota[t]) break;
+      deck.push(x.p.id); parTranche[t]++;
+      if(x.p.type === "sort") sorts++;
+      if(x.p.type === "serviteur" && x.p.provocation) provoc++;
     }
   }
   return deck.slice(0, 30);
 }
-async function cbDeckEnregistrer(ids){ state.profile.deckCombat = ids; await sset("fm:profile", state.profile); }
+async function cbDeckEnregistrer(ids){
+  const d = cbDeckObj() || cbNouveauDeck("Deck principal");
+  d.cards = ids.slice(0, 30);
+  if(d.id === state.profile.deckCombatActif) state.profile.deckCombat = d.cards.slice();
+  await sset("fm:profile", state.profile);
+}
 async function cbAlignerRaretes(){
   let n = 0;
   for(const c of state.collection){ const r = rareteEffective(c); if(r && r !== c.rarity){ c.rarity = r; n++; } }
@@ -13964,6 +14030,7 @@ function cbQuitter(){ document.querySelectorAll(".cbfinmodal").forEach(x => x.re
 
 /* ---- écran Combat ---- */
 function viewDuel(){
+  CB.deckId = null;
   cbDemarrerVeille();
   if(!CB.demarre){
     CB.demarre = true;
@@ -13991,6 +14058,7 @@ function cbRegles(){
     <p class='sub' style='margin:0'>Pouvoir de héros : 2 mana, 1 dégât, une fois par tour. Main de 10 cartes au plus (au-delà, la carte piochée brûle) ; deck vide : fatigue de 1, puis 2, puis 3… Le second joueur reçoit « Élan » (+1 mana une fois).</p>`);
 }
 function cbVueJouer(corps){
+  cbMigrerDecks();
   const val = cbValider(cbDeck());
   const pr = CB.profil || {};
   const at = CB.attente;
@@ -14005,10 +14073,12 @@ function cbVueJouer(corps){
       ].map(([id,ic,label])=>`<button type="button" class="cb-class-choice ${CB.classeChoisie===id?"active":""}" data-cbclasse="${id}" aria-pressed="${CB.classeChoisie===id}"><span>${ic}</span><b>${label}</b></button>`).join("")}</div>
     </section>
     ${cbRegles()}
-    <div class="panel cbbilan">
-      <div><b>Votre deck</b><span class="sub">${cbDeck().length} / 30 cartes</span></div>
-      ${val.ok ? `<span class="tag ok">prêt</span>` : `<span class="sub" style="color:var(--red)">${cbEsc(val.erreurs[0] || "")}</span>`}
-      <button class="btn small ghost" data-cbong2="deck">${val.ok ? "Modifier" : "Composer"}</button>
+    <div class="panel cbchoixdeck">
+      <div class="cbdeckhead"><div><b>Deck pour ce combat</b><span class="sub">${cbDecks().length > 1 ? "Touchez un deck pour le choisir." : "Créez d'autres decks pour varier votre façon de jouer."}</span></div>
+        <button class="btn small ghost" data-cbong2="deck">${val.ok ? "Modifier" : "Composer"}</button></div>
+      ${cbDecks().length ? cbChipsDecks() : ""}
+      <div class="cbbilan" style="margin:.6rem 0 0"><div><b>${cbDeckObj() ? cbEsc(cbDeckObj().name) : "Votre deck"}</b><span class="sub">${cbDeck().length} / 30 cartes</span></div>
+      ${val.ok ? `<span class="tag ok">prêt</span>` : `<span class="sub" style="color:var(--red)">${cbEsc(val.erreurs[0] || "")}</span>`}</div>
     </div>
     ${!enLigne ? `<p class="sub">Le combat demande une connexion au serveur.</p>` : ""}
     <p class="sub">Plateau de combat : si au moins un joueur est VIP, les deux joueurs pourront voter parmi les trois plateaux au début du match. En cas de désaccord, la priorité dépend du statut VIP.</p>
@@ -14033,6 +14103,7 @@ function cbVueJouer(corps){
     </div>`;
   corps.querySelectorAll("[data-cbclasse]").forEach(b => b.onclick = async ()=>{ CB.classeChoisie=b.dataset.cbclasse; state.profile.combatClasse=CB.classeChoisie; await sset("fm:profile",state.profile); viewDuel(); });
   corps.querySelectorAll("[data-cbong2]").forEach(b => b.onclick = ()=>{ CB.onglet = b.dataset.cbong2; viewDuel(); });
+  corps.querySelectorAll("[data-cbdeck]").forEach(b => b.onclick = async ()=>{ await cbChoisirDeck(b.dataset.cbdeck); viewDuel(); });
   corps.querySelectorAll("[data-cbniv]").forEach(b => b.onclick = ()=>{ CB.niveau = b.dataset.cbniv; viewDuel(); });
   const ci = corps.querySelector("#cbcodein"); if(ci) ci.oninput = ()=>{ CB.code = ci.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5); };
   corps.querySelectorAll("[data-cblancer]").forEach(b => b.onclick = ()=>{
@@ -14041,9 +14112,20 @@ function cbVueJouer(corps){
   });
   const an = corps.querySelector("#cbannuler"); if(an) an.onclick = cbAnnuler;
 }
+/* rangée de choix de deck (combat) */
+function cbChipsDecks(opts = {}){
+  const actif = state.profile.deckCombatActif;
+  return `<div class="cbdeckchips">${cbDecks().map(d => { const ok = cbValider(d.cards).ok;
+    return `<button type="button" class="cbdeckchip ${d.id === actif ? "on" : ""}" data-cbdeck="${cbEsc(d.id)}" style="--a:${cbEsc(d.a)};--b:${cbEsc(d.b)}" aria-pressed="${d.id === actif}">
+      <span class="g">${cbEsc(d.glyph || "⚔")}</span><span class="t"><b>${cbEsc(d.name)}</b><small>${ok ? "prêt" : d.cards.length + " / 30"}</small></span></button>`; }).join("")}
+    ${opts.nouveau ? `<button type="button" class="cbdeckchip plus" id="cbdecknew"><span class="g">＋</span><span class="t"><b>Nouveau deck</b><small>vide</small></span></button>` : ""}</div>`;
+}
 function cbVueDeck(corps){
   cbAlignerRaretes();
+  cbMigrerDecks();
+  const fixe = !!CB.deckId;                     // ouvert depuis la page Decks : un seul deck
   const ids = cbDeck(), val = cbValider(ids);
+  const courant = cbDeckObj();
   const n = {}; ids.forEach(i => n[i] = (n[i] || 0) + 1);
   const q = (CB.filtre || "").toLowerCase();
   const cat = cbCatalogue().filter(x => (!q || (x.p.nom + " " + (x.carte ? x.carte.univ : "")).toLowerCase().includes(q)) && (!CB.filtreT || x.p.type === CB.filtreT))
@@ -14051,13 +14133,17 @@ function cbVueDeck(corps){
   const dansDeck = Object.keys(n).map(id => cbCatalogue().find(x => x.p.id === id)).filter(Boolean).sort((a, b) => a.p.cout - b.p.cout);
   const haut = Math.max(1, ...val.courbe);
   corps.innerHTML = `
+    ${fixe ? "" : `<div class="cbdeckhead"><div><b>Vos decks de combat</b><span class="sub">Touchez un deck pour le modifier : c'est aussi celui qui part au combat.</span></div>
+      ${courant ? `<button class="btn small ghost" id="cbdeckperso">Nom et couleur</button>` : ""}</div>${cbChipsDecks({nouveau:true})}`}
+    <div class="panel cbstyles"><div><b>Remplir automatiquement</b><span class="sub">Choisissez un style : le deck est composé avec vos meilleures cartes pour ce style.</span></div>
+      <div class="cbstylegrid">${Object.entries(CB_STYLES).map(([k, st]) => `<button type="button" class="cbstyle" data-cbstyle="${k}" ${k === "equilibre" ? `id="cbauto"` : ""}>
+        <span class="i">${st.ic}</span><b>${st.nom}</b><small>${st.desc}</small></button>`).join("")}</div></div>
     <div class="panel cbbilan">
-      <div><b>${ids.length} / 30 cartes</b><span class="sub">2 exemplaires au plus par carte, 1 pour une Légendaire ou une Relique</span></div>
+      <div><b>${courant ? cbEsc(courant.name) + " · " : ""}${ids.length} / 30 cartes</b><span class="sub">2 exemplaires au plus par carte, 1 pour une Légendaire ou une Relique</span></div>
       ${val.ok ? `<span class="tag ok">deck valide</span>` : `<span class="sub" style="color:var(--red)">${cbEsc(val.erreurs.join(" · "))}</span>`}
     </div>
     <div class="cbcourbe">${val.courbe.map((x, i) => `<div><i style="height:${Math.round(100 * x / haut)}%"></i><span>${i === 7 ? "7+" : i}</span><b>${x || ""}</b></div>`).join("")}</div>
     <div class="row" style="gap:.4rem;margin:.6rem 0;flex-wrap:wrap">
-      <button class="btn small" id="cbauto">Deck conseillé</button>
       <button class="btn small ghost" id="cbvider">Vider</button>
     </div>
     <div class="cblistedeck">${dansDeck.length ? dansDeck.map(x => `<div class="cbligne" data-cbretirer="${cbEsc(x.p.id)}"><span class="cbcout">${x.p.cout}</span><b>${cbEsc(x.p.nom)}</b><span class="sub">${x.p.type === "serviteur" ? x.p.atq + "/" + x.p.pv : x.p.type}</span><span>×${n[x.p.id]}</span><span class="cbmoins">−</span></div>`).join("") : `<p class="sub">Ajoutez 30 cartes ci-dessous, ou prenez le deck conseillé.</p>`}</div>
@@ -14069,8 +14155,18 @@ function cbVueDeck(corps){
     <div class="cbgrille">${cat.map(x => { const pris = n[x.p.id] || 0; return `<div class="cbcase ${pris >= x.max ? "plein" : ""}">${cbCarteHTML(x.p, {petite:true})}
       <div class="row" style="justify-content:space-between;align-items:center;margin-top:.25rem"><span class="sub" style="font-size:.74rem">${pris} / ${x.max}</span>
       <button class="btn small" data-cbajout="${cbEsc(x.p.id)}" ${pris >= x.max || ids.length >= 30 ? "disabled" : ""}>+</button></div></div>`; }).join("")}</div>`;
-  const maj = async nv => { await cbDeckEnregistrer(nv); cbVueDeck(corps); };
-  corps.querySelector("#cbauto").onclick = ()=>maj(cbDeckAuto());
+  const maj = async nv => { await cbDeckEnregistrer(nv); cbVueDeck(corps); if(CB.deckId && CB.surMaj) CB.surMaj(); };
+  corps.querySelectorAll("[data-cbstyle]").forEach(b => b.onclick = async ()=>{
+    const st = CB_STYLES[b.dataset.cbstyle];
+    if(ids.length && !(await demanderConfirmation("Style « " + st.nom + " »", "Le contenu actuel du deck sera remplacé par un deck " + st.nom.toLowerCase() + " composé avec vos cartes.", "Remplacer"))) return;
+    const nv = cbDeckAuto(b.dataset.cbstyle);
+    const d = cbDeckObj(); if(d) d.style = b.dataset.cbstyle;
+    await maj(nv);
+    toast("Deck " + st.nom.toLowerCase(), nv.length + " cartes", "info");
+  });
+  corps.querySelectorAll("[data-cbdeck]").forEach(b => b.onclick = async ()=>{ await cbChoisirDeck(b.dataset.cbdeck); cbVueDeck(corps); });
+  const nd = corps.querySelector("#cbdecknew"); if(nd) nd.onclick = async ()=>{ const d = cbNouveauDeck("Deck " + (cbDecks().length + 1)); await cbChoisirDeck(d.id); cbVueDeck(corps); };
+  const dp = corps.querySelector("#cbdeckperso"); if(dp) dp.onclick = ()=>{ if(courant){ state.deckEdit = {id:courant.id, kind:"combat"}; go("decks"); } };
   corps.querySelector("#cbvider").onclick = ()=>maj([]);
   corps.querySelectorAll("[data-cbretirer]").forEach(b => b.onclick = ()=>{ const i = ids.lastIndexOf(b.dataset.cbretirer); if(i >= 0){ ids.splice(i, 1); maj(ids); } });
   corps.querySelectorAll("[data-cbajout]").forEach(b => b.onclick = ()=>maj([...ids, b.dataset.cbajout]));
@@ -14519,62 +14615,89 @@ const btq = {articles:null, historique:[], erreur:"", achat:false};
 function soldeCristaux(){ return Math.max(0, Math.floor(+((state.profile || {}).cristaux) || 0)); }
 function lignesRpc(r, nom){ return (Array.isArray(r) ? r : r ? [r] : []).map(x => x && typeof x === "object" && nom in x && Object.keys(x).length === 1 ? x[nom] : x); }
 async function boutiqueCharger(){
-  /* La boutique ne charge plus le catalogue d'articles ou les achats en Cristaux.
-     Aucun achat de cartes, boosters ou objets n'est proposé depuis l'interface. */
-  btq.articles = [];
-  btq.historique = [];
-  btq.erreur = "";
+  /* Pas de cartes à vendre : la boutique propose le VIP et des fournitures de campagne. */
+  try{
+    const [a, h] = await Promise.all([
+      nuageRest("boutique?select=id,nom,description,prix,contenu&order=ordre.asc,prix.asc"),
+      nuageRest("achats?select=type,article,cristaux,motif,cree&order=cree.desc&limit=10")
+    ]);
+    btq.articles = Array.isArray(a) ? a : [];
+    btq.historique = Array.isArray(h) ? h : [];
+    btq.erreur = "";
+  }catch(e){ btq.erreur = String(e && e.message || e); if(!btq.articles) btq.articles = []; }
+}
+/* objets crédités par un article : {clé d'objet: quantité} */
+function articleObjets(a){
+  const o = a && a.contenu && a.contenu.inv && a.contenu.inv.inv;
+  return o && typeof o === "object" ? o : null;
 }
 function viewBoutique(){
   const vip = vipActif();
-  const dateVip = state.profile && state.profile.vip_jusqua && new Date(state.profile.vip_jusqua) > new Date() ? new Date(state.profile.vip_jusqua).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
+  const fin = state.profile && state.profile.vip_jusqua && new Date(state.profile.vip_jusqua) > new Date()
+    ? new Date(state.profile.vip_jusqua).toLocaleDateString("fr-FR", {day:"numeric", month:"long", year:"numeric"}) : "";
   const solde = soldeCristaux();
+  const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
+  const arts = btq.articles || [];
+  const vipArt = arts.find(a => a.id === "vip_annuel") || {id:"vip_annuel", nom:"VIP annuel", prix:1000};
+  const lots = arts.filter(a => articleObjets(a));
   const avantages = [
-    ["✦", "Contributions renforcées", "10 ajouts de cartes et 10 recadrages par jour au lieu de 5."],
-    ["▣", "Ouvertures en grand", "Débloquez les ouvertures groupées jusqu’à 100 boosters."],
-    ["♛", "Un profil qui se distingue", "Couronne dorée, polices gothiques et médiévales, jusqu’à 3 titres affichés."],
-    ["▧", "Une vitrine plus grande", "Mettez en avant jusqu’à 10 cartes et consultez l’album public des autres VIP."],
-    ["⚔", "Combats classés", "Accédez au mode classé et au classement mondial des 100 meilleurs joueurs."],
-    ["✧", "Historique et effets exclusifs", "Retrouvez vos 5 dernières ouvertures en détail et profitez d’effets de combat épiques."],
-    ["⚑", "Créez votre guilde", "Fondez votre propre guilde et rassemblez votre communauté."]
+    ["Combats classés", "le mode classé et le Top 100 mondial"],
+    ["Profil qui se distingue", "couronne, polices de pseudo, 3 titres, vitrine de 10 cartes"],
+    ["Ouvertures en grand", "jusqu'à 100 paquets d'un coup et l'historique détaillé"],
+    ["Plus de contributions", "10 ajouts et 10 recadrages par jour, création de guilde"]
   ];
-  view.innerHTML = `
-    <div class="vipshop">
-      <div class="vipshop-hero">
-        <div class="vipshop-glow" aria-hidden="true"></div>
-        <div class="vipshop-kicker">FANDOMASTERS · PRESTIGE</div>
-        <div class="vipshop-crown" aria-hidden="true">♛</div>
-        <h2>FandoMasters <span>VIP</span></h2>
-        <p class="vipshop-lead">Faites briller votre collection. Affirmez votre style. Prenez votre place parmi les collectionneurs.</p>
-        <div class="vipshop-price"><strong>1 000</strong><span>◆ Cristaux</span><i>pour 1 an</i></div>
-        ${vip ? `<div class="vipshop-status">${estAdmin() && !dateVip ? "✦ Accès DEV illimité" : `✓ Votre VIP est actif jusqu’au ${dateVip}`}</div>` : `<button class="vipshop-buy" id="vip-achat" ${btq.achat || solde < 1000 ? "disabled" : ""}>${btq.achat ? "Activation en cours…" : "Débloquer le VIP  ·  1 000 ◆"}<span>→</span></button><p class="vipshop-balance">Votre solde : <b>${solde.toLocaleString("fr-FR")} Cristaux</b>${solde < 1000 ? ` · Encore ${(1000-solde).toLocaleString("fr-FR")} à réunir` : " · Vous avez assez de Cristaux"}</p>`}
-        <div class="vipshop-trust"><span>✓ Paiement en Cristaux</span><span>✓ 12 mois d’accès</span><span>✓ Aucun achat de cartes</span></div>
+  const lotHTML = a => {
+    const [cle, n] = Object.entries(articleObjets(a))[0];
+    const it = item(cle), f = it ? FAM[it.fam] : null;
+    const place = it ? invFreeSpace(cle) >= n : false;
+    const ok = enLigne && !btq.achat && solde >= a.prix && place;
+    return `<article class="shoplot">
+      <div class="shoplot-pic">${it ? itemTile(cle, null) : ""}<span class="shoplot-n">×${n}</span></div>
+      <div class="shoplot-txt"><b>${esc(a.nom)}</b><span>${it ? `+${it.val} ${esc(f.unit)} par armement` : esc(a.description || "")}</span></div>
+      <div class="shoplot-buy">
+        <span class="shopprix">${CRISTAL} ${(+a.prix).toLocaleString("fr-FR")}</span>
+        <button class="btn small" data-acheter="${esc(a.id)}" ${ok ? "" : "disabled"}>${!place ? "Inventaire plein" : solde < a.prix ? "Cristaux insuffisants" : "Acheter"}</button>
       </div>
-      <section class="vipshop-benefits">
-        <div class="vipshop-sectionhead"><span class="vipshop-eyebrow">VOTRE COLLECTION, ENCORE PLUS LOIN</span><h3>Le VIP change votre expérience</h3><p>Des outils supplémentaires pour collectionner, personnaliser et jouer.</p></div>
-        <div class="vipshop-grid">${avantages.map(([ic,t,d])=>`<article class="vipshop-benefit"><span class="vipshop-benefit-icon">${ic}</span><div><h4>${t}</h4><p>${d}</p></div><span class="vipshop-check">✓</span></article>`).join("")}</div>
-      </section>
-      <section class="vipshop-compare">
-        <div class="vipshop-sectionhead"><span class="vipshop-eyebrow">SIMPLE ET TRANSPARENT</span><h3>Gratuit ou VIP ?</h3><p>Le VIP ajoute du confort et des options, sans avantage de puissance en combat.</p></div>
-        <div class="vipshop-tablewrap"><table class="vipshop-table"><thead><tr><th>Fonctionnalité</th><th>Gratuit</th><th class="vipcol">♛ VIP</th></tr></thead><tbody>
-          <tr><td>Ajouts de cartes / jour</td><td>5</td><td class="vipcol">10</td></tr>
-          <tr><td>Recadrages / jour</td><td>5</td><td class="vipcol">10</td></tr>
-          <tr><td>Ouvertures groupées</td><td>1 ou 10</td><td class="vipcol">1, 10 ou 100</td></tr>
-          <tr><td>Titres affichés</td><td>1</td><td class="vipcol">Jusqu’à 3</td></tr>
-          <tr><td>Cartes en vitrine</td><td>3</td><td class="vipcol">10</td></tr>
-          <tr><td>Police du pseudo personnalisée</td><td>—</td><td class="vipcol">Gothique / médiévale</td></tr>
-          <tr><td>Album public des VIP</td><td>—</td><td class="vipcol">✓</td></tr>
-          <tr><td>Combats classés et Top 100</td><td>—</td><td class="vipcol">✓</td></tr>
-          <tr><td>Historique détaillé et effets épiques</td><td>—</td><td class="vipcol">✓</td></tr>
-          <tr><td>Création de guilde</td><td>—</td><td class="vipcol">✓</td></tr>
-        </tbody></table></div>
-        ${vip ? `<p class="vipshop-foot">Merci de soutenir FandoMasters ✦ Votre accès VIP est actif.</p>` : `<button class="vipshop-buy vipshop-buy-bottom" id="vip-achat-bas" ${btq.achat || solde < 1000 ? "disabled" : ""}>Passer VIP pour 1 000 Cristaux <span>→</span></button><p class="vipshop-foot">Le VIP dure un an. Si vous êtes déjà abonné, un nouvel achat prolonge votre échéance actuelle.</p>`}
-      </section>
-    </div>`;
-  const buy = async ()=>acheterVipAnnuel();
-  const vipBuy = view.querySelector("#vip-achat"); if(vipBuy && !vip) vipBuy.onclick = buy;
-  const vipBuyBottom = view.querySelector("#vip-achat-bas"); if(vipBuyBottom && !vip) vipBuyBottom.onclick = buy;
-  if(btq.articles === null) boutiqueCharger();
+    </article>`;
+  };
+  view.innerHTML = `
+    <h2 class="vuetitre" data-ghost="BOUTIQUE">Boutique</h2>
+    <p class="sub">Le VIP et des fournitures pour vos campagnes. Aucune carte n'est vendue : elles se gagnent en ouvrant des paquets.</p>
+    <div class="shopsolde"><span>Votre solde</span><b>${CRISTAL} ${solde.toLocaleString("fr-FR")}</b><small>Cristaux</small></div>
+    ${btq.erreur ? `<div class="panel" style="margin-bottom:1rem"><b>Boutique indisponible pour l'instant</b><p class="sub" style="margin:.3rem 0 0">${esc(btq.erreur)}</p></div>` : ""}
+    ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
+
+    <section class="panel shopvip ${vip ? "actif" : ""}">
+      <div class="shopvip-txt">
+        <span class="shopvip-k">♛ Abonnement d'un an</span>
+        <h3>FandoMasters VIP</h3>
+        <ul>${avantages.map(([t, d]) => `<li><b>${t}</b><span>${d}</span></li>`).join("")}</ul>
+        <p class="sub">Confort et personnalisation : aucun avantage de puissance en combat.</p>
+      </div>
+      <div class="shopvip-buy">
+        ${vip ? `<span class="shopvip-ok">✓ VIP actif</span><small>${estAdmin() && !fin ? "accès développeur" : "jusqu'au " + fin}</small>
+                 ${!estAdmin() ? `<button class="btn ghost small" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>Prolonger d'un an · ${CRISTAL} ${(+vipArt.prix).toLocaleString("fr-FR")}</button>` : ""}`
+              : `<span class="shopprix grand">${CRISTAL} ${(+vipArt.prix).toLocaleString("fr-FR")}</span><small>pour 12 mois</small>
+                 <button class="btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>${btq.achat ? "Activation…" : solde < vipArt.prix ? "Cristaux insuffisants" : "Devenir VIP"}</button>`}
+      </div>
+    </section>
+    <details class="fold shopcomp"><summary>Gratuit ou VIP : le détail</summary><div class="shopcomp-in">
+      <table class="shoptable"><thead><tr><th></th><th>Gratuit</th><th>VIP</th></tr></thead><tbody>
+        ${[["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], ["Ouvertures groupées", "1 ou 10", "jusqu'à 100"],
+           ["Titres affichés", "1", "3"], ["Cartes en vitrine", "3", "10"], ["Police du pseudo", "—", "gothique, médiévale"], ["Album public", "—", "✓"],
+           ["Combats classés et Top 100", "—", "✓"], ["Historique des ouvertures", "—", "✓"], ["Création de guilde", "—", "✓"], ["Vote du plateau de combat", "—", "✓"]]
+          .map(([t, g, v]) => `<tr><td>${t}</td><td>${g}</td><td>${v}</td></tr>`).join("")}
+      </tbody></table></div></details>
+
+    <div class="sectionhead shopsect"><div><h3>Fournitures de campagne</h3><span class="sub">Rangées dans votre inventaire, à équiper sur vos escouades.</span></div></div>
+    ${btq.articles === null ? `<p class="sub">Chargement…</p>` : lots.length ? `<div class="shoplots">${lots.map(lotHTML).join("")}</div>` : `<p class="sub">Aucune fourniture pour le moment.</p>`}
+
+    ${btq.historique.length ? `<details class="fold shopcomp"><summary>Vos derniers achats</summary><ul class="btqhist">${btq.historique.map(h => `
+      <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
+        <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`;
+  const vb = view.querySelector("#vip-achat"); if(vb) vb.onclick = ()=>acheterVipAnnuel(vip);
+  view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{ const a = (btq.articles || []).find(x => x.id === b.dataset.acheter); if(a) acheterArticle(a); });
+  if(btq.articles === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
 }
 function demanderConfirmation(titre, texte, bouton){
   return new Promise(res => {
@@ -14596,10 +14719,10 @@ function demanderConfirmation(titre, texte, bouton){
     m.onclick = e => { if(e.target === m) fin(false); };
   });
 }
-async function acheterVipAnnuel(){
-  if(btq.achat || vipActif()) return;
-  if(soldeCristaux() < 1000){ toast("Cristaux insuffisants", "Il faut 1 000 Cristaux pour acheter le VIP annuel.", "lose"); return; }
-  if(!(await demanderConfirmation("FandoMasters VIP", "Acheter le VIP pour 1 000 Cristaux ? L'abonnement dure un an à partir de la date d'expiration actuelle ou d'aujourd'hui.", "Acheter"))) return;
+async function acheterVipAnnuel(prolonger){
+  if(btq.achat || (vipActif() && !prolonger)) return;
+  if(soldeCristaux() < 1000){ toast("Cristaux insuffisants", "Il faut 1 000 Cristaux pour le VIP annuel.", "lose"); return; }
+  if(!(await demanderConfirmation("FandoMasters VIP", prolonger ? "Prolonger votre VIP d'un an pour 1 000 Cristaux ?" : "Devenir VIP pendant un an pour 1 000 Cristaux ?", prolonger ? "Prolonger" : "Devenir VIP"))) return;
   btq.achat=true; viewBoutique();
   try{
     if(!REG.pret) throw new Error("serveur injoignable, réessayez dans un instant");
@@ -14617,6 +14740,10 @@ async function acheterVipAnnuel(){
 }
 async function acheterArticle(a){
   if(btq.achat) return;
+  const obj = articleObjets(a);
+  if(obj) for(const [cle, n] of Object.entries(obj)) if(invFreeSpace(cle) < n){
+    toast("Inventaire plein", "Libérez de la place ou agrandissez l'inventaire pour recevoir " + n + " objets.", "lose"); return;
+  }
   if(!(await demanderConfirmation(a.nom, "Acheter pour " + (+a.prix).toLocaleString("fr-FR") + " Cristaux ? Il vous en restera " + (soldeCristaux() - a.prix).toLocaleString("fr-FR") + ".", "Acheter"))) return;
   btq.achat = true;
   if(state.view === "shop") viewBoutique();
@@ -14636,7 +14763,7 @@ async function acheterArticle(a){
     await regPersister();
     regRebaser(ancien, REG.confirme);
     try{ sfx.coin(); }catch(e){}
-    toast(a.nom, "acheté · " + soldeCristaux().toLocaleString("fr-FR") + " Cristaux restants", "ach");
+    toast(a.nom, (obj ? "rangé dans votre inventaire · " : "acheté · ") + soldeCristaux().toLocaleString("fr-FR") + " Cristaux restants", "ach");
     logEvent("Boutique : " + a.nom, "gold");
   }catch(e){
     toast("Achat non effectué", regRefus(e) ? regRaison(e) : "réseau indisponible : rien n'a été débité deux fois, vérifiez votre solde dans un instant", "lose");
@@ -14980,7 +15107,7 @@ function viewInv(){
 }
 
 /* ---------- decks ---------- */
-const DECK_SIZES = {bataille:5, campagne:5};
+const DECK_SIZES = {bataille:5, campagne:5, combat:30};
 const DECK_COLORS = [
   {n:"Or",        a:"#E8B44C", b:"#8A6A27"},
   {n:"Sang",      a:"#E2574C", b:"#7A241E"},
@@ -14998,34 +15125,45 @@ function decks(kind){
   return kind ? all.filter(d=>d.kind === kind) : all;
 }
 function deckCards(d){ return d.cards.map(id=>state.collection.find(c=>c.id===id)).filter(Boolean); }
-function deckFull(d){ return deckCards(d).length === DECK_SIZES[d.kind]; }
+function deckFull(d){ return d.kind === "combat" ? cbValider(d.cards).ok : deckCards(d).length === DECK_SIZES[d.kind]; }
 
 function viewDecks(){
+  cbSorts(); cbMigrerDecks();
   if(state.deckEdit) return renderDeckEditor();
-  const all = decks();
+  const all = decks().slice().sort((a, b) => (a.kind === "combat" ? 0 : 1) - (b.kind === "combat" ? 0 : 1));
   view.innerHTML = `
     <h2 class="vuetitre">Decks</h2>
-    ${info("Comment marchent les decks ?", "<p class='sub' style='margin:0'>Un deck de combat réunit cinq cartes, prêtes à être envoyées dans l'arène d'un seul geste. Un deck de campagne en compte cinq aussi, mais seulement des Légendaires, Ultra rares ou Reliques. Chacun a son nom, sa couleur, son emblème et l'illustration d'une de vos cartes en couverture.</p>")}
+    ${info("Comment marchent les decks ?", "<p class='sub' style='margin:0 0 .5rem'><b>Deck de combat</b> : 30 cartes (serviteurs, sorts, armes) pour les combats contre le bot ou d'autres joueurs. Créez-en autant que vous voulez, avec un style différent pour chacun, et choisissez lequel emporter avant chaque partie.</p><p class='sub' style='margin:0'><b>Deck de campagne</b> : cinq Légendaires, Ultra rares ou Reliques envoyées en expédition.</p>")}
     <div class="row" style="margin:.8rem 0 1rem">
-      <button class="btn" data-new="bataille">Nouveau deck de combat</button>
+      <button class="btn" data-new="combat">Nouveau deck de combat</button>
       <button class="btn ghost" data-new="campagne">Nouveau deck de campagne</button>
     </div>
     ${all.length? all.map(d=>deckHTML(d, {actions:true})).join("")
       : `<div class="panel">Aucun deck pour l'instant.</div>`}`;
 
-  view.querySelectorAll("[data-new]").forEach(b=>b.onclick=()=>{
+  view.querySelectorAll("[data-new]").forEach(b=>b.onclick=async ()=>{
     const kind = b.dataset.new;
+    if(kind === "combat"){
+      const d = cbNouveauDeck("Deck " + (decks("combat").length + 1));
+      await sset("fm:profile", state.profile);
+      state.deckEdit = {id:d.id, kind:"combat"}; return renderDeckEditor();
+    }
     const col = DECK_COLORS[Math.floor(Math.random()*DECK_COLORS.length)];
     state.deckEdit = {id:"d"+Date.now(), kind, name: kind==="bataille"?"Nouvelle escouade":"Nouvelle escouade",
                       a:col.a, b:col.b, glyph:DECK_GLYPHS[Math.floor(Math.random()*DECK_GLYPHS.length)], cards:[]};
     renderDeckEditor();
   });
   view.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>{
-    state.deckEdit = JSON.parse(JSON.stringify(decks().find(d=>d.id===b.dataset.edit)));
+    const d = decks().find(x=>x.id===b.dataset.edit);
+    state.deckEdit = d.kind === "combat" ? {id:d.id, kind:"combat"} : JSON.parse(JSON.stringify(d));
     renderDeckEditor();
   });
+  view.querySelectorAll("[data-actif]").forEach(b=>b.onclick=async ()=>{ await cbChoisirDeck(b.dataset.actif); toast("Deck choisi pour les combats"); viewDecks(); });
   view.querySelectorAll("[data-del]").forEach(b=>b.onclick=async ()=>{
+    const d = decks().find(x=>x.id===b.dataset.del);
+    if(d && d.cards.length && !(await demanderConfirmation("Supprimer « " + d.name + " » ?", "Le deck est supprimé ; les cartes restent dans votre collection.", "Supprimer"))) return;
     state.profile.decks = decks().filter(d=>d.id !== b.dataset.del);
+    if(state.profile.deckCombatActif === b.dataset.del){ const n = decks("combat")[0]; state.profile.deckCombatActif = n ? n.id : null; state.profile.deckCombat = n ? n.cards.slice() : []; }
     await sset("fm:profile", state.profile);
     toast("Deck supprimé");
     viewDecks();
@@ -15041,6 +15179,8 @@ function deckCover(d){
 function deckHTML(d, opts={}){
   const cards = deckCards(d);
   const size = DECK_SIZES[d.kind];
+  const combat = d.kind === "combat", actif = combat && d.id === state.profile.deckCombatActif;
+  const nb = combat ? d.cards.length : cards.length;
   const cover = deckCover(d);
   const atk = cards.length ? Math.round(cards.reduce((n,c)=>n+c.atk,0)/cards.length) : 0;
   return `<div class="deck ${opts.sel?"sel":""}" style="--a:${esc(d.a)};--b:${esc(d.b)}" ${opts.pick?`data-pick="${esc(d.id)}"`:""}>
@@ -15050,16 +15190,17 @@ function deckHTML(d, opts={}){
         <span class="cover" ${cover?`style="background-image:url('${esc(cover)}')"`:""}></span>
         <span class="sheen"></span>
         <span class="em">${esc(d.glyph)}</span>
-        <span class="cnt">${cards.length}/${size}</span>
+        <span class="cnt">${nb}/${size}</span>
       </div>
       <div style="flex:1;min-width:0">
         <div class="nm">${esc(d.name)}</div>
-        <div class="sub" style="font-size:.84rem">${d.kind === "bataille" ? "Deck de combat" : "Deck de campagne"}${atk?` · ${atk.toLocaleString("fr-FR")} ATQ moyenne`:""}</div>
+        <div class="sub" style="font-size:.84rem">${combat ? "Deck de combat" + (d.style && CB_STYLES[d.style] ? " · " + CB_STYLES[d.style].nom : "") + (actif ? " · <b style='color:var(--p4)'>utilisé en combat</b>" : "") : "Deck de campagne" + (atk?` · ${atk.toLocaleString("fr-FR")} ATQ moyenne`:"")}</div>
         <div class="thumbs">${cards.slice(0,10).map(c=>`<span style="${c.img?`background-image:url('${esc(c.img)}')`:""}"></span>`).join("")}</div>
         ${deckFull(d)? `<span class="tag ok" style="margin-top:.4rem;display:inline-block">Prêt</span>`
           : `<span class="tag" style="margin-top:.4rem;display:inline-block">Incomplet</span>`}
       </div>
       ${opts.actions? `<span class="row" style="gap:.35rem">
+        ${combat && !actif ? `<button class="btn small" data-actif="${esc(d.id)}">Utiliser</button>` : ""}
         <button class="btn small ghost" data-edit="${esc(d.id)}">Modifier</button>
         <button class="btn small ghost" data-del="${esc(d.id)}">✕</button>
       </span>`:""}
@@ -15067,7 +15208,44 @@ function deckHTML(d, opts={}){
   </div>`;
 }
 
+function renderDeckEditorCombat(){
+  const d = decks("combat").find(x => x.id === state.deckEdit.id);
+  if(!d){ state.deckEdit = null; return viewDecks(); }
+  const sauver = ()=>sset("fm:profile", state.profile);
+  const actif = d.id === state.profile.deckCombatActif;
+  view.innerHTML = `
+    <div class="row" style="justify-content:space-between;align-items:center"><h2 class="vuetitre" style="margin:0">Deck de combat</h2>
+      <button class="btn small ghost" id="cancel">‹ Decks</button></div>
+    <div id="deckentete">${deckHTML(d)}</div>
+    <details class="fold" style="margin-bottom:1rem"><summary>Nom, couleur et emblème</summary><div style="padding:0 1.2rem 1.2rem">
+      <input id="dname" maxlength="26" value="${esc(d.name)}">
+      <div class="sub" style="margin:.9rem 0 .35rem">Couleur</div>
+      <div class="row">${DECK_COLORS.map(c=>`<button class="swatch" data-col="${esc(c.a)}|${esc(c.b)}" aria-pressed="${c.a===d.a}" title="${esc(c.n)}" style="background:linear-gradient(135deg,${c.a},${c.b})"></button>`).join("")}</div>
+      <div class="sub" style="margin:.9rem 0 .35rem">Emblème</div>
+      <div class="row">${DECK_GLYPHS.map(g=>`<button class="embtn" data-gl="${esc(g)}" aria-pressed="${g===d.glyph}">${esc(g)}</button>`).join("")}</div>
+      <div class="row" style="margin-top:.9rem"><button class="btn small ghost" id="pickcover">Illustration de la boîte</button>${d.cover? `<button class="btn small ghost" id="nocover">Retirer</button>`:""}</div>
+    </div></details>
+    <div class="row" style="margin:-.2rem 0 1rem;gap:.5rem;align-items:center">
+      ${actif ? `<span class="tag ok">Utilisé en combat</span>` : `<button class="btn small" id="utiliser">Utiliser pour les combats</button>`}
+      <button class="btn small ghost" id="fini">Terminé</button>
+    </div>
+    <div id="cbcorps"></div>`;
+  const ouvert = view.querySelector(".fold"); if(state.deckPerso) ouvert.open = true;
+  ouvert.ontoggle = ()=>{ state.deckPerso = ouvert.open; };
+  view.querySelector("#dname").onchange = async e=>{ d.name = e.target.value.trim().slice(0,26) || d.name; await sauver(); renderDeckEditorCombat(); };
+  view.querySelectorAll("[data-col]").forEach(b=>b.onclick=async ()=>{ const [a,bb] = b.dataset.col.split("|"); d.a=a; d.b=bb; await sauver(); renderDeckEditorCombat(); });
+  view.querySelectorAll("[data-gl]").forEach(b=>b.onclick=async ()=>{ d.glyph = b.dataset.gl; await sauver(); renderDeckEditorCombat(); });
+  view.querySelector("#pickcover").onclick = ()=>pickCard({title:"Illustration de la boîte", filter: c=>!!c.img, onPick:async c=>{ d.cover = c.id; await sauver(); renderDeckEditorCombat(); }});
+  const nc = view.querySelector("#nocover"); if(nc) nc.onclick = async ()=>{ d.cover = null; await sauver(); renderDeckEditorCombat(); };
+  const ut = view.querySelector("#utiliser"); if(ut) ut.onclick = async ()=>{ await cbChoisirDeck(d.id); toast("Deck choisi pour les combats"); renderDeckEditorCombat(); };
+  const fin = ()=>{ state.deckEdit = null; state.deckPerso = false; CB.deckId = null; viewDecks(); };
+  view.querySelector("#cancel").onclick = fin; view.querySelector("#fini").onclick = fin;
+  CB.deckId = d.id;
+  CB.surMaj = ()=>{ const e = view.querySelector("#deckentete"); if(e && state.deckEdit && state.deckEdit.id === d.id) e.innerHTML = deckHTML(d); };
+  cbVueDeck(view.querySelector("#cbcorps"));
+}
 function renderDeckEditor(){
+  if(state.deckEdit && state.deckEdit.kind === "combat") return renderDeckEditorCombat();
   const d = state.deckEdit;
   const size = DECK_SIZES[d.kind];
   const cards = deckCards(d);
@@ -18842,7 +19020,7 @@ function viewAventure(){
   view.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
 }
 function viewCollection(){
-  const all=decks(); const combat=all.filter(d=>d.kind==="bataille"); const campagne=all.filter(d=>d.kind==="campagne");
+  const all=decks(); const combat=all.filter(d=>d.kind==="combat"||d.kind==="bataille"); const campagne=all.filter(d=>d.kind==="campagne");
   let stacks=[]; try{stacks=inv();}catch(e){}
   let nbObjets=0; stacks.forEach(x=>nbObjets+=Number(x.n)||0);
   view.innerHTML=`<div class="pagehub">
@@ -19112,6 +19290,86 @@ function openSettings(){
 }
 .cbz-amenu,.cbrond{z-index:999!important;position:relative;pointer-events:auto!important;touch-action:manipulation!important}
 .cbpartie:not(.cbvote){isolation:isolate}
+
+/* ---- decks de combat : choix et remplissage par style ---- */
+.cbdeckhead{display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem;margin:0 0 .6rem}
+.cbdeckhead > div{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.cbdeckhead .sub{font-size:.82rem}
+.cbdeckchips{display:flex;gap:.5rem;overflow-x:auto;padding:.15rem .1rem .45rem;scrollbar-width:thin;margin-bottom:.4rem}
+.cbdeckchip{flex:none;display:flex;align-items:center;gap:.55rem;min-width:150px;max-width:220px;padding:.55rem .8rem .55rem .55rem;border-radius:16px;cursor:pointer;text-align:left;
+  font:inherit;color:var(--text);background:var(--creux);border:1px solid color-mix(in srgb,var(--text) 8%,transparent);transition:border-color .15s,background .15s,transform .15s}
+.cbdeckchip:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--a,var(--p4)) 60%,transparent)}
+.cbdeckchip .g{width:2.2rem;height:2.2rem;flex:none;border-radius:12px;display:grid;place-items:center;font-size:1.1rem;
+  background:linear-gradient(135deg,var(--a,#555),var(--b,#222));box-shadow:inset 0 1px 0 #ffffff40}
+.cbdeckchip .t{display:flex;flex-direction:column;min-width:0}
+.cbdeckchip b{font-size:.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbdeckchip small{font-size:.72rem;color:var(--muted)}
+.cbdeckchip.on{background:color-mix(in srgb,var(--p4) 16%,var(--surface));border-color:var(--p4);box-shadow:0 0 0 1px var(--p4) inset}
+.cbdeckchip.on small{color:var(--p4)}
+.cbdeckchip.plus .g{background:var(--creux);color:var(--p4);border:1px dashed color-mix(in srgb,var(--p4) 60%,transparent)}
+.cbstyles > div:first-child{display:flex;flex-direction:column;gap:.15rem;margin-bottom:.7rem}
+.cbstyles .sub{font-size:.82rem}
+.cbstylegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.55rem}
+.cbstyle{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;column-gap:.6rem;row-gap:.1rem;align-items:center;text-align:left;
+  padding:.7rem .8rem;border-radius:16px;cursor:pointer;font:inherit;color:var(--text);background:var(--creux);border:1px solid color-mix(in srgb,var(--text) 8%,transparent);transition:border-color .15s,transform .15s}
+.cbstyle:hover{border-color:var(--p4);transform:translateY(-1px)}
+.cbstyle .i{grid-row:1 / span 2;width:2.1rem;height:2.1rem;border-radius:11px;display:grid;place-items:center;background:color-mix(in srgb,var(--p4) 14%,transparent);color:var(--p4);font-size:1rem}
+.cbstyle b{font-size:.9rem}
+.cbstyle small{font-size:.72rem;line-height:1.3;color:var(--muted)}
+.cbchoixdeck .cbbilan{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding-top:.6rem;border-top:1px solid color-mix(in srgb,var(--text) 8%,transparent)}
+.cbchoixdeck .cbbilan > div{display:flex;flex-direction:column}
+
+/* ---- boutique : sobre, dans la charte du site ---- */
+.shopsolde{display:inline-flex;align-items:baseline;gap:.5rem;padding:.55rem 1rem;border-radius:999px;background:var(--creux);margin:0 0 1.2rem}
+.shopsolde span,.shopsolde small{font-size:.8rem;color:var(--muted)}
+.shopsolde b{font-family:var(--f-affiche);font-size:1.05rem}
+.shopvip{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1.4rem;align-items:center;margin-bottom:.8rem !important;
+  background:radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--p4) 18%,transparent),transparent 55%),linear-gradient(180deg,var(--surface),var(--surface-2)) !important}
+.shopvip-k{font-size:.72rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--p4)}
+.shopvip h3{font-family:var(--f-affiche);font-weight:900;font-stretch:118%;text-transform:uppercase;font-size:clamp(1.4rem,4vw,2rem);margin:.25rem 0 .8rem}
+.shopvip ul{list-style:none;margin:0 0 .7rem;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem 1.2rem}
+.shopvip li{display:flex;flex-direction:column;padding-left:1.1rem;position:relative}
+.shopvip li::before{content:"✓";position:absolute;left:0;top:0;color:var(--p4);font-weight:800}
+.shopvip li b{font-size:.92rem}.shopvip li span{font-size:.8rem;color:var(--muted)}
+.shopvip .sub{font-size:.78rem;margin:0}
+.shopvip-buy{display:flex;flex-direction:column;align-items:center;gap:.35rem;min-width:190px;padding:1rem 1.2rem;border-radius:18px;background:var(--creux);text-align:center}
+.shopvip-buy small{font-size:.78rem;color:var(--muted)}
+.shopvip-buy .btn{margin-top:.4rem;width:100%}
+.shopvip-ok{font-family:var(--f-affiche);font-weight:800;color:var(--p4);font-size:1.1rem}
+.shopprix{font-family:var(--f-affiche);font-weight:800;white-space:nowrap}
+.shopprix.grand{font-size:1.9rem;line-height:1}
+.shopcomp{margin-bottom:1.6rem}
+.shopcomp-in{padding:0 1.2rem 1.1rem;overflow-x:auto}
+.shoptable{width:100%;border-collapse:collapse;font-size:.85rem}
+.shoptable th,.shoptable td{padding:.5rem .4rem;text-align:left;border-bottom:1px solid color-mix(in srgb,var(--text) 7%,transparent)}
+.shoptable th{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.shoptable td:last-child,.shoptable th:last-child{color:var(--p4);font-weight:700}
+.shopsect{margin-top:.4rem !important}.shopsect .sub{font-size:.85rem}
+.shoplots{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.8rem;margin:.8rem 0 1.6rem}
+.shoplot{display:grid;grid-template-columns:auto 1fr;grid-template-rows:auto auto;gap:.6rem .9rem;align-items:center;padding:1rem;border-radius:var(--rayon);
+  background:linear-gradient(180deg,var(--surface),var(--surface-2));box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 9%,transparent)}
+.shoplot-pic{position:relative;width:64px;height:64px}
+.shoplot-pic .item{width:64px;height:64px}
+.shoplot-n{position:absolute;right:-6px;bottom:-6px;padding:.1rem .45rem;border-radius:999px;background:var(--p4);color:var(--sur-a2,#1a0f16);font-weight:800;font-size:.75rem}
+.shoplot-txt{display:flex;flex-direction:column;gap:.15rem;min-width:0}
+.shoplot-txt b{font-size:.95rem}.shoplot-txt span{font-size:.8rem;color:var(--muted)}
+.shoplot-buy{grid-column:1 / -1;display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding-top:.6rem;border-top:1px solid color-mix(in srgb,var(--text) 7%,transparent)}
+@media (max-width:640px){
+  .shopvip{grid-template-columns:1fr}
+  .shopvip ul{grid-template-columns:1fr}
+  .shopvip-buy{min-width:0}
+}
+
+/* ---- fiches de deck : surface sombre du site, couleur du deck en lueur ---- */
+.deck{border-radius:var(--rayon) !important;border:1px solid color-mix(in srgb,var(--a) 38%,transparent) !important;
+  background:radial-gradient(ellipse at 0% 50%,color-mix(in srgb,var(--a) 30%,transparent),transparent 62%),linear-gradient(180deg,var(--surface),var(--surface-2)) !important;
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--text) 9%,transparent),0 24px 48px -32px rgba(0,0,0,.7)}
+.deck .nm{font-family:var(--f-affiche);font-weight:800;color:var(--text);font-size:1.08rem}
+.deck .sub{color:var(--muted)}
+@media (max-width:640px){
+  .deck .in{flex-wrap:wrap}
+  .deck .in > .row{width:100%;justify-content:flex-end}
+}
 /* Noms longs des cartes de combat : retour à la ligne plutôt que coupés. */
 .cbbandeau span{overflow-wrap:anywhere;hyphens:auto}
 /* Barre du haut sur téléphone : une seule ligne, le pseudo se raccourcit au besoin. */
