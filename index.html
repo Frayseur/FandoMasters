@@ -4095,6 +4095,25 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 @media(prefers-reduced-motion:reduce){.fm-startup-track:after{animation:none;width:65%}.fm-startup-mark{animation:none}#fm-startup{transition:none}}
 
 
+
+/* Choix de classe : composants alignés sur la palette native FandoMasters */
+.cb-classes h3{margin:0 0 .75rem;color:var(--text,#f5eee4)}
+.cb-class-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.55rem}
+.cb-class-choice{min-height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem;border:1px solid var(--line,rgba(220,190,145,.25));border-radius:12px;background:var(--panel2,rgba(255,255,255,.035));color:var(--text,#f5eee4);font:inherit;cursor:pointer}
+.cb-class-choice span{font-size:1.35rem;color:var(--gold,#d9b77f)}
+.cb-class-choice b{font-size:.84rem;font-weight:650;color:#fff}
+.cb-class-choice.active{border-color:var(--gold,#d9b77f);background:rgba(217,183,127,.12);box-shadow:inset 0 0 0 1px rgba(217,183,127,.18)}
+.cbclass .cb-class-choice{color:#fff}
+@media(max-width:520px){.cb-class-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+
+<style id="fm-communaute-typo-blanche">
+/* Communauté : titres lisibles, sans bleu qui détonne avec la DA d’origine. */
+.pagehub.commhome .commhero .eyebrow,
+.pagehub.commhome .commhero h2,
+.pagehub.commhome .sectionhead h3,
+.pagehub.commhome .featurecard h3,
+.pagehub.commhome .commtile h3 { color:#fff !important; }
 </style>
 </head>
 <body>
@@ -13616,7 +13635,7 @@ const SORTS_DEFAUT = [
   {id:"sort:renfort", nom:"Renfort tactique", texte:"Donne +1 ATQ et +3 PV à un serviteur allié.", cout:2, effet:{type:"bonus", atq:1, pv:3}}
 ];
 const CB = {onglet:"jouer", profil:null, id:null, v:null, attente:null, erreur:"", envoi:false, lecture:false, mode:null, mull:new Set(),
-            niveau:"normal", code:"", dernierType:null, demarre:false, sorts:null, sig:"", recu:0, hors:0, cle:null, filtre:"", filtreT:"", fxPending:[], voteChoisi:null};
+            niveau:"normal", code:"", dernierType:null, demarre:false, sorts:null, sig:"", recu:0, hors:0, cle:null, filtre:"", filtreT:"", fxPending:[], voteChoisi:null, classeChoisie:"gardien", fxAdvSnapshot:null};
 
 /* ---- outils ---- */
 const cbEsc = esc;
@@ -13727,6 +13746,8 @@ function cbPortrait(moi, cote){
     if(img && !artRefusee(img)) return `<span class="vip-avatar-wrap"><img src="${cbEsc(img)}" alt="" draggable="false" onerror="this.remove()">${moi && vipActif() || profilVIPActif(cote)?vipCouronne():""}</span>`;
   }
   const nom = cote.pseudo || (moi ? "Vous" : "Adversaire");
+  const imgAdv = cote.avatarImg || cote.avatar_img || cote.photo || cote.avatar_url || cote.photo_profil || null;
+  if(!moi && imgAdv && !artRefusee(imgAdv)) return `<span class="vip-avatar-wrap"><img src="${cbEsc(imgAdv)}" alt="Photo de ${cbEsc(nom)}" draggable="false" onerror="this.style.display='none'"><span class="cbmono" hidden>${cbEsc(nom.slice(0,1).toUpperCase()||"?")}</span>${profilVIPActif(cote)?vipCouronne():""}</span>`;
   return `<span class="vip-avatar-wrap"><span class="cbmono">${cote.bot ? "⚙" : cbEsc(nom.replace(/^Bot\s*/i, "").slice(0, 1).toUpperCase() || "?")}</span>${moi && vipActif() || profilVIPActif(cote)?vipCouronne():""}</span>`;
 }
 function cbHerosHTML(cote, k, moi, opts = {}){
@@ -13972,6 +13993,12 @@ function cbVueJouer(corps){
   const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
   const occupe = CB.envoi || !!at || !enLigne;
   corps.innerHTML = `
+    <section class="panel cb-classes">
+      <h3>Choisir sa classe</h3>
+      <div class="cb-class-grid">${[
+        ["gardien","🛡","Gardien"],["duelliste","⚔","Duelliste"],["arcaniste","✦","Arcaniste"],["rodeur","➶","Rôdeur"]
+      ].map(([id,ic,label])=>`<button type="button" class="cb-class-choice ${CB.classeChoisie===id?"active":""}" data-cbclasse="${id}" aria-pressed="${CB.classeChoisie===id}"><span>${ic}</span><b>${label}</b></button>`).join("")}</div>
+    </section>
     ${cbRegles()}
     <div class="panel cbbilan">
       <div><b>Votre deck</b><span class="sub">${cbDeck().length} / 30 cartes</span></div>
@@ -13999,6 +14026,7 @@ function cbVueJouer(corps){
         <div class="row" style="gap:.4rem;margin-top:.5rem"><input id="cbcodein" maxlength="5" placeholder="CODE" value="${cbEsc(CB.code)}" style="flex:1;text-transform:uppercase;letter-spacing:.2em">
           <button class="btn small" data-cblancer="REJOINDRE" ${occupe || !val.ok ? "disabled" : ""}>Rejoindre</button></div></div>
     </div>`;
+  corps.querySelectorAll("[data-cbclasse]").forEach(b => b.onclick = async ()=>{ CB.classeChoisie=b.dataset.cbclasse; state.profile.combatClasse=CB.classeChoisie; await sset("fm:profile",state.profile); viewDuel(); });
   corps.querySelectorAll("[data-cbong2]").forEach(b => b.onclick = ()=>{ CB.onglet = b.dataset.cbong2; viewDuel(); });
   corps.querySelectorAll("[data-cbniv]").forEach(b => b.onclick = ()=>{ CB.niveau = b.dataset.cbniv; viewDuel(); });
   const ci = corps.querySelector("#cbcodein"); if(ci) ci.oninput = ()=>{ CB.code = ci.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5); };
@@ -14222,7 +14250,6 @@ function cbFxAttack(attackerId, targetId){
   setTimeout(impact,reduce?0:duration*.72);
 }
 function cbFxRun(){
-  if(!vipActif() && !estAdmin()){ CB.fxAttacks = []; CB.fxPending = []; return; }
   const attacks = CB.fxAttacks || [];
   CB.fxAttacks = [];
   attacks.forEach(a=>cbFxAttack(a.attacker,a.target));
@@ -14337,7 +14364,6 @@ function cbPeindre(force){
         ${cbMana(v.adv)}
       </div>
       <div class="cbz-amenu">
-        <button class="cbrond" id="cbmenu" title="Revenir au menu (la partie continue)" aria-label="Revenir au menu">☰</button>
         <button class="cbrond" id="cbmuter" title="${state.profile.mute ? "Réactiver les sons" : "Couper les sons"}" aria-label="${state.profile.mute ? "Réactiver les sons" : "Couper les sons"}">${state.profile.mute ? "🔇" : "🔊"}</button>
         ${fini ? "" : `<button class="cbrond" id="cbabandon" title="Abandonner" aria-label="Abandonner">⚑</button>`}
       </div>
@@ -14375,6 +14401,17 @@ function cbPeindre(force){
         }).join("")}</div>
       </div>`, (CB.mode ? "cibler " : "cbcombat ") + "theme-" + (v.moi.decor || "classique"));
   cbFxRun();
+  // Détecter les attaques adverses entre deux états reçus. Le clone visuel traverse
+  // le plateau depuis le véritable attaquant, même si le rendu vient du polling serveur.
+  try{
+    const snap = {v:v.version, units:(v.adv.plateau||[]).map(m=>({id:m.iid,n:m.attaques||0})), hero:!!v.adv.heros_attaque};
+    const prev = CB.fxAdvSnapshot;
+    if(prev && prev.v !== snap.v){
+      for(const m of snap.units){ const was=prev.units.find(x=>x.id===m.id); if(was && m.n>was.n) cbFxAttack(ak+":"+m.id,mk+":heros"); }
+      if(snap.hero && !prev.hero) cbFxAttack(ak+":heros",mk+":heros");
+    }
+    CB.fxAdvSnapshot=snap;
+  }catch(e){}
   // jouer une carte
   view.querySelectorAll("[data-jouer]").forEach(el => el.onclick = ()=>{
     const p = v.moi.main.find(x => x.iid === el.dataset.jouer); if(!p) return;
@@ -14413,7 +14450,6 @@ function cbPeindre(force){
   }; });
   const st = view.querySelector("#cbstop"); if(st) st.onclick = ()=>{ CB.mode = null; cbPeindre(true); };
   const fin = view.querySelector("#cbfin"); if(fin) fin.onclick = ()=>cbAgir({type:"fin_tour"});
-  const menu = view.querySelector("#cbmenu"); if(menu) menu.onclick = ()=>{ CB.mode = null; cbPleinEcran(false); go("hub"); };
   const mute = view.querySelector("#cbmuter"); if(mute) mute.onclick = async ()=>{
     state.profile.mute = !state.profile.mute;
     await sset("fm:profile", state.profile);
