@@ -4176,7 +4176,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.5";
+const BUILD = "V2.1.6";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -6884,6 +6884,15 @@ const sfx = {
   shield(){ tone(880,0,.18,{type:"sine",gain:.055,to:1320}); tone(1320,.07,.22,{type:"triangle",gain:.035,to:980}); },
   debuff(){ tone(390,0,.22,{type:"sawtooth",gain:.035,to:150}); noise(.025,.18,{gain:.035,freq:750,sweep:240}); },
   turn(){ tone(520,0,.09,{type:"triangle",gain:.035}); tone(690,.08,.13,{type:"triangle",gain:.04}); },
+  /* roue de la fortune */
+  roueClic(v){ const f = 1500 + v * 900; noise(0, 0.025, {gain:0.07, freq:f * 2.2, q:2.5}); tone(f, 0, 0.035, {type:"square", gain:0.035, to:f * 0.55}); },
+  roueDepart(){ noise(0, 0.55, {gain:0.06, freq:600, sweep:3400, q:0.6}); tone(180, 0, 0.5, {type:"sawtooth", gain:0.035, to:520}); },
+  roueGain(){ [523, 659, 784, 1047].forEach((f, i)=>{ tone(f, i * 0.09, 0.42, {type:"triangle", gain:0.075}); tone(f * 2, i * 0.09 + 0.02, 0.25, {type:"sine", gain:0.02}); });
+    noise(0.34, 0.6, {gain:0.045, freq:6200, sweep:2400}); [1319, 1568].forEach((f, i)=>tone(f, 0.42 + i * 0.07, 0.5, {type:"sine", gain:0.03})); },
+  roueJackpot(){ const n = [523, 659, 784, 1047, 784, 1047, 1319, 1568];
+    n.forEach((f, i)=>{ tone(f, i * 0.085, 0.5, {type:"sawtooth", gain:0.045}); tone(f * 1.006, i * 0.085, 0.5, {type:"triangle", gain:0.05}); });
+    tone(130.8, 0, 1.6, {type:"triangle", gain:0.07}); noise(0.7, 1.1, {gain:0.06, freq:7000, sweep:2500});
+    for(let k = 0; k < 9; k++) tone(1800 + (k % 3) * 400, 0.75 + k * 0.07, 0.12, {type:"sine", gain:0.03, to:2600}); },
   victory(){ [523,659,784,1047].forEach((f,i)=>tone(f,i*.11,.48,{type:"triangle",gain:.065})); noise(.25,.38,{gain:.035,freq:2600,sweep:4400}); },
   defeat(){ [392,330,247,165].forEach((f,i)=>tone(f,i*.13,.42,{type:"triangle",gain:.055,to:f*.72})); noise(.08,.38,{gain:.04,freq:550,sweep:110,q:.5}); }
 };
@@ -14611,11 +14620,12 @@ setInterval(()=>{
    coupure réseau ne débite jamais deux fois.
    ====================================================================== */
 const CRISTAL = "⬢";
-const btq = {articles:null, historique:[], erreur:"", achat:false};
+const btq = {articles:null, historique:[], erreur:"", achat:false, roue:null, tourne:false, angle:0, livraison:false};
 function soldeCristaux(){ return Math.max(0, Math.floor(+((state.profile || {}).cristaux) || 0)); }
 function lignesRpc(r, nom){ return (Array.isArray(r) ? r : r ? [r] : []).map(x => x && typeof x === "object" && nom in x && Object.keys(x).length === 1 ? x[nom] : x); }
 async function boutiqueCharger(){
   /* Pas de cartes à vendre : la boutique propose le VIP et des fournitures de campagne. */
+  regRpc("roue_etat").then(r => { btq.roue = r; if(state.view === "shop" && !btq.tourne) viewBoutique(); roueLivrerCartes(); }).catch(()=>{});
   try{
     const [a, h] = await Promise.all([
       nuageRest("boutique?select=id,nom,description,prix,contenu&order=ordre.asc,prix.asc"),
@@ -14630,6 +14640,165 @@ async function boutiqueCharger(){
 function articleObjets(a){
   const o = a && a.contenu && a.contenu.inv && a.contenu.inv.inv;
   return o && typeof o === "object" ? o : null;
+}
+/* ======================= roue de la fortune ======================= */
+const ROUE_STYLE = {
+  mana:{c:"#4a8fe8", ic:"★"}, coins:{c:"#c9a352", ic:"◆"}, renard:{c:"#e8743a", ic:"🦊"}, objet:{c:"#7d8796", ic:"⚔"}, cristaux:{c:"#d64fa0", ic:"⬢"},
+  "Rare":{c:"#2f9e8f", ic:"R"}, "Super rare":{c:"#c76f9c", ic:"SR"}, "Légendaire":{c:"#e2ae3c", ic:"♛"}
+};
+function roueStyle(l){ return l.t === "carte" ? ROUE_STYLE[l.r] : ROUE_STYLE[l.t]; }
+function roueSVG(segs){
+  const n = segs.length, a = 2 * Math.PI / n, R = 100;
+  const pt = (ang, r) => [Math.sin(ang) * r, -Math.cos(ang) * r];
+  return `<svg class="roue-svg" viewBox="-108 -108 216 216" aria-hidden="true">
+    <circle r="106" class="roue-bord"/>
+    <g id="roue-disque" style="transform:rotate(${btq.angle}deg)">
+      ${segs.map((l, i) => { const st = roueStyle(l), a0 = i * a, a1 = (i + 1) * a, [x0, y0] = pt(a0, R), [x1, y1] = pt(a1, R), [tx, ty] = pt((i + 0.5) * a, 78);
+        return `<path d="M0 0L${x0.toFixed(2)} ${y0.toFixed(2)}A${R} ${R} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}Z" fill="${st.c}" class="${i % 2 ? "imp" : ""}"/>
+          <text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" transform="rotate(${((i + 0.5) * 360 / n).toFixed(2)} ${tx.toFixed(2)} ${ty.toFixed(2)})" class="${st.ic.length > 1 && st.ic !== "🦊" ? "petit" : ""}">${st.ic}</text>`; }).join("")}
+      ${segs.map((_, i) => { const [x, y] = pt(i * a, R); return `<line x1="0" y1="0" x2="${x.toFixed(2)}" y2="${y.toFixed(2)}" class="roue-trait"/>`; }).join("")}
+      ${segs.map((_, i) => { const [x, y] = pt(i * a, 101.5); return `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="1.6" class="roue-clou"/>`; }).join("")}
+    </g>
+    <circle r="20" class="roue-moyeu"/><text class="roue-moyeu-t" y="1">⬢</text>
+  </svg>`;
+}
+function roueQuand(iso){
+  const d = new Date(iso), j = Math.round((new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 864e5);
+  const h = d.toLocaleTimeString("fr-FR", {hour:"2-digit", minute:"2-digit"});
+  return j <= 0 ? "aujourd'hui à " + h : j === 1 ? "demain à " + h : d.toLocaleDateString("fr-FR", {weekday:"long", day:"numeric", month:"long"}) + " à " + h;
+}
+function roueHTML(){
+  const r = btq.roue;
+  if(!r || !Array.isArray(r.segments)) return "";
+  const enLigne = nuageConfigure() && nuageConnecte() && REG.pret;
+  const lots = {}; r.segments.forEach(l => { const k = l.nom; (lots[k] = lots[k] || {l, n:0}).n++; });
+  const ordre = Object.values(lots).sort((a, b) => a.n - b.n);
+  return `<section class="panel roue">
+    <div class="roue-zone"><span class="roue-fleche"></span>${roueSVG(r.segments)}</div>
+    <div class="roue-txt">
+      <span class="shopvip-k">✦ Roue de la fortune</span>
+      <h3>Un tour offert ${r.vip ? "chaque jour" : "chaque semaine"}</h3>
+      <p class="sub">${r.vip ? "Avantage VIP : la roue se recharge tous les jours à minuit." : "La roue se recharge chaque lundi. Les VIP la font tourner tous les jours."}</p>
+      <button class="btn roue-go" id="roue-go" ${r.dispo && enLigne && !btq.tourne ? "" : "disabled"}>${btq.tourne ? "La roue tourne…" : r.dispo ? "Tourner la roue" : "Prochain tour " + roueQuand(r.prochaine)}</button>
+      <ul class="roue-lots">${ordre.map(({l, n}) => { const st = roueStyle(l); return `<li><i style="--c:${st.c}">${st.ic}</i><span>${esc(l.nom)}</span><small>${n} / ${r.segments.length}</small></li>`; }).join("")}</ul>
+    </div>
+  </section>`;
+}
+/* une carte tirée dans les univers, comme dans un booster */
+async function roueTirerCarte(rarete){
+  let pool = await ensurePool(); if(!pool.length) pool = state.pool;
+  await chargerRangs();
+  for(let t = 0; t < 10; t++){
+    try{
+      const w = universPourRang(pool, rarete, new Set(), null) || pool[Math.floor(Math.random() * pool.length)];
+      const c = await drawForRarity(w, rarete);
+      if(c && c.rarity === rarete) return c;
+    }catch(e){}
+  }
+  return null;
+}
+/* les cartes gagnées à la roue rejoignent la collection ; le serveur les garde jusque-là */
+async function roueLivrerCartes(prete){
+  if(btq.livraison || !btq.roue || !(btq.roue.cartes || []).length) return;
+  btq.livraison = true;
+  try{
+    for(const rarete of btq.roue.cartes.slice()){
+      const c = prete && prete.rarity === rarete ? prete : await roueTirerCarte(rarete);
+      prete = null;
+      if(!c) break;                                // réseau : on réessaiera à la prochaine visite
+      addCard(c);
+      await sset("fm:col", state.collection);
+      registrePlanifier("col");
+      try{ await regConfirmer(); }catch(e){}
+      btq.roue = await regRpc("roue_carte_recue", {p_rarete:rarete});
+      if(!btq.tourne) toast(c.title, "carte " + rarete.toLowerCase() + " de la roue · ajoutée à votre album", "ach");
+    }
+  }finally{ btq.livraison = false; }
+}
+/* le lot, en plein écran pendant trois secondes */
+function roueAfficherLot(lot, carte){
+  const st = roueStyle(lot);
+  const grand = lot.t === "cristaux" || lot.t === "renard" || lot.r === "Légendaire";
+  const m = document.createElement("div");
+  m.className = "rouelot" + (grand ? " grand" : "");
+  m.style.setProperty("--c", st.c);
+  m.innerHTML = `<div class="rouelot-rayons"></div>
+    <div class="rouelot-in">
+      <div class="rouelot-k">${grand ? "Jackpot !" : "Gagné !"}</div>
+      ${carte ? `<div class="rouelot-carte">${cardHTML(carte)}</div>` : `<div class="rouelot-ic">${st.ic}</div>`}
+      <div class="rouelot-nom">${esc(carte ? carte.title : lot.nom)}</div>
+      ${carte ? `<div class="rouelot-sous">${esc(lot.nom)} · ${esc(carte.univ || "")}</div>` : ""}
+    </div>`;
+  document.body.appendChild(m);
+  try{ grand ? sfx.roueJackpot() : sfx.roueGain(); }catch(e){}
+  return new Promise(res => {
+    const fin = ()=>{ if(!m.isConnected) return res(); m.classList.add("sort"); setTimeout(()=>{ m.remove(); res(); }, 350); };
+    setTimeout(fin, 3000);
+    m.onclick = fin;
+  });
+}
+async function roueTourner(){
+  if(btq.tourne || !btq.roue || !btq.roue.dispo) return;
+  btq.tourne = true; viewBoutique();
+  const cle = regUid();
+  let r = null;
+  try{
+    if(!REG.pret) throw new Error("serveur injoignable, réessayez dans un instant");
+    await regConfirmer(); REG.achat = true;
+    for(let i = 0; i < 50 && REG.enCours; i++) await new Promise(res => setTimeout(res, 100));
+    for(let essai = 1; ; essai++){
+      try{ r = await regRpc("roue_tourner", {p_cle:cle}); break; }
+      catch(e){ if(regRefus(e) || essai >= 4) throw e; await new Promise(res => setTimeout(res, 700 * essai)); }
+    }
+    const ancien = REG.confirme;
+    REG.confirme = {version:r.version, etat:r.etat || {}, cartes:regMap(r.cartes)};
+    await regPersister(); regRebaser(ancien, REG.confirme);
+  }catch(e){
+    REG.achat = false; btq.tourne = false;
+    toast("La roue n'a pas tourné", regRefus(e) ? regRaison(e) : "réseau indisponible : réessayez dans un instant", "lose");
+    try{ btq.roue = await regRpc("roue_etat"); }catch(e2){}
+    if(state.view === "shop") viewBoutique();
+    return;
+  }
+  REG.achat = false;
+  const lot = r.roue.lot, idx = r.roue.index;
+  btq.roue = r.roue_etat || btq.roue;
+  // une carte se tire pendant que la roue tourne
+  const carteP = lot.t === "carte" ? roueTirerCarte(lot.r).catch(()=>null) : Promise.resolve(null);
+  // rotation : plusieurs tours, puis arrêt au milieu de la case gagnante (avec un léger décalage naturel)
+  const n = btq.roue.segments.length, pas = 360 / n;
+  const cible = -((idx + 0.5) * pas) + (Math.random() - 0.5) * pas * 0.6;
+  const depart = btq.angle, fin = depart + 360 * 7 + ((cible - depart) % 360 + 360) % 360;
+  const disque = document.getElementById("roue-disque"), fleche = document.querySelector(".roue-fleche");
+  const duree = 5600, t0 = performance.now();
+  let caseVue = null, dernierClic = 0;
+  try{ sfx.roueDepart(); }catch(e){}
+  await new Promise(res => {
+    const pasAnim = now => {
+      const t = Math.min(1, (now - t0) / duree), e = 1 - Math.pow(1 - t, 4);
+      const ang = depart + (fin - depart) * e;
+      btq.angle = ang;
+      const d = document.getElementById("roue-disque"); if(d) d.style.transform = `rotate(${ang}deg)`;
+      const sous = Math.floor((((-ang) % 360 + 360) % 360) / pas);
+      if(sous !== caseVue){
+        caseVue = sous;
+        if(now - dernierClic > 28){ dernierClic = now; try{ sfx.roueClic(1 - t); }catch(e){}
+          const f = document.querySelector(".roue-fleche"); if(f){ f.classList.remove("clac"); void f.offsetWidth; f.classList.add("clac"); } }
+      }
+      if(t < 1) requestAnimationFrame(pasAnim); else res();
+    };
+    requestAnimationFrame(pasAnim);
+  });
+  btq.angle = fin % 360;
+  await new Promise(res => setTimeout(res, 350));
+  const carte = await Promise.race([carteP, new Promise(res => setTimeout(()=>res(null), 1500))]);
+  await roueAfficherLot(lot, carte);
+  btq.tourne = false;
+  logEvent("Roue : " + lot.nom, "gold");
+  render();                                                    // soldes et compteurs à jour
+  if(lot.t === "carte") await roueLivrerCartes(carte || await carteP);
+  if(lot.t === "renard") try{ majRenards(); }catch(e){}
+  if(state.view === "shop") viewBoutique();
 }
 function viewBoutique(){
   const vip = vipActif();
@@ -14666,6 +14835,7 @@ function viewBoutique(){
     <div class="shopsolde"><span>Votre solde</span><b>${CRISTAL} ${solde.toLocaleString("fr-FR")}</b><small>Cristaux</small></div>
     ${btq.erreur ? `<div class="panel" style="margin-bottom:1rem"><b>Boutique indisponible pour l'instant</b><p class="sub" style="margin:.3rem 0 0">${esc(btq.erreur)}</p></div>` : ""}
     ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
+    ${roueHTML()}
 
     <section class="panel shopvip ${vip ? "actif" : ""}">
       <div class="shopvip-txt">
@@ -14696,6 +14866,8 @@ function viewBoutique(){
       <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
         <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`;
   const vb = view.querySelector("#vip-achat"); if(vb) vb.onclick = ()=>acheterVipAnnuel(vip);
+  const rg = view.querySelector("#roue-go"); if(rg) rg.onclick = roueTourner;
+  if(!btq.roue && enLigne) regRpc("roue_etat").then(r => { btq.roue = r; if(state.view === "shop" && !btq.tourne) viewBoutique(); roueLivrerCartes(); }).catch(()=>{});
   view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{ const a = (btq.articles || []).find(x => x.id === b.dataset.acheter); if(a) acheterArticle(a); });
   if(btq.articles === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
 }
@@ -14735,6 +14907,7 @@ async function acheterVipAnnuel(prolonger){
     if(!state.profile) state.profile={}; state.profile.vip_jusqua=r.vip_jusqua || new Date(Date.now()+365*86400000).toISOString(); FM_VIP_JUSQUA = state.profile.vip_jusqua;
     await sset("fm:profile",state.profile);
     toast("VIP activé !", "Votre VIP annuel est actif.", "ach"); logEvent("Achat VIP annuel", "gold");
+    btq.roue = null;
   }catch(e){ toast("Achat non effectué", regRefus(e)?regRaison(e):"Erreur réseau ; vérifiez votre solde avant de réessayer.","lose"); if(!regRefus(e)) setTimeout(()=>registreVerifier(),3000); }
   finally{ REG.achat=false; btq.achat=false; render(); }
 }
@@ -19370,6 +19543,57 @@ function openSettings(){
   .deck .in{flex-wrap:wrap}
   .deck .in > .row{width:100%;justify-content:flex-end}
 }
+
+/* ---- roue de la fortune ---- */
+.roue{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1.6rem;align-items:center;margin-bottom:1rem !important;
+  background:radial-gradient(ellipse at 15% 50%,color-mix(in srgb,var(--p4) 16%,transparent),transparent 60%),linear-gradient(180deg,var(--surface),var(--surface-2)) !important}
+.roue-zone{position:relative;width:min(78vw,330px);aspect-ratio:1;flex:none}
+.roue-svg{width:100%;height:100%;display:block;filter:drop-shadow(0 18px 30px rgba(0,0,0,.55))}
+.roue-bord{fill:#1a1015;stroke:color-mix(in srgb,var(--p4) 70%,#fff);stroke-width:3}
+#roue-disque{transform-origin:0 0;will-change:transform}
+#roue-disque path{stroke:none}
+#roue-disque path.imp{filter:brightness(.78)}
+#roue-disque text{fill:#fff;font:800 11px var(--f-affiche,sans-serif);text-anchor:middle;dominant-baseline:central;paint-order:stroke;stroke:rgba(0,0,0,.45);stroke-width:2px}
+#roue-disque text.petit{font-size:8px}
+.roue-trait{stroke:rgba(0,0,0,.35);stroke-width:.6}
+.roue-clou{fill:#fff3d6;filter:drop-shadow(0 0 1px #000)}
+.roue-moyeu{fill:#1a1015;stroke:color-mix(in srgb,var(--p4) 70%,#fff);stroke-width:2.5}
+.roue-moyeu-t{fill:var(--p4);font:900 17px sans-serif;text-anchor:middle;dominant-baseline:central}
+.roue-fleche{position:absolute;left:50%;top:-6px;z-index:2;width:28px;height:36px;transform:translateX(-50%);transform-origin:50% 20%;
+  background:linear-gradient(#fff6e0,color-mix(in srgb,var(--p4) 60%,#fff));clip-path:polygon(50% 100%,0 0,100% 0);filter:drop-shadow(0 3px 4px rgba(0,0,0,.6))}
+.roue-fleche.clac{animation:roueClac .12s ease-out}
+@keyframes roueClac{40%{transform:translateX(-50%) rotate(-16deg)}}
+.roue-txt h3{font-family:var(--f-affiche);font-weight:900;font-stretch:118%;text-transform:uppercase;font-size:clamp(1.3rem,3.6vw,1.8rem);margin:.25rem 0 .4rem}
+.roue-txt .sub{font-size:.85rem;margin:0 0 .9rem}
+.roue-go{min-width:220px}
+.roue-go:not(:disabled){animation:rouePulse 2s ease-in-out infinite}
+@keyframes rouePulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--p4) 22%,transparent)}}
+.roue-lots{list-style:none;margin:1rem 0 0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.35rem .9rem}
+.roue-lots li{display:flex;align-items:center;gap:.5rem;font-size:.82rem;min-width:0}
+.roue-lots i{width:1.6rem;height:1.6rem;flex:none;border-radius:8px;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:.72rem;color:#fff;background:var(--c)}
+.roue-lots span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.roue-lots small{color:var(--muted);font-size:.72rem}
+@media (max-width:760px){ .roue{grid-template-columns:1fr;justify-items:center;text-align:center} .roue-lots{text-align:left} .roue-go{width:100%} }
+/* le lot gagné, en plein écran */
+.rouelot{position:fixed;inset:0;z-index:100001;display:grid;place-items:center;overflow:hidden;cursor:pointer;
+  background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--c) 45%,#120a10),#0b0609 70%);animation:rouelotIn .35s ease-out}
+.rouelot.sort{animation:rouelotOut .35s ease-in forwards}
+.rouelot-rayons{position:absolute;width:220vmax;height:220vmax;left:50%;top:45%;transform:translate(-50%,-50%);opacity:.35;
+  background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--c) 70%,#fff) 0 6deg,transparent 6deg 18deg);animation:rouelotTourne 9s linear infinite;
+  -webkit-mask:radial-gradient(circle,#000 0,transparent 55%);mask:radial-gradient(circle,#000 0,transparent 55%)}
+.rouelot-in{position:relative;display:flex;flex-direction:column;align-items:center;gap:.6rem;text-align:center;padding:1rem;animation:rouelotPop .6s cubic-bezier(.2,1.6,.4,1)}
+.rouelot-k{font-family:var(--f-affiche);font-weight:900;font-stretch:125%;text-transform:uppercase;letter-spacing:.06em;font-size:clamp(1.1rem,4vw,1.6rem);color:#fff;opacity:.9}
+.rouelot-ic{width:min(42vw,190px);aspect-ratio:1;border-radius:32%;display:grid;place-items:center;font-size:min(20vw,92px);font-weight:900;color:#fff;
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--c) 55%,#fff),var(--c) 60%,color-mix(in srgb,var(--c) 60%,#000));box-shadow:0 0 60px color-mix(in srgb,var(--c) 80%,transparent),inset 0 2px 0 #ffffff70}
+.rouelot-carte{width:min(56vw,250px);filter:drop-shadow(0 0 40px color-mix(in srgb,var(--c) 85%,transparent))}
+.rouelot-nom{font-family:var(--f-affiche);font-weight:900;font-size:clamp(1.6rem,6vw,2.8rem);line-height:1.05;color:#fff;text-shadow:0 4px 18px rgba(0,0,0,.6);max-width:90vw}
+.rouelot-sous{color:#ffffffc0;font-size:.95rem}
+.rouelot.grand .rouelot-k{color:#ffe08a}
+@keyframes rouelotIn{from{opacity:0}}
+@keyframes rouelotOut{to{opacity:0;transform:scale(1.04)}}
+@keyframes rouelotTourne{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes rouelotPop{from{transform:scale(.3);opacity:0}60%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.rouelot-rayons,.roue-go{animation:none}}
 /* Noms longs des cartes de combat : retour à la ligne plutôt que coupés. */
 .cbbandeau span{overflow-wrap:anywhere;hyphens:auto}
 /* Barre du haut sur téléphone : une seule ligne, le pseudo se raccourcit au besoin. */
