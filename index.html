@@ -4048,27 +4048,38 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 .commquick button{border:1px solid var(--line,#ffffff20);border-radius:999px;background:transparent;color:inherit;padding:.55rem .8rem;font:inherit;font-size:.82rem;cursor:pointer}
 @media(max-width:520px){.commhero{min-height:200px;border-radius:19px}.commtiles{gap:.6rem}.commtiles button{min-height:124px;padding:.8rem;border-radius:16px}.commtiles .tileicon{width:42px;height:42px;border-radius:13px}.commquick{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.commquick button{width:100%}}
 
-/* Écran d'attente initial : évite d'afficher une interface incomplète pendant le démarrage. */
-#fm-startup{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:24px;background:radial-gradient(ellipse at 50% 38%,#352923 0%,#201b18 58%,#151210 100%);color:#f7eadb;opacity:1;visibility:visible;transition:opacity .28s ease,visibility .28s ease;font-family:inherit}
+/* Écran d'accueil de chargement : reprend le vrai logo et la direction artistique du jeu. */
+#fm-startup{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:24px;background:radial-gradient(ellipse at 50% 36%,#49352a 0%,#29211d 42%,#171311 78%,#100e0c 100%);color:#f7eadb;opacity:1;visibility:visible;transition:opacity .36s ease,visibility .36s ease;font-family:inherit;isolation:isolate}
+#fm-startup:before,#fm-startup:after{content:"";position:absolute;z-index:-1;pointer-events:none;border-radius:50%;border:1px solid #d6b27b16;width:min(82vw,620px);aspect-ratio:1;box-shadow:0 0 90px #d6b27b08,inset 0 0 80px #d6b27b06}
+#fm-startup:after{width:min(65vw,470px);border-color:#d6b27b12}
 #fm-startup.fm-startup-hide{opacity:0;visibility:hidden;pointer-events:none}
-.fm-startup-card{width:min(100%,360px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:28px 22px;border:1px solid #c7a16b40;border-radius:22px;background:#ffffff08;box-shadow:0 18px 60px #0005}
-.fm-startup-mark{width:58px;height:58px;border-radius:18px;display:grid;place-items:center;background:linear-gradient(145deg,#e0bd83,#a87942);color:#261b13;font-size:30px;font-weight:900;box-shadow:0 8px 28px #0004}
-.fm-startup-title{font-size:1.55rem;font-weight:900;letter-spacing:-.04em}.fm-startup-title em{font-style:normal;color:#e3bd80}
-.fm-startup-sub{font-size:.9rem;color:#d4c4b2;line-height:1.5}
-.fm-startup-track{height:5px;width:min(100%,220px);overflow:hidden;border-radius:99px;background:#ffffff18;margin-top:3px}
-.fm-startup-track:after{content:"";display:block;width:38%;height:100%;border-radius:99px;background:#e3bd80;animation:fm-startup-progress 1.25s ease-in-out infinite}
-@keyframes fm-startup-progress{0%{transform:translateX(-110%)}100%{transform:translateX(370%)}}
-@media(prefers-reduced-motion:reduce){.fm-startup-track:after{animation:none;width:65%}#fm-startup{transition:none}}
+.fm-startup-card{position:relative;width:min(100%,390px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding:36px 26px 30px;border:1px solid #d8b98242;border-radius:26px;background:linear-gradient(145deg,#ffffff0d,#ffffff04);box-shadow:0 24px 90px #0008,inset 0 1px #ffffff0b;backdrop-filter:blur(8px)}
+.fm-startup-brand{display:flex;flex-direction:column;align-items:center;gap:13px}
+.fm-startup-mark{width:96px;height:96px;border-radius:26px;display:block;background-image:var(--logo);background-position:center;background-repeat:no-repeat;background-size:contain;filter:drop-shadow(0 9px 18px #0008);animation:fm-startup-float 2.8s ease-in-out infinite}
+.fm-startup-title{font-family:var(--f-marque,var(--f-titre,inherit));font-size:clamp(1.9rem,7vw,2.35rem);font-weight:900;letter-spacing:-.055em;line-height:1.05;text-shadow:0 3px 18px #0005}.fm-startup-title em{font-style:normal;color:#e3bd80}
+.fm-startup-kicker{font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;color:#d9b77f;font-weight:800;margin-top:1px}
+.fm-startup-sub{max-width:280px;font-size:.91rem;color:#d4c4b2;line-height:1.55;margin-top:1px}
+.fm-startup-track{height:5px;width:min(100%,240px);overflow:hidden;border-radius:99px;background:#ffffff18;margin-top:5px;box-shadow:inset 0 1px 2px #0004}
+.fm-startup-track:after{content:"";display:block;width:36%;height:100%;border-radius:99px;background:linear-gradient(90deg,#b68a54,#f0d6a2,#b68a54);box-shadow:0 0 12px #e3bd8050;animation:fm-startup-progress 1.35s ease-in-out infinite}
+.fm-startup-foot{font-size:.72rem;color:#a99888;letter-spacing:.035em;margin-top:0}
+@keyframes fm-startup-progress{0%{transform:translateX(-110%)}100%{transform:translateX(390%)}}
+@keyframes fm-startup-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@media(max-width:420px){.fm-startup-card{padding:30px 20px 25px;border-radius:23px}.fm-startup-mark{width:82px;height:82px;border-radius:22px}.fm-startup-sub{font-size:.86rem}}
+@media(prefers-reduced-motion:reduce){.fm-startup-track:after{animation:none;width:65%}.fm-startup-mark{animation:none}#fm-startup{transition:none}}
 
 </style>
 </head>
 <body>
 <div id="fm-startup" role="status" aria-live="polite" aria-label="Chargement de FandoMasters">
   <div class="fm-startup-card">
-    <div class="fm-startup-mark" aria-hidden="true">F</div>
-    <div class="fm-startup-title">Fando<em>M</em>asters</div>
+    <div class="fm-startup-brand">
+      <div class="fm-startup-mark" role="img" aria-label="Logo FandoMasters"></div>
+      <div class="fm-startup-title">Fando<em>M</em>asters</div>
+      <div class="fm-startup-kicker">Collection · Univers · Combats</div>
+    </div>
     <div class="fm-startup-sub">Préparation de votre collection et connexion au jeu…</div>
     <div class="fm-startup-track" aria-hidden="true"></div>
+    <div class="fm-startup-foot">Un instant, les univers se rassemblent.</div>
   </div>
 </div>
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
@@ -4357,7 +4368,7 @@ const UNIVERSES = [
   {label:"Peaky Blinders",     host:"peaky-blinders.fandom.com", cat:"Films & séries"},
   {label:"Shameless",          host:"shameless.fandom.com",     cat:"Films & séries"},
   // — lot du 11 octobre —
-  {label:"Junji Ito",         host:"junjiito.fandom.com",               cat:"Livres & mangas"},
+  {label:"Junji Ito",         host:"junji-ito.fandom.com",              cat:"Livres & mangas", path:"", pages:["Junji Ito Wiki"]},
   {label:"Inazuma Eleven",    host:"inazuma-eleven.fandom.com",         cat:"Livres & mangas"},
   {label:"Pixar",             host:"pixar.fandom.com",                  cat:"Films & séries"},
   {label:"DreamWorks",        host:"dreamworks.fandom.com",             cat:"Films & séries"},
