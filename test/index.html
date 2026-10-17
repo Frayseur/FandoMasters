@@ -1689,6 +1689,22 @@ body.cardopen .wrap,body.cardopen .nav{visibility:hidden}
 .arcade.lose .verdict{color:var(--red)}
 @keyframes slam{0%{transform:scale(1.7);opacity:0}60%{transform:scale(.94)}100%{transform:scale(1);opacity:1}}
 .lootlist{display:grid;gap:.4rem;margin:.2rem 0 .2rem}
+
+.cg-res{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin:.2rem 0 .9rem}
+.cg-chip{display:inline-flex;align-items:baseline;gap:.35rem;padding:.45rem .85rem;border-radius:999px;background:var(--ink-2);border:1px solid var(--line)}
+.cg-chip i{font-style:normal;color:#ffd36a}.cg-chip.mana i{color:#c9a7ff}
+.cg-chip b{font-size:1.15rem}.cg-chip small{color:var(--muted,#aaa);font-size:.75rem}
+.cg-titre{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.4rem .7rem;font-weight:700;margin:.2rem 0 .7rem}
+.cg-titre span{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center}
+.cg-titre em{font-style:normal;font-size:.75rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;color:var(--rc);border:1px solid color-mix(in srgb,var(--rc) 60%,transparent);background:color-mix(in srgb,var(--rc) 14%,transparent)}
+.cg-cartes{display:grid;gap:.7rem;justify-content:center;grid-template-columns:repeat(auto-fit,minmax(118px,170px))}
+.cg-cartes.n1{grid-template-columns:minmax(0,190px)}
+.cg-carte{display:flex;flex-direction:column;align-items:center;gap:.3rem;animation:cgIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.cg-carte>:first-child{width:100%}
+.cg-carte small{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#aaa)}
+@keyframes cgIn{from{opacity:0;transform:translateY(14px) scale(.92)}}
+@media (prefers-reduced-motion:reduce){.cg-carte{animation:none}}
+@media (max-width:520px){.cg-cartes{grid-template-columns:repeat(2,minmax(0,1fr))}.cg-cartes.n1{grid-template-columns:minmax(0,190px)}}
 .lootrow{display:flex;align-items:center;gap:.6rem;background:var(--ink-2);border:1px solid var(--line);
   border-radius:10px;padding:.55rem .7rem;font-weight:600;text-align:left}
 .lootrow .i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;
@@ -2325,6 +2341,7 @@ details.fold .in{padding-top:.6rem}
 body.overlay{overflow:hidden}
 body.overlay .wrap,body.overlay .nav,body.overlay .scrim{visibility:hidden}
 .modal .inner:not(.card .inner){background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:420px;width:100%;padding:1.1rem;max-height:88vh;overflow:auto}
+.modal .inner.camp-gains:not(.card .inner){max-width:min(720px,94vw)}
 .spinner{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--brass);animation:spin .8s linear infinite;display:inline-block;vertical-align:-5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .chip{background:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:.35rem .75rem;font-size:.85rem;color:var(--text)}
@@ -19407,30 +19424,46 @@ async function collectCamp(id){
     if(!gains.length && !cardWanted) gains.push({type:"coins", n:loot.coins, label:`${loot.coins} Fandominus`});
   }
 
+  /* Toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, chaque carte remplaçait la précédente). */
+  const ORDRE = ["Relique","Légendaire","Ultra rare","Super rare","Rare","Peu commun","Commun"];
+  const cartes = [];                 // {carte, quoi}
+  let attente = [cardWanted, card2Wanted, bossWanted, relicWanted].filter(Boolean).length;
   const m = document.createElement("div");
   m.className = "modal";
-  const paint = (cardHtml, pending)=>{
-    m.innerHTML = `<div class="inner arcade ${won?"win":"lose"}">
+  const paint = ()=>{
+    const tri = cartes.slice().sort((x,y)=>ORDRE.indexOf(x.carte.rarity) - ORDRE.indexOf(y.carte.rarity));
+    const parRar = {};
+    tri.forEach(x=>parRar[x.carte.rarity] = (parRar[x.carte.rarity]||0) + 1);
+    const ressources = gains.filter(g=>g.type==="coins"||g.type==="mana");
+    m.innerHTML = `<div class="inner arcade camp-gains ${won?"win":"lose"}">
       <div class="verdict">${won?"VICTOIRE !":"DÉFAITE."}</div>
       <p class="sub" style="text-align:center;margin:.2rem 0 .9rem">
         ${won ? `${esc(c.vilain)} est tombé à ${esc(c.lieu)}.` : `${esc(c.vilain)} a repoussé votre escouade à ${esc(c.lieu)}.`}
       </p>
-      ${won? `<div class="lootlist">
-        ${gains.map(g=>`<div class="lootrow"><span class="i">${g.type==="coins"?"◆":g.type==="mana"?"★":"▣"}</span><span>${esc(g.label)}</span></div>`).join("")}
-      </div>
-      ${cardHtml || (pending? `<p class="sub" style="text-align:center;margin:.6rem 0 0"><span class="spinner"></span> une carte ${esc(cardWanted)} vous est rapportée…</p>` : "")}`
+      ${won ? `
+        ${ressources.length ? `<div class="cg-res">${ressources.map(g=>`<span class="cg-chip ${g.type}"><i>${g.type==="coins"?"◆":"★"}</i><b>${g.n.toLocaleString("fr-FR")}</b><small>${g.type==="coins"?"Fandominus":"Mana"}</small></span>`).join("")}</div>` : ""}
+        ${tri.length ? `<div class="cg-titre">${tri.length} carte${tri.length>1?"s":""} rapportée${tri.length>1?"s":""}
+            <span>${Object.entries(parRar).map(([r,n])=>`<em style="--rc:${RAR_HEX[r]||(r==="Relique"?"#C9A7FF":"#E8B44C")}">${n} ${esc(r)}</em>`).join("")}</span></div>
+          <div class="cg-cartes n${Math.min(tri.length,4)}">${tri.map(x=>`<div class="cg-carte">
+            ${cardHTML(x.carte,{count:(owned(x.carte)||0)+1})}<small>${esc(x.quoi)}</small></div>`).join("")}</div>` : ""}
+        ${attente > 0 ? `<p class="sub" style="text-align:center;margin:.7rem 0 0"><span class="spinner"></span> ${attente>1?`${attente} récompenses sont en route…`:"une récompense est en route…"}</p>` : ""}`
       : `<p class="sub" style="text-align:center;margin:0 0 .9rem">Vos cartes rentrent intactes, mais les mains vides.</p>`}
-      <button class="btn" id="take" style="width:100%;margin-top:.9rem" ${pending?"disabled":""}>Récupérer</button>
+      <button class="btn" id="take" style="width:100%;margin-top:1rem" ${attente>0?"disabled":""}>Tout récupérer</button>
     </div>`;
     const take = m.querySelector("#take");
-    if(take && !pending) take.onclick = ()=>finishCollect(c, gains, m);
+    if(take && attente <= 0) take.onclick = ()=>finishCollect(c, gains, m);
   };
+  const obtenue = (carte, quoi, type, label)=>{
+    cartes.push({carte, quoi}); gains.push({type, label}); attente--; paint(); sfxForRarity(carte.rarity);
+  };
+  const perdue = ()=>{ attente--; paint(); };
 
-  paint(null, !!cardWanted || bossWanted);
+  paint();
   document.body.appendChild(m);
   if(won) sfx.fanfare(); else sfx.hurt();
 
-  if(bossWanted){
+  const taches = [];
+  if(bossWanted) taches.push((async()=>{
     let boss = null;
     try{
       await ensurePool();
@@ -19443,55 +19476,24 @@ async function collectCamp(id){
         }
       }
     }catch(e){}
-    if(boss){
-      c.boss = boss;
-      gains.push({type:"boss", label:`${boss.title} — carte ${boss.rarity}`});
-      paint(`<div style="max-width:175px;margin:.7rem auto 0">${cardHTML(boss,{count:(owned(boss)||0)+1})}</div>`, !!cardWanted);
-      sfxForRarity(boss.rarity);
-    }
-  }
-
-  if(relicWanted){
-    try{
-      await ensurePool();
-      const relic = await relicCard();
-      if(relic){
-        c.relicLoot = relic;
-        gains.push({type:"relic", label:`Artefact — ${relic.title}`});
-        paint(`<div style="max-width:175px;margin:.7rem auto 0">${cardHTML(relic)}</div>`, true);
-        sfx.legendary();
-      }
-    }catch(e){}
-  }
-
-  if(card2Wanted){
-    try{
-      const pool = await ensurePool();
-      const w = pool[Math.floor(Math.random()*pool.length)];
-      const extra = await drawForRarity(w, card2Wanted);
-      if(extra){
-        c.loot2 = extra;
-        gains.push({type:"card", label:`${extra.title} — ${extra.rarity}`});
-      }
-    }catch(e){}
-  }
-
-  if(cardWanted){
+    if(boss){ c.boss = boss; obtenue(boss, "Le vilain", "boss", `${boss.title} — carte ${boss.rarity}`); } else perdue();
+  })());
+  if(relicWanted) taches.push((async()=>{
+    let relic = null;
+    try{ await ensurePool(); relic = await relicCard(); }catch(e){}
+    if(relic){ c.relicLoot = relic; obtenue(relic, "Artefact", "relic", `Artefact — ${relic.title}`); } else perdue();
+  })());
+  if(card2Wanted) taches.push((async()=>{
+    let extra = null;
+    try{ const pool = await ensurePool(); const w = pool[Math.floor(Math.random()*pool.length)]; extra = await drawForRarity(w, card2Wanted); }catch(e){}
+    if(extra){ c.loot2 = extra; obtenue(extra, "Butin", "card", `${extra.title} — ${extra.rarity}`); } else perdue();
+  })());
+  if(cardWanted) taches.push((async()=>{
     let card = null;
-    try{
-      const pool = await ensurePool();
-      const w = pool[Math.floor(Math.random()*pool.length)];
-      card = await drawForRarity(w, cardWanted);
-    }catch(e){}
-    if(card){
-      c.loot = card;                                   // remise effective au clic
-      gains.push({type:"card", label:`Carte ${card.rarity} — ${card.title}`});
-      paint(`<div style="max-width:175px;margin:.7rem auto 0">${cardHTML(card,{count:(owned(card)||0)+1})}</div>`, false);
-      sfxForRarity(card.rarity);
-    } else {
-      paint(`<p class="sub" style="text-align:center;margin:.6rem 0 0">La carte promise s'est perdue en route.</p>`, false);
-    }
-  }
+    try{ const pool = await ensurePool(); const w = pool[Math.floor(Math.random()*pool.length)]; card = await drawForRarity(w, cardWanted); }catch(e){}
+    if(card){ c.loot = card; obtenue(card, "Butin", "card", `Carte ${card.rarity} — ${card.title}`); } else perdue();
+  })());
+  await Promise.all(taches);
 }
 
 async function finishCollect(c, gains, m){
@@ -19922,7 +19924,8 @@ const NOUVEAUTES = [
   {v:"V2.2.2", titre:"Nouveaux armements", points:[
     "Les quatre armements ont de vraies illustrations : épée en bois, pistolet de fortune, fusil à plasma, bombe nucléaire.",
     "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond.",
-    "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche."
+    "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche.",
+    "Fin de campagne : toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, la dernière cachait les autres)."
   ]},
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
@@ -20644,7 +20647,6 @@ body.holo-ouvert{overflow:hidden}
 .cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
 @media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
+<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
 </html>
-
-<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
