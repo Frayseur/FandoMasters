@@ -9478,7 +9478,7 @@ function majCartesPerso(col){
    Ce que le développeur accepte vaut tout de suite pour tous les joueurs : le
    jeu relit les recadrages et raretés acceptés (quelques octets) et les pose
    par-dessus CORRECTIONS. Intégrer le code reste possible, mais plus nécessaire. */
-const CORR_LIVE = {cad:{}, rar:{}, aj:{}};
+const CORR_LIVE = {cad:{}, rar:{}, aj:{}, emb:{}};
 let RAR_TITRE = null;
 function rareteDe(id){
   const l = CORR_LIVE.rar[id]; if(l && l.r) return l.r;
@@ -9602,8 +9602,28 @@ async function corrLiveCache(){
   try{
     const sig = String(hashId(JSON.stringify(CORRECTIONS)));
     const c = await sget("fm:corr-live", true);
-    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; RAR_TITRE = null; }
+    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; CORR_LIVE.emb = c.emb || {}; RAR_TITRE = null; appliquerEmblemes(); }
   }catch(e){}
+}
+/* emblèmes acceptés : la carte emblème d'un univers change pour tout le monde */
+let ICONIC_BASE = null;
+function appliquerEmblemes(){
+  try{
+    if(!ICONIC_BASE) ICONIC_BASE = Object.assign({}, ICONIC);
+    for(const [u, e] of Object.entries(CORR_LIVE.emb || {})) if(e && e.titre) ICONIC[u] = e.titre;
+  }catch(e){}
+}
+/* lit TOUTES les lignes, par pages de 1000 (et plus seulement les 1000 premières) */
+async function corrLivePages(base, depuis){
+  const out = []; let t = depuis || "";
+  for(let k = 0; k < 30; k++){
+    const page = await nuageRest(base + (t ? "&traite=gt." + encodeURIComponent(t) : "") + "&order=traite.asc&limit=1000");
+    if(!Array.isArray(page)) return k ? out : null;
+    out.push(...page);
+    if(page.length < 1000) break;
+    t = page[page.length - 1].traite || t;
+  }
+  return out;
 }
 function appliquerLive(){
   try{
@@ -9622,16 +9642,20 @@ async function chargerCorrectionsLive(force){
       const sig = String(hashId(JSON.stringify(CORRECTIONS)));
       let c = await sget("fm:corr-live", true);
       /* le code a changé (nouvelles corrections intégrées) : on repart de zéro */
-      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", cad:{}, rar:{}, aj:{}};
-      c.aj = c.aj || {}; c.ta = c.ta || "";
-      const [ps, vs] = await Promise.all([
-        nuageRest("propositions?statut=eq.acceptee&cadrage=not.is.null" + (c.tp ? "&traite=gt." + encodeURIComponent(c.tp) : "") +
-                  "&select=carte_id,cadrage,traite&order=traite.asc&limit=1000").catch(()=>null),
-        nuageRest("votes_cartes?statut=eq.acceptee&type=eq.rarete" + (c.tv ? "&traite=gt." + encodeURIComponent(c.tv) : "") +
-                  "&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite&order=traite.asc&limit=1000").catch(()=>null)
+      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", te:"", cad:{}, rar:{}, aj:{}, emb:{}};
+      c.aj = c.aj || {}; c.ta = c.ta || ""; c.emb = c.emb || {}; c.te = c.te || "";
+      const [ps, vs, as, es] = await Promise.all([
+        corrLivePages("propositions?statut=eq.acceptee&cadrage=not.is.null&select=carte_id,cadrage,traite", c.tp).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.rarete&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite", c.tv).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.ajout&select=sujet,carte,r:proposition->>rarete,traite", c.ta).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.embleme&select=sujet,univ:carte->>univ,titre:proposition->remplacant->>title,traite", c.te).catch(()=>null)
       ]);
-      const as = await nuageRest("votes_cartes?statut=eq.acceptee&type=eq.ajout" + (c.ta ? "&traite=gt." + encodeURIComponent(c.ta) : "") +
-                  "&select=sujet,carte,r:proposition->>rarete,traite&order=traite.asc&limit=1000").catch(()=>null);
+      for(const e of (es || [])){
+        if(!e.univ || !e.titre) continue;
+        const t = e.traite || "", o = c.emb[e.univ];
+        if(!o || t >= o.t) c.emb[e.univ] = {titre:e.titre, t};
+        if(t > c.te) c.te = t;
+      }
       for(const a of (as || [])){
         if(!a.sujet || !a.carte) continue;
         const t = a.traite || "", o = c.aj[a.sujet];
@@ -9651,10 +9675,11 @@ async function chargerCorrectionsLive(force){
         if(!o || t >= o.t) c.rar[v.sujet] = {r:v.r, titre:v.titre, univ:v.univ, t};
         if(t > c.tv) c.tv = t;
       }
-      if(ps || vs || as) await sset("fm:corr-live", c, true);
-      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj]);
-      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; RAR_TITRE = null;
-      change = avant !== JSON.stringify([c.cad, c.rar, c.aj]);
+      if(ps || vs || as || es) await sset("fm:corr-live", c, true);
+      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj, CORR_LIVE.emb]);
+      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; CORR_LIVE.emb = c.emb; RAR_TITRE = null;
+      appliquerEmblemes();
+      change = avant !== JSON.stringify([c.cad, c.rar, c.aj, c.emb]);
     }catch(e){}
     corrLiveVu = Date.now();
     return change;
@@ -10195,7 +10220,7 @@ function viewCommu(){
   }else if(ong === "export" && admin){
     const n = nbExport;
     corps = `<div class="panel">
-      ${n ? `<p class="sub" style="margin:0 0 .6rem">${n} correction${n > 1 ? "s" : ""} acceptée${n > 1 ? "s" : ""}, déjà actives pour tous les joueurs. Le code ci-dessous sert à les intégrer définitivement.</p>
+      ${n ? `<p class="sub" style="margin:0 0 .6rem">${n} correction${n > 1 ? "s" : ""} acceptée${n > 1 ? "s" : ""} : <b>déjà actives automatiquement pour tous les joueurs</b> (recadrages, raretés, ajouts et emblèmes). Rien à envoyer : la liste ci-dessous n'est qu'un historique.</p>
         <div class="mliste">${entreesExport(exportP, exportV).map(blocExport).join("")}</div>
         <div class="row" style="gap:.4rem;margin:.8rem 0 .4rem">
           <button class="btn small" id="pcopier">Copier le code</button>
@@ -10218,7 +10243,7 @@ function viewCommu(){
       ${tab("votes", "Votes", aVoter)}
       ${tab("recadrer", "Recadrer", 0)}
       ${tab("ajouts", "Ajouts", aVoterAj)}
-      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Export", nbExport) : ""}
+      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Intégrées", 0) : ""}
     </div>
     ${corps}`;
 
@@ -19771,7 +19796,8 @@ const NOUVEAUTES = [
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
     "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
-    "Communauté plus claire : une tuile Joueurs et une tuile Contributions, au lieu de neuf boutons."]},
+    "Communauté plus claire : une tuile Joueurs et une tuile Contributions, au lieu de neuf boutons.",
+    "Les contributions acceptées (recadrages, raretés, ajouts et emblèmes) s'appliquent toutes, tout de suite, chez tout le monde."]},
   {v:"V2.2.0", titre:"Ouverture holographique", points:[
     "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
     "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
