@@ -19586,7 +19586,7 @@ async function viewCatalog(){
       </div>
       <p class="sub" style="margin:.4rem 0 0">${list.length? `${Math.min(list.length,175)} emplacements répertoriés pour cet univers. Le wiki en compte des milliers d'autres : chaque carte tirée ailleurs vient s'ajouter en bas de page.` : "Ce wiki n'expose pas de palmarès exploitable ; seules vos cartes obtenues sont listées."}</p>
     </div>
-    <input id="catq" placeholder="Rechercher dans cet univers…" value="${esc(state.catQ||"")}" style="margin-bottom:.8rem">
+    <input id="catq" placeholder="Rechercher une carte, même pas encore trouvée…" value="${esc(state.catQ||"")}" style="margin-bottom:.8rem">
     <div id="catlist"></div>
   </div>`;
 
@@ -19740,11 +19740,71 @@ function renderCatList(){
     </div>`;
   }
 
+  /* au-delà du palmarès : toute carte du wiki, trouvée ou non */
+  if(q.length >= 2) html = `<div class="catsec" id="catwiki"><h3><span class="pill" style="background:#6E8BD8">Sur le wiki</span>
+      <span class="prog">recherche de « ${esc(state.catQ.trim())} »…</span></h3><div class="cgrid"></div></div>` + html;
   box.innerHTML = html || `<div class="panel">Rien à afficher pour cette recherche.</div>`;
   box.querySelectorAll(".cslot.got").forEach(el=>{
     el.onclick = ()=>showCard(state.collection.find(c=>c.id===el.dataset.id));
   });
   peindreFantomes(box, state.catW);
+  if(q.length >= 2) catWikiChercher(state.catW, state.catQ.trim(), new Set([...list.map(e => e.t), ...mine.map(c => c.title)]));
+}
+
+/* Recherche dans tout le wiki de l'univers, comme Wiki Masters : chaque résultat
+   devient la carte qu'il serait (même rareté, mêmes stats que s'il sortait d'un
+   paquet), grisée tant qu'on ne l'a pas. Résultats gardés en mémoire. */
+const CAT_WIKI = {cache:new Map(), jeton:0, minuteur:null};
+function catWikiChercher(w, q, dejaVus){
+  clearTimeout(CAT_WIKI.minuteur);
+  const mon = ++CAT_WIKI.jeton;
+  CAT_WIKI.minuteur = setTimeout(async ()=>{
+    const cle = w.host + (w.path || "") + "\u0001" + q.toLowerCase();
+    let cartes = CAT_WIKI.cache.get(cle);
+    if(!cartes){
+      try{
+        const d = await api({action:"query", list:"search", srsearch:q, srnamespace:"0", srlimit:"20", srwhat:"text"}, w);
+        /* un univers restreint à ses pages de référence ne tire rien d'autre : on n'affiche que celles-là */
+        const restreint = hotesRestreints().has(w.host), refs = new Set((state.catList || []).map(e => e.t));
+        const titres = ((d.query && d.query.search) || []).map(x => x.title)
+          .filter(t => t && !isRelic(t) && (!restreint || refs.has(t)) && !(restreint && HORS_SUJET.test(t))).slice(0, 12);
+        const liste = state.catList || [];
+        const pages = await Promise.all(titres.map(t => pageByTitle(w, t).catch(()=>null)));
+        cartes = pages.filter(p => p && p.thumbnail && !artRefusee(p.thumbnail.source)).map(p => makeCard(p, w, intrinsicRarity(p, liste, w)));
+        CAT_WIKI.cache.set(cle, cartes);
+      }catch(e){ cartes = null; }
+    }
+    if(mon !== CAT_WIKI.jeton || state.view !== "cat") return;
+    const sec = view.querySelector("#catwiki"); if(!sec) return;
+    const prog = sec.querySelector(".prog"), grille = sec.querySelector(".cgrid");
+    if(!cartes){ prog.textContent = "le wiki ne répond pas, réessayez"; return; }
+    const res = cartes.filter(c => !dejaVus.has(c.title));
+    if(!res.length){ prog.textContent = cartes.length ? "déjà toutes affichées plus haut" : "aucun résultat"; return; }
+    const a = res.filter(c => state.collection.some(x => x.id === c.id)).length;
+    prog.textContent = `${res.length} résultat${res.length > 1 ? "s" : ""} · ${a} obtenue${a > 1 ? "s" : ""}`;
+    grille.innerHTML = res.map(c => {
+      const moi = state.collection.find(x => x.id === c.id);
+      return moi ? `<div class="cslot got" data-id="${esc(moi.id)}">${cardHTML(moi)}</div>`
+                 : `<div class="cslot fantome" data-wiki="${esc(c.id)}">${cardHTML(c, {count:0})}<span class="lock">à trouver</span></div>`;
+    }).join("");
+    grille.querySelectorAll(".cslot.got").forEach(el => el.onclick = ()=>showCard(state.collection.find(c => c.id === el.dataset.id)));
+    grille.querySelectorAll("[data-wiki]").forEach(el => el.onclick = ()=>apercuNonTrouvee(res.find(c => c.id === el.dataset.wiki)));
+  }, CAT_WIKI.cache.size && CAT_WIKI.cache.has(w.host + (w.path || "") + "\u0001" + q.toLowerCase()) ? 0 : 450);
+}
+/* une carte pas encore trouvée, en grand : on voit ce qu'elle vaut, sans pouvoir l'utiliser */
+function apercuNonTrouvee(c){
+  if(!c) return;
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `<div class="inner" style="max-width:360px;text-align:center">
+      <div style="width:min(260px,70vw);margin:0 auto .8rem">${cardHTML(c, {count:0})}</div>
+      <p class="sub" style="margin:0 0 .3rem"><b>Pas encore dans votre collection.</b></p>
+      <p class="sub" style="margin:0 0 .8rem">Elle peut sortir des paquets de ${esc(c.univ)}, en ${esc(c.rarity)}.</p>
+      <button class="btn small ghost" id="anf">Fermer</button>
+    </div>`;
+  document.body.appendChild(m);
+  m.querySelector("#anf").onclick = ()=>m.remove();
+  m.onclick = ev => { if(ev.target === m) m.remove(); };
 }
 
 /* Les cartes pas encore trouvées restent visibles, grisées : on voit ce
@@ -19886,7 +19946,8 @@ const NOUVEAUTES = [
     "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
     "Communauté plus claire : une tuile Joueurs et une tuile Contributions, au lieu de neuf boutons.",
     "Les contributions acceptées (recadrages, raretés, ajouts et emblèmes) s'appliquent toutes, tout de suite, chez tout le monde.",
-    "Nouveau dans Contributions : proposer un nouveau nom ou un nouveau texte pour une carte (2 par jour, 10 avec le VIP)."]},
+    "Nouveau dans Contributions : proposer un nouveau nom ou un nouveau texte pour une carte (2 par jour, 10 avec le VIP).",
+    "Toutes les cartes : la recherche fouille maintenant tout le wiki de l'univers, y compris les cartes jamais trouvées."]},
   {v:"V2.2.0", titre:"Ouverture holographique", points:[
     "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
     "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
