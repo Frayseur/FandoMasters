@@ -19868,40 +19868,19 @@ function viewAventure(){
   const pr = CB.profil || {}, bilan = pr.bilan || {};
   const parties = Object.values(bilan).reduce((n, b) => n + (+(b && b.parties) || 0), 0), victoires = Object.values(bilan).reduce((n, b) => n + (+(b && b.victoires) || 0), 0);
   const imgs = vitImages(6);
-  const deckPilule = dk ? `<span class="vit-pilule">${esc(dk.glyph || "⚔")} ${esc(dk.name)} · ${dkOk ? "prêt" : dk.cards.length + " / 30"}</span>` : `<span class="vit-pilule">Aucun deck de combat</span>`;
-  const slides = [
-    {titre:"Combat de cartes", court:"Combat", art:"fmart-plateau", g1:"#d64fa0", g2:"#ff8a3c",
-     titreHTML:`Combat <em>de cartes</em>`, tags:["30 cartes", "Serviteurs", "Sorts", "Contre le bot ou des joueurs"], bas:deckPilule,
-     texte:"Votre héros à 30 PV, votre deck de 30 cartes, et un adversaire en face. Entraînement contre le bot, partie en ligne ou salon entre amis.",
-     prix:parties ? `${victoires} victoire${victoires > 1 ? "s" : ""} · ${parties} partie${parties > 1 ? "s" : ""}` : "",
-     bouton:`<button class="btn vit-btn" data-avgo="duel">Jouer</button>`},
-    {titre:"Combat classé", court:"Classé", art:"fmart-cyber", g1:"#7a3cff", g2:"#d64fa0",
-     titreHTML:`Combat <em>classé</em>`, tags:["VIP", "Cote Elo", "Top 100 mondial"],
-     bas:`<span class="vit-pilule">${pr.cote ? "Votre cote : " + pr.cote + (pr.rang ? " · rang " + pr.rang : "") : "Cote de départ : 1 000"}</span>`,
-     texte:"Affrontez les meilleurs joueurs : chaque victoire fait monter votre cote, et le Top 100 est affiché dans le classement mondial.",
-     prix:vip ? "" : "Réservé aux VIP",
-     bouton:vip ? `<button class="btn vit-btn" data-avgo="duel">Entrer dans le classé</button>` : `<button class="btn vit-btn" data-avgo="shop">Découvrir le VIP</button>`},
-    {titre:"Campagnes", court:"Campagnes", art:imgs[0] || "fmart-taverne", g1:"#e2ae3c", g2:"#c3261c",
-     titreHTML:`Campagnes <em>& expéditions</em>`, tags:["Escouades de 5", "Boss d'univers", "Armements"],
-     bas:`<span class="vit-pilule">${actifs ? actifs + " expédition" + (actifs > 1 ? "s" : "") + " en cours" : termines ? termines + " rapport" + (termines > 1 ? "s" : "") + " à lire" : debloquee ? "Aucune expédition en cours" : "À débloquer"}</span>`,
-     texte:debloquee ? "Envoyez vos meilleures cartes en expédition dans les théâtres d'opérations et affrontez les boss d'univers." : "Améliorez votre atelier et réunissez des Légendaires, Ultra rares ou Reliques pour ouvrir les campagnes.",
-     bouton:`<button class="btn vit-btn" data-avgo="camp">${debloquee ? "Voir les campagnes" : "Voir les conditions"}</button>`}
-  ];
   const covers = [
-    {titre:"Entraînement", sous:"contre le bot · facile, normal, difficile", art:"fmart-plateau", large:true, badge:"⚔", attrs:`data-avgo="duel"`},
+    {titre:"Entraînement", sous:parties ? `${victoires} victoire${victoires > 1 ? "s" : ""} · ${parties} partie${parties > 1 ? "s" : ""}` : "contre le bot · facile, normal, difficile", art:"fmart-plateau", large:true, badge:"⚔", attrs:`data-avgo="duel"`},
     {titre:"En ligne", sous:"un adversaire au hasard", art:imgs[1] || "fmart-cyber", attrs:`data-avgo="duel"`},
     {titre:"Entre amis", sous:"salon avec un code", art:"fmart-taverne", attrs:`data-avgo="duel"`},
-    {titre:"Classé", sous:vip ? "cote et Top 100" : "réservé aux VIP", art:"fmart-cyber", large:true, badge:"♛", attrs:`data-avgo="${vip ? "duel" : "shop"}"`},
-    {titre:"Campagnes", sous:actifs ? actifs + " en cours" : "expéditions et boss", s3:true, art:imgs[2] || "fmart-taverne", attrs:`data-avgo="camp"`},
+    {titre:"Classé", sous:vip ? (pr.cote ? "votre cote : " + pr.cote : "cote et Top 100") : "réservé aux VIP", art:"fmart-cyber", large:true, badge:"♛", attrs:`data-avgo="${vip ? "duel" : "shop"}"`},
+    {titre:"Campagnes", sous:termines ? termines + " rapport" + (termines > 1 ? "s" : "") + " à lire" : actifs ? actifs + " en cours" : debloquee ? "expéditions et boss" : "à débloquer", s3:true, art:imgs[2] || "fmart-taverne", attrs:`data-avgo="camp"`},
     {titre:"Mes decks", sous:dk ? esc(dk.name) + (dkOk ? " · prêt" : "") : "créer un deck", s3:true, art:imgs[3] || "fmart-plateau", attrs:`data-avgo="decks"`}
   ];
   view.innerHTML = `
     <h2 class="vuetitre" data-ghost="COMBATS">Combats & campagnes</h2>
-    ${vitrineHTML("aventure", slides)}
     <div class="sectionhead vit-sect"><div><h3>Modes de jeu</h3></div><button type="button" class="btn small ghost" data-avgo="duel">Règles et classement</button></div>
     <div class="covers">${covers.map(coverHTML).join("")}</div>`;
   view.querySelectorAll("[data-avgo]").forEach(b => b.onclick = ()=>{ if(b.dataset.avgo === "duel") CB.onglet = "jouer"; go(b.dataset.avgo); });
-  vitrineBrancher("aventure", slides.length, ()=>{ if(state.view === "aventure") viewAventure(); });
   if(!CB.profil) try{ cbProfilCharger().then(()=>{ if(state.view === "aventure") viewAventure(); }); }catch(e){}
 }
 function viewCollection(){
@@ -19925,6 +19904,7 @@ const NOUVEAUTES = [
     "Les quatre armements ont de vraies illustrations : épée en bois, pistolet de fortune, fusil à plasma, bombe nucléaire.",
     "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond.",
     "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche.",
+    "Combats & campagnes : la grande bannière en double a disparu, les modes de jeu sont affichés directement.",
     "Fin de campagne : toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, la dernière cachait les autres)."
   ]},
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
@@ -20647,6 +20627,7 @@ body.holo-ouvert{overflow:hidden}
 .cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
 @media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
-<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
 </html>
+
+<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
