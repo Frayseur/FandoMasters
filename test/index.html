@@ -12297,6 +12297,7 @@ function rollItem(kind){
 }
 function pickRank(kind){
   const fam = ["heal","dmg","arm"][Math.floor(Math.random()*3)];
+  if(fam !== "arm") return null;   // les potions ne servent plus : plus distribuées
   const x = Math.random();
   const rank = kind === "normal" ? (x < 0.70 ? 1 : x < 0.95 ? 2 : 3)
                                  : (x < 0.40 ? 1 : x < 0.80 ? 2 : 3);
@@ -15784,18 +15785,22 @@ function itemSVGMini(key){ return `<span class="isvgmini">${itemSVG(key)}</span>
 function itemShort(key){ return item(key).name.replace(/^Potion de (vie|dégât) /,"").replace(/^Armement /,""); }
 
 function inv(){ return state.profile.inv || (state.profile.inv = []); }
+/* Potions : plus utilisées. Celles déjà possédées restent dans la sauvegarde (rien n'est effacé),
+   mais ne s'affichent plus et n'occupent plus d'emplacement. */
+function estPotion(key){ const d = item(key); return !!d && d.fam !== "arm"; }
+function invVisible(){ return inv().filter(s=>!estPotion(s.key)); }
 function invSlots(){ return INV_BASE + INV_STEP*(state.profile.invUp||0); }
 function countItem(key){ return inv().filter(s=>s.key===key).reduce((n,s)=>n+s.n, 0); }
 function invFreeSpace(key){
   const open = inv().filter(s=>s.key===key).reduce((n,s)=>n+(STACK-s.n), 0);
-  return open + (invSlots() - inv().length)*STACK;
+  return open + Math.max(0, invSlots() - invVisible().length)*STACK;
 }
 function addItem(key, n=1){
   let left = n;
   inv().filter(s=>s.key===key && s.n<STACK).forEach(s=>{
     const take = Math.min(STACK-s.n, left); s.n += take; left -= take;
   });
-  while(left > 0 && inv().length < invSlots()){
+  while(left > 0 && invVisible().length < invSlots()){
     const take = Math.min(STACK, left);
     inv().push({key, n:take}); left -= take;
   }
@@ -15839,36 +15844,27 @@ function itemTile(key, n, opts={}){
 
 function viewInv(){
   const p = state.profile;
-  p.hotbar = p.hotbar || [null,null,null,null,null,null,null,null];
   const up = p.invUp||0;
   const price = up < INV_MAX_UP ? INV_PRICES[up] : null;
 
-  const stacks = inv();
-  const parFam = f => stacks.filter(st => item(st.key).fam === f).reduce((n,st)=>n+st.n, 0);
+  const stacks = invVisible();
+  const total = stacks.reduce((n,st)=>n+st.n, 0);
   const libres = Math.max(0, invSlots() - stacks.length);
 
   view.innerHTML = `
     <h2 class="vuetitre">Inventaire</h2>
 
     <div class="invstats">
-      <div><span class="is">${itemSVGMini("heal1")}</span><b>${parFam("heal")}</b><small>Fioles de soin</small></div>
-      <div><span class="is">${itemSVGMini("dmg1")}</span><b>${parFam("dmg")}</b><small>Fioles de dégâts</small></div>
-      <div><span class="is">${itemSVGMini("arm1")}</span><b>${parFam("arm")}</b><small>Armements</small></div>
+      <div><span class="is">${itemSVGMini("arm1")}</span><b>${total}</b><small>Armements</small></div>
       <div><span class="is sq"></span><b>${libres}</b><small>Emplacements libres</small></div>
     </div>
 
-    <h3>Barre rapide <span class="sub" style="font-weight:300;font-size:.78rem;text-transform:none;letter-spacing:0">· reprise en bataille</span></h3>
-    <div class="hotbar">${p.hotbar.map((k,i)=>`<div class="hslot ${k?"full":""}" data-h="${i}">
-      ${k && countItem(k) ? itemTile(k, countItem(k)) : `<span class="num">${i+1}</span>`}
-    </div>`).join("")}</div>
-
     <h3>Sacoche <span class="sub" style="font-weight:300;font-size:.78rem;text-transform:none;letter-spacing:0">· ${stacks.length} / ${invSlots()} emplacements, piles de ${STACK}</span></h3>
     <div class="invgrid">
-      ${stacks.map((st,i)=>`<div class="istack" data-st="${i}" title="${esc(item(st.key).name)}">
-        ${itemTile(st.key, st.n, {click:true, sel:(p.hotbar||[]).includes(st.key)})}</div>`).join("")}
+      ${stacks.map(st=>`<div class="istack" title="${esc(item(st.key).name)}">${itemTile(st.key, st.n)}</div>`).join("")}
       ${Array.from({length:libres},()=>`<div class="istack empty"><span class="vide"></span></div>`).join("")}
     </div>
-    ${stacks.length ? "" : `<p class="sub" style="margin:.7rem 0 0">Sacoche vide. Les potions et armements se trouvent dans les boosters, se forgent à l'atelier, ou tombent des campagnes.</p>`}
+    ${stacks.length ? "" : `<p class="sub" style="margin:.7rem 0 0">Sacoche vide. Les armements se trouvent dans les boosters, se forgent à l'Atelier ou s'achètent en Boutique.</p>`}
 
     <div class="panel" style="margin-top:1.4rem">
       <h3 style="margin-top:0">Agrandir la sacoche</h3>
@@ -15879,39 +15875,14 @@ function viewInv(){
     </div>
 
     <details class="fold" style="margin-top:1.2rem">
-      <summary>Que font ces objets ?</summary>
+      <summary>À quoi servent les armements ?</summary>
       <div class="in">
-        ${["heal","dmg","arm"].map(f=>`<p class="sub" style="margin:.3rem 0"><b>${FAM[f].label}</b> — ${
-          f==="heal"?"utilisable en bataille, rend des points de vie."
-          :f==="dmg"?"utilisable en bataille, blesse l'adversaire sur-le-champ."
-          :"s'attache à une carte partant en campagne et gonfle ses dégâts. Consommé au retour, rendu si vous rappelez l'escouade."}</p>
-          <div class="row" style="gap:.4rem;margin-bottom:.6rem">${ITEMS.filter(i=>i.fam===f).map(i=>
-            `<span class="itemline">${itemSVGMini(i.key)}<b>${esc(itemShort(i.key))}</b><small>${i.fam==="arm"?"+"+i.val+" dégâts":i.val+(i.fam==="heal"?" PV":" dégâts")}</small></span>`).join("")}</div>`).join("")}
+        <p class="sub" style="margin:.3rem 0">Un armement s'attache à une carte qui part en campagne et augmente ses dégâts. Il est consommé au retour, et rendu si vous rappelez l'escouade.</p>
+        <div class="row" style="gap:.4rem;margin-bottom:.6rem">${ITEMS.filter(i=>i.fam==="arm").map(i=>
+          `<span class="itemline">${itemSVGMini(i.key)}<b>${esc(itemShort(i.key))}</b><small>+${i.val} dégâts</small></span>`).join("")}</div>
       </div>
     </details>`;
 
-
-  view.querySelectorAll("[data-st]").forEach(el=>el.onclick = async ()=>{
-    const st = inv()[+el.dataset.st];
-    if(!st) return;
-    const hb = p.hotbar;
-    const at = hb.indexOf(st.key);
-    if(at >= 0){ hb[at] = null; }
-    else {
-      const free = hb.indexOf(null);
-      if(free < 0) return toast("Barre rapide pleine");
-      hb[free] = st.key;
-    }
-    await sset("fm:profile", p);
-    viewInv();
-  });
-  view.querySelectorAll("[data-h]").forEach(el=>el.onclick = async ()=>{
-    const i = +el.dataset.h;
-    if(!p.hotbar[i]) return;
-    p.hotbar[i] = null;
-    await sset("fm:profile", p);
-    viewInv();
-  });
   const bs = view.querySelector("#buyslots");
   if(bs) bs.onclick = async ()=>{
     if(price == null || p.coins < price) return;
@@ -19950,7 +19921,8 @@ function viewCollection(){
 const NOUVEAUTES = [
   {v:"V2.2.2", titre:"Nouveaux armements", points:[
     "Les quatre armements ont de vraies illustrations : épée en bois, pistolet de fortune, fusil à plasma, bombe nucléaire.",
-    "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond."
+    "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond.",
+    "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche."
   ]},
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
@@ -20664,7 +20636,6 @@ body.holo-ouvert{overflow:hidden}
 /* Boutique : des fonds qui parlent du contenu (plus de plateaux de combat) */
 .fmart-vip{background:radial-gradient(70% 90% at 78% 40%,rgba(255,210,110,.28),transparent 60%),radial-gradient(60% 80% at 15% 100%,rgba(214,79,160,.45),transparent 65%),repeating-conic-gradient(from 0deg at 78% 40%,rgba(255,220,140,.07) 0 6deg,transparent 6deg 18deg),linear-gradient(135deg,#2a0f3d 0%,#4b1a66 45%,#7a2c8f 100%)}
 .fmart-roue{background:radial-gradient(60% 90% at 80% 50%,rgba(255,214,120,.45),transparent 62%),radial-gradient(50% 70% at 10% 0%,rgba(214,79,160,.4),transparent 60%),repeating-conic-gradient(from 0deg at 80% 50%,rgba(255,255,255,.06) 0 8deg,transparent 8deg 20deg),linear-gradient(135deg,#3a1420,#6b2333 50%,#a2462a)}
-<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 .fmart-arsenal{background:radial-gradient(55% 85% at 80% 50%,rgba(255,138,60,.45),transparent 62%),repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 14px,transparent 14px 28px),linear-gradient(135deg,#1c1412,#3a1f16 50%,#5e2a17)}
 .vit-eventail{position:absolute;right:9%;top:50%;width:clamp(150px,26vw,280px);height:clamp(150px,26vw,280px);transform:translateY(-50%);z-index:-1;pointer-events:none}
 .vit-eventail i{position:absolute;left:50%;top:50%;width:52%;aspect-ratio:63/88;border-radius:8px;background-size:cover;background-position:center 20%;box-shadow:0 0 0 2px rgba(255,215,106,.85),0 18px 40px -12px #000,0 0 40px -10px #ffd76a;transform:translate(-50%,-50%) rotate(calc(var(--k) * 14deg)) translateX(calc(var(--k) * 46%)) translateY(calc(var(--k) * var(--k) * 6%))}
@@ -20675,3 +20646,5 @@ body.holo-ouvert{overflow:hidden}
 </style>
 </body>
 </html>
+
+<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
