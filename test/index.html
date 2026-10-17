@@ -15541,8 +15541,8 @@ function viewBoutique(){
 const PAIEMENT_OUVERT = false;          // false : visible des administrateurs seulement (phase de test)
 const PACKS_CRISTAUX = [
   {n:500,  prix:"4,99 €",  url:"https://buy.stripe.com/dRmfZa7GBagIbFU2z4eZ200"},
-  {n:1100, prix:"9,99 €",  url:"", bonus:"+10 %"},
-  {n:2400, prix:"19,99 €", url:"", bonus:"+20 %", top:true}
+  {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},
+  {n:2400, prix:"19,99 €", url:"https://buy.stripe.com/8x23co6CxgF6eS6a1weZ202", bonus:"+20 %", top:true}
 ];
 function rechargeVisible(){ return (PAIEMENT_OUVERT || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
 function rechargeHTML(){
