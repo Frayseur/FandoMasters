@@ -4174,7 +4174,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.2.0";
+const BUILD = "V2.2.1";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -12651,10 +12651,16 @@ async function mountIdleBooster(host, kind){
    chacun une tranche. Ils s'envolent au fur et à mesure du chargement. */
 const COUNTDOWN_FROM = 2;
 function playBoosterCountdown(kind, total){
-  let tick = ()=>{}, finish = ()=>{}, meilleure = ()=>{};
+  /* Les appels qui arrivent avant que la scène 3D soit prête (tirage très rapide)
+     sont retenus puis rejoués : sans ça, le compteur pouvait attendre pour toujours. */
+  let tick = null, finish = null, meilleure = null, dernierTick = 0, fini = false, best = null;
   const done = runBoosterCountdown(kind, total,
-    (t, f, m)=>{ tick = t; finish = f; meilleure = m || meilleure; });
-  return {done, tick:n=>tick(n), finish:()=>finish(), meilleure:(r, c)=>meilleure(r, c)};
+    (t, f, m)=>{ tick = t; finish = f; meilleure = m || null;
+      if(dernierTick) t(dernierTick); if(best && m) m(best[0], best[1]); if(fini) f(); });
+  return {done,
+    tick:n=>{ dernierTick = n; if(tick) tick(n); },
+    finish:()=>{ fini = true; if(finish) finish(); },
+    meilleure:(r, c)=>{ best = [r, c]; if(meilleure) meilleure(r, c); }};
 }
 
 async function runBoosterCountdown(kind, total, expose){
@@ -12990,6 +12996,169 @@ function holoOuverture(kind){
   return {done, finish:()=>finirChargement(), tick:()=>{}};
 }
 
+
+/* =========================================================================
+   SÉRIE DE BOOSTERS (jusqu'à 10) : chaque paquet s'ouvre comme un booster seul,
+   cartes une par une ; entre deux, l'emballage vide est jeté (booster 3D) et le
+   suivant arrive. Les cartes sont déjà rangées dans la collection avant : quitter
+   ou « Tout voir » ne fait rien perdre.
+   ========================================================================= */
+const HOLO_SERIE_MAX = 10;
+function holoSerie(kind, paquets){
+  return new Promise(resoudre=>{
+    if(!paquets.length || !HOLO_TEX[kind]) return resoudre();
+    const mouvement = !reducedMotion();
+    const glow = (B3D_TINT[kind] || B3D_TINT.normal).glow;
+    const total = paquets.reduce((s, p)=>s + p.length, 0);
+    const el = document.createElement("div");
+    el.className = "holov k-" + kind + " serie" + (mouvement ? "" : " calme");
+    el.style.setProperty("--hg", glow);
+    el.innerHTML = `<div class="holo-fond"><i class="holo-etoiles"></i></div>
+      <canvas class="holo-jet"></canvas>
+      <div class="holo-compteur"></div>
+      <button type="button" class="holo-passer">Tout voir</button>
+      <div class="holo-scene"></div><div class="holo-bas"></div>`;
+    document.body.appendChild(el);
+    document.body.classList.add("holo-ouvert");
+    requestAnimationFrame(()=>el.classList.add("on"));
+    const scene = el.querySelector(".holo-scene"), bas = el.querySelector(".holo-bas"), compteur = el.querySelector(".holo-compteur"), cv = el.querySelector(".holo-jet");
+    let ferme = false, pk = -1, ordre = [], pos = -1, verrou = false, gl = null, phase = "paquet";
+    const muet = ()=>state.profile && state.profile.mute;
+
+    /* le booster 3D qui sera jeté : préparé dès le début, sans bloquer */
+    if(mouvement){
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(window.innerWidth * dpr); cv.height = Math.round(window.innerHeight * dpr);
+      makeBoosterGL(cv, kind, window.innerWidth / window.innerHeight < 0.62 ? 16.5 : 13.5).then(v => { if(ferme){ try{ v && v.dispose(); }catch(e){} } else gl = v; }).catch(()=>{});
+    }
+    function fermer(){
+      if(ferme) return; ferme = true;
+      el.classList.add("off");
+      document.body.classList.remove("holo-ouvert");
+      setTimeout(()=>{ try{ gl && gl.dispose(); }catch(e){} el.remove(); }, mouvement ? 380 : 0);
+      HOLO.fermer = null;
+      resoudre();
+    }
+    HOLO.fermer = fermer;
+    const majCompteur = ()=>{ compteur.innerHTML = `Booster <b>${pk + 1}</b> / ${paquets.length}`; };
+
+    function montrerPaquet(){
+      pk++;
+      if(pk >= paquets.length){ fermer(); return; }
+      phase = "paquet"; pos = -1; verrou = false;
+      const p = paquets[pk];
+      ordre = p.map((c, i)=>i).sort((a, b)=>RARITIES.indexOf(p[a].rarity) - RARITIES.indexOf(p[b].rarity) || a - b);
+      el.classList.remove("cartes", "ouverture"); el.classList.add("pret");
+      el.removeAttribute("data-rang");
+      majCompteur();
+      scene.innerHTML = `<div class="holo-paquet arrive" style="background-image:url('${HOLO_TEX[kind]}')"><i class="holo-reflet"></i><i class="holo-scan"></i></div>`;
+      bas.innerHTML = `<p class="holo-msg">${pk === 0 ? (HOLO_NOM[kind] || "Booster") + " · " + paquets.length + " paquets, " + total + " cartes" : "Booster suivant"}</p>
+        <button type="button" class="btn holo-ouvrir">Ouvrir le paquet</button>`;
+      bas.querySelector(".holo-ouvrir").onclick = ev => { ev.stopPropagation(); ouvrir(); };
+    }
+
+    function ouvrir(){
+      if(phase !== "paquet") return;
+      phase = "onde";
+      bas.querySelector(".holo-ouvrir").disabled = true;
+      el.classList.remove("pret"); el.classList.add("ouverture");
+      if(!muet()) sfx.holoMonte();
+      const p = paquets[pk];
+      const meilleur = Math.max(...p.map(c => RARITIES.indexOf(c.rarity)));
+      el.style.setProperty("--onde", RAR_HEX[RARITIES[meilleur]] || "var(--hg)");
+      setTimeout(()=>{ if(ferme) return; el.classList.remove("ouverture"); el.classList.add("cartes"); phase = "cartes"; montrerCarte(); }, mouvement ? 1000 : 0);
+    }
+
+    function montrerCarte(){
+      pos++;
+      const p = paquets[pk];
+      if(pos >= ordre.length) return jeter();
+      const c = p[ordre[pos]], rang = Math.max(0, RARITIES.indexOf(c.rarity));
+      const coul = RAR_HEX[c.rarity] || (c.rarity === "Relique" ? "#C9A7FF" : "#B9AC9E");
+      const suspense = mouvement && rang >= 3;
+      verrou = true;
+      el.style.setProperty("--rc", coul);
+      el.dataset.rang = rang;
+      scene.innerHTML = `<div class="holo-rayons"></div>
+        <div class="holo-carte ${suspense ? "attente" : "arrive"}" data-rang="${rang}">
+          <div class="flip"><div class="in">
+            <div class="face back ${kind === "mythic" ? "myth" : kind === "demon" ? "demon" : ""}"><span class="mk"></span></div>
+            <div class="face front"></div>
+          </div></div><i class="holo-irise"></i>
+        </div>`;
+      bas.innerHTML = `<div class="holo-info" hidden>
+          <span class="holo-rar" style="background:${coul}">${esc(c.rarity)}</span>
+          <h2 class="holo-nom">${esc(c.title || "")}</h2>
+          <small class="holo-univ">${esc(c.univ || "")}</small>
+        </div>
+        <p class="holo-msg">${suspense ? "Quelque chose de rare arrive…" : ""}</p>`;
+      const carte = scene.querySelector(".holo-carte"), flip = scene.querySelector(".flip");
+      const x = state.collection.find(k => k.id === c.id);
+      const suite = ()=>{
+        if(ferme || !carte.isConnected) return;
+        el.classList.add("eclat"); setTimeout(()=>el.classList.remove("eclat"), 500);
+        if(!muet()){ try{ if(kind === "demon" && rang >= 4) sfx.demonRare(); else sfxForRarity(c.rarity); }catch(e){} }
+        const info = bas.querySelector(".holo-info"); if(info) info.hidden = false;
+        const dernierPaquet = pk === paquets.length - 1, derniereCarte = pos === ordre.length - 1;
+        bas.querySelector(".holo-msg").innerHTML = !derniereCarte
+          ? `Carte ${pos + 1} / ${ordre.length} · <b>touchez pour la suivante</b>`
+          : dernierPaquet
+            ? `<button type="button" class="btn holo-fin">Voir mes ${total} cartes</button>`
+            : `<button type="button" class="btn holo-suivant">Booster suivant ›</button>`;
+        const fin = bas.querySelector(".holo-fin"); if(fin) fin.onclick = ev => { ev.stopPropagation(); fermer(); };
+        const sv = bas.querySelector(".holo-suivant"); if(sv) sv.onclick = ev => { ev.stopPropagation(); jeter(); };
+        setTimeout(()=>{ verrou = false; }, mouvement ? 420 : 0);
+      };
+      const reveler = ()=>{
+        carte.classList.remove("attente", "arrive");
+        animerRetournement(flip, c, x ? (x.count || 1) : 1, suite);
+        setTimeout(()=>{ if(carte.isConnected) carte.classList.add("brille"); }, mouvement ? 650 : 0);
+      };
+      if(suspense){ if(!muet()) sfx.holoAttente(); setTimeout(reveler, rang >= 5 ? 1500 : 1050); }
+      else { if(!muet()) try{ sfx.flip(); }catch(e){} setTimeout(reveler, mouvement ? 160 : 0); }
+    }
+
+    /* l'emballage vide est jeté hors de l'écran, en tournoyant */
+    function jeter(){
+      if(phase === "jet") return;
+      if(pk >= paquets.length - 1){ fermer(); return; }
+      phase = "jet"; verrou = true;
+      el.classList.remove("cartes"); el.removeAttribute("data-rang");
+      scene.innerHTML = ""; bas.innerHTML = `<p class="holo-msg holo-suivant-titre">Booster suivant</p>`;
+      if(!muet()){ try{ noise(0, 0.35, {gain:0.09, freq:1800, sweep:500, q:0.8}); }catch(e){} }
+      const fini = ()=>{ cv.classList.remove("on"); if(!ferme) montrerPaquet(); };
+      if(!mouvement) return fini();
+      if(gl){
+        cv.classList.add("on");
+        const sens = pk % 2 ? -1 : 1, T0 = performance.now(), D = 620;
+        const pas = ()=>{
+          if(ferme) return;
+          const u = Math.min(1, (performance.now() - T0) / D), e = u * u;
+          /* il se froisse un peu, s'envole en arc et part en vrille hors de l'écran */
+          const froisse = 1 - 0.18 * Math.sin(Math.min(1, u * 3) * Math.PI);
+          gl.draw([sens * (e * 9), 1.2 * Math.sin(u * Math.PI) - e * 6, -e * 2],
+                  [0.5 * u, sens * u * 7.5, sens * u * 2.4], 0.9 * froisse * (1 - 0.25 * u), 0.15, -99, 0);
+          cv.style.opacity = String(1 - Math.max(0, (u - 0.75) / 0.25));
+          if(u < 1) requestAnimationFrame(pas); else { cv.style.opacity = ""; fini(); }
+        };
+        requestAnimationFrame(pas);
+      } else {
+        const b = document.createElement("div");
+        b.className = "holo-paquet jete"; b.style.backgroundImage = `url('${HOLO_TEX[kind]}')`;
+        scene.appendChild(b);
+        setTimeout(fini, 560);
+      }
+    }
+
+    el.addEventListener("click", ev=>{
+      if(phase !== "cartes" || verrou || ev.target.closest("button")) return;
+      montrerCarte();
+    });
+    el.querySelector(".holo-passer").onclick = ev => { ev.stopPropagation(); fermer(); };
+    montrerPaquet();
+  });
+}
+
 function playBoosterIntro(kind){
   let finish = ()=>{};
   const done = runBoosterIntro(kind, fn=>{ finish = fn; });
@@ -13255,6 +13424,12 @@ async function openPack(n, kind){
     await saveAll();
     intro.finish();                      // le paquet se déchire une fois les cartes prêtes
     await intro.done;
+    /* Jusqu'à 10 boosters : on les ouvre ensuite un par un, comme un booster seul.
+       Les cartes sont déjà toutes dans la collection : ce n'est que le spectacle. */
+    if(n > 1 && n <= HOLO_SERIE_MAX && state.openToken === token){
+      stopShaking();
+      try{ await holoSerie(kind, resultats.filter(p => p && p.length)); }catch(e){}
+    }
     state.busy = false;
     stopShaking();
     document.getElementById("coins").textContent = short(state.profile.coins);
@@ -19587,6 +19762,9 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
+    "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
+    "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup."]},
   {v:"V2.2.0", titre:"Ouverture holographique", points:[
     "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
     "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
@@ -20254,6 +20432,19 @@ body.holo-ouvert{overflow:hidden}
 @media (min-width:621px) and (max-width:900px){.pr-reste{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:901px){.pr-reste{grid-template-columns:repeat(4,minmax(0,1fr))}.pr-corps{grid-template-columns:minmax(0,1.1fr) minmax(0,3fr);align-items:center}}
 @media (prefers-reduced-motion:reduce){.pr-brille .pr-star{animation:none}}
+
+/* Série de boosters */
+.holo-jet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0}
+.holo-jet.on{opacity:1}
+.holo-compteur{position:absolute;top:max(18px,env(safe-area-inset-top));left:16px;z-index:2;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:#cfd6ff;padding:.4rem .8rem;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.holo-compteur b{color:#fff;font-size:1rem}
+.holo-paquet.arrive{animation:holoTombe .45s cubic-bezier(.2,.9,.3,1.15) both,holoFlotte 4.5s ease-in-out .45s infinite}
+.holov.pret .holo-paquet.arrive{animation:holoTombe .45s cubic-bezier(.2,.9,.3,1.15) both,holoFlotte 4.5s ease-in-out .45s infinite,holoPret 1.6s ease-in-out .45s infinite}
+@keyframes holoTombe{from{transform:translateY(-55vh) rotateZ(-14deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.holo-paquet.jete{position:absolute;animation:holoJete .56s cubic-bezier(.5,0,.9,.5) forwards}
+@keyframes holoJete{0%{transform:none}25%{transform:scale(.92,.82) rotateZ(-6deg)}100%{transform:translate(70vw,40vh) rotateZ(220deg) scale(.4);opacity:0}}
+.holo-suivant-titre{font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;letter-spacing:.12em;font-size:1rem;color:#fff;animation:holoInfo .3s ease-out}
+.holo-suivant{min-width:13rem;font-size:1rem;padding:.85rem 1.6rem;background:linear-gradient(135deg,color-mix(in srgb,var(--hg) 75%,#2a5cff),#2a62e8);color:#fff;border:none;box-shadow:0 10px 30px -10px var(--hg);text-transform:uppercase;letter-spacing:.08em;font-weight:900}
 </style>
 <div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
