@@ -15450,33 +15450,36 @@ function viewBoutique(){
     ? (estAdmin() && !fin ? `<span class="vit-etat">✓ Accès développeur</span>` : `<button class="btn vit-btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>Prolonger d'un an</button>`)
     : `<button class="btn vit-btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>${btq.achat ? "Activation…" : solde < vipArt.prix ? "Cristaux insuffisants" : "Devenir VIP"}</button>`;
   const roueDeco = `<span class="vit-roue" aria-hidden="true"></span>`;
+  /* le VIP montre ce qu'il offre : la vitrine de vos plus belles cartes, en éventail */
+  const belles = vitImages(3);
+  const vipDeco = belles.length >= 2 ? `<span class="vit-eventail" aria-hidden="true">${belles.map((u, k) => `<i style="--k:${k - (belles.length - 1) / 2};background-image:url('${cssUrl(u)}')"></i>`).join("")}</span>` : `<span class="vit-grande-couronne" aria-hidden="true">♛</span>`;
   const slides = [
-    {titre:"FandoMasters VIP", court:"VIP", art:"fmart-cyber", g1:"#d64fa0", g2:"#7a3cff",
+    {titre:"FandoMasters VIP", court:"VIP", art:"fmart-vip", deco:vipDeco, g1:"#d64fa0", g2:"#7a3cff",
      titreHTML:`<span class="vit-couronne">♛</span>FandoMasters <em>VIP</em>`,
      tags:["Combats classés", "Top 100", "Profil", "Guilde"],
      bas:`<span class="vit-pilule">${vip ? "✓ VIP actif" + (fin ? " jusqu'au " + fin : "") : "Valable 12 mois"}</span>`,
      texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres, une vitrine de 10 cartes, jusqu'à 100 paquets d'un coup et la roue chaque jour.",
      prix:prix(vipArt.prix), bouton:vipBouton},
-    {titre:"Roue de la fortune", court:"Roue", art:"fmart-taverne", g1:"#e2ae3c", g2:"#d64fa0", deco:roueDeco,
+    {titre:"Roue de la fortune", court:"Roue", art:"fmart-roue", g1:"#e2ae3c", g2:"#d64fa0", deco:roueDeco,
      tags:["Gratuit", vip ? "Chaque jour" : "Chaque semaine", "34 cases"],
      bas:`<span class="vit-pilule">${r ? (r.dispo ? "Un tour vous attend" : "Prochain tour " + roueQuand(r.prochaine)) : "Chargement…"}</span>`,
      texte:"Mana, Fandominus, armements, booster Renard, cartes rares, super rares… et une Légendaire à gagner. Les VIP tournent la roue tous les jours.",
      prix:"Gratuit", bouton:`<button class="btn vit-btn" data-shoptab="roue">${r && r.dispo ? "Tourner la roue" : "Voir la roue"}</button>`}
   ];
   for(const a of lots){ const L = lotInfo(a);
-    slides.push({titre:a.nom, court:"Armements", art:"fmart-plateau", g1:"#ff8a3c", g2:"#c3261c",
+    slides.push({titre:a.nom, court:"Armements", art:"fmart-arsenal", g1:"#ff8a3c", g2:"#c3261c",
       deco:L.it ? `<span class="vit-objet">${itemSVG(L.cle)}</span>` : "",
       titreHTML:`${esc(a.nom.replace(/^Lot de \d+ /, ""))} <em>×${L.n}</em>`,
       tags:["Campagnes", "Inventaire"],
       bas:`<span class="vit-pilule">${L.it ? "+" + L.it.val + " dégâts chacun en campagne" : esc(a.description || "")}</span>`,
       texte:esc(a.description || "") + " Rangés directement dans votre inventaire.", prix:prix(a.prix), bouton:lotBouton(a)}); }
   const covers = [
-    {titre:"FandoMasters VIP", sous:vip ? "actif" : "12 mois", art:"fmart-cyber", large:true, badge:"♛", prix:prix(vipArt.prix), attrs:`data-vitsel="0"`,
+    {titre:"FandoMasters VIP", sous:vip ? "actif" : "12 mois", art:"fmart-vip", large:true, badge:"♛", prix:prix(vipArt.prix), attrs:`data-vitsel="0"`,
      deco:`<span class="cover-grand">VIP</span>`},
-    {titre:"Roue de la fortune", sous:r && r.dispo ? "un tour disponible" : "gratuite", art:"fmart-taverne", badge:r && r.dispo ? "1" : "", prix:"Gratuit", attrs:`data-shoptab="roue"`, deco:roueDeco},
-    ...lots.map(a => { const L = lotInfo(a); return {titre:a.nom.replace(/^Lot de /, ""), sous:"pour vos campagnes", art:"fmart-plateau", prix:prix(a.prix),
+    {titre:"Roue de la fortune", sous:r && r.dispo ? "un tour disponible" : "gratuite", art:"fmart-roue", badge:r && r.dispo ? "1" : "", prix:"Gratuit", attrs:`data-shoptab="roue"`, deco:roueDeco},
+    ...lots.map(a => { const L = lotInfo(a); return {titre:a.nom.replace(/^Lot de /, ""), sous:"pour vos campagnes", art:"fmart-arsenal", prix:prix(a.prix),
       attrs:`data-vitsel="${2 + lots.indexOf(a)}"`, deco:L.it ? `<span class="cover-objet">${itemSVG(L.cle)}</span>` : ""}; }),
-    {titre:"Gratuit ou VIP", sous:"le comparatif", large:true, art:vitImages(1)[0] || "fmart-cyber", attrs:`data-ouvrir="comparatif"`}
+    {titre:"Gratuit ou VIP", sous:"le comparatif", large:true, art:"fmart-vip", deco:`<span class="cover-grand cover-vs">Gratuit<i>ou</i>VIP</span>`, attrs:`data-ouvrir="comparatif"`}
   ];
   view.innerHTML = `
     <h2 class="vuetitre" data-ghost="BOUTIQUE">Boutique</h2>
@@ -20649,6 +20652,17 @@ body.holo-ouvert{overflow:hidden}
 .nt-champs input,.nt-champs textarea{width:100%;margin:0;font:inherit}
 .nt-champs textarea{resize:vertical;min-height:5.5rem}
 @media (max-width:560px){.nt-grille{grid-template-columns:1fr}.nt-carte{max-width:170px;margin:0 auto}}
+
+/* Boutique : des fonds qui parlent du contenu (plus de plateaux de combat) */
+.fmart-vip{background:radial-gradient(70% 90% at 78% 40%,rgba(255,210,110,.28),transparent 60%),radial-gradient(60% 80% at 15% 100%,rgba(214,79,160,.45),transparent 65%),repeating-conic-gradient(from 0deg at 78% 40%,rgba(255,220,140,.07) 0 6deg,transparent 6deg 18deg),linear-gradient(135deg,#2a0f3d 0%,#4b1a66 45%,#7a2c8f 100%)}
+.fmart-roue{background:radial-gradient(60% 90% at 80% 50%,rgba(255,214,120,.45),transparent 62%),radial-gradient(50% 70% at 10% 0%,rgba(214,79,160,.4),transparent 60%),repeating-conic-gradient(from 0deg at 80% 50%,rgba(255,255,255,.06) 0 8deg,transparent 8deg 20deg),linear-gradient(135deg,#3a1420,#6b2333 50%,#a2462a)}
+.fmart-arsenal{background:radial-gradient(55% 85% at 80% 50%,rgba(255,138,60,.45),transparent 62%),repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 14px,transparent 14px 28px),linear-gradient(135deg,#1c1412,#3a1f16 50%,#5e2a17)}
+.vit-eventail{position:absolute;right:9%;top:50%;width:clamp(150px,26vw,280px);height:clamp(150px,26vw,280px);transform:translateY(-50%);z-index:-1;pointer-events:none}
+.vit-eventail i{position:absolute;left:50%;top:50%;width:52%;aspect-ratio:63/88;border-radius:8px;background-size:cover;background-position:center 20%;box-shadow:0 0 0 2px rgba(255,215,106,.85),0 18px 40px -12px #000,0 0 40px -10px #ffd76a;transform:translate(-50%,-50%) rotate(calc(var(--k) * 14deg)) translateX(calc(var(--k) * 46%)) translateY(calc(var(--k) * var(--k) * 6%))}
+.vit-grande-couronne{position:absolute;right:10%;top:50%;transform:translateY(-50%);z-index:-1;font-size:clamp(5rem,14vw,10rem);color:#ffd76a;opacity:.9;text-shadow:0 0 50px #e7ad35}
+.cover-vs{display:grid;place-items:center;align-content:center;gap:.1em;font-size:clamp(1.6rem,4vw,2.6rem);line-height:.9;text-transform:uppercase}
+.cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
+@media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
 <div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
