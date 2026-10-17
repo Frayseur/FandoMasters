@@ -10090,24 +10090,30 @@ function viewCommu(){
           <div class="statbox"><b>${demandeN}</b><span>Demandes reçues</span></div>
           <div class="statbox"><b>${enCours}</b><span>Votes ouverts</span></div>
         </div>
-        <div class="sectionhead"><div><h3>Joueurs</h3></div></div>
-        <div class="featuregrid">
-          <button type="button" class="featurecard commtile" data-caction="amis"><span class="featureicon">♧</span><h3>Amis</h3><span class="commcount">${socialN}</span></button>
-          <button type="button" class="featurecard commtile" data-caction="chercher"><span class="featureicon">⌕</span><h3>Rechercher un joueur</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="demandes"><span class="featureicon">♙</span><h3>Demandes d’amis</h3><span class="commcount">${demandeN}</span></button>
-          <button type="button" class="featurecard commtile" data-caction="echanges"><span class="featureicon">⇄</span><h3>Échanges</h3><span class="commcount">${echangeN}</span></button>
-          <button type="button" class="featurecard commtile" data-caction="guilde"><span class="featureicon">♜</span><h3>Guildes</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="classement"><span class="featureicon">🏆</span><h3>Classement</h3></button>
-        </div>
-        <div class="sectionhead"><div><h3>Contributions</h3></div></div>
-        <div class="featuregrid">
-          <button type="button" class="featurecard commtile" data-caction="ajouts"><span class="featureicon">＋</span><h3>Proposer une carte</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="partager"><span class="featureicon">▧</span><h3>Proposer un recadrage</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="votes"><span class="featureicon">✦</span><h3>Votes de cartes</h3><span class="commcount">${enCours}</span></button>
+        <div class="commpoles">
+          <button type="button" class="commpole" data-caction="amis">
+            <span class="cp-ic">♧</span>
+            <span class="cp-txt"><b>Joueurs</b><small>Amis, demandes, échanges, guildes, classement et recherche de joueurs</small></span>
+            <span class="cp-tags">
+              <i>${socialN} ami${socialN > 1 ? "s" : ""}</i>
+              ${demandeN ? `<i class="chaud">${demandeN} demande${demandeN > 1 ? "s" : ""}</i>` : ""}
+              ${echangeN ? `<i class="chaud">${echangeN} échange${echangeN > 1 ? "s" : ""} à voir</i>` : ""}
+            </span>
+            <span class="cp-fl">→</span>
+          </button>
+          <button type="button" class="commpole" data-caction="contributions">
+            <span class="cp-ic">✦</span>
+            <span class="cp-txt"><b>Contributions</b><small>Proposer une carte, proposer un recadrage et voter pour les cartes</small></span>
+            <span class="cp-tags">
+              ${enCours ? `<i class="chaud">${enCours} vote${enCours > 1 ? "s" : ""} ouvert${enCours > 1 ? "s" : ""}</i>` : `<i>aucun vote ouvert</i>`}
+            </span>
+            <span class="cp-fl">→</span>
+          </button>
         </div>
       </div>`;
     view.querySelectorAll('[data-caction]').forEach(b=>b.onclick=()=>{
       const a=b.dataset.caction;
+      if(a === "contributions"){ commu.onglet = "votes"; viewCommu(); return; }
       if(["amis","demandes","echanges","guilde","classement","chercher"].includes(a)){
         amis.onglet = ({amis:"amis",demandes:"demandes",echanges:"echanges",guilde:"guilde",classement:"classement",chercher:"chercher"})[a];
         go("amis");
@@ -19764,7 +19770,8 @@ function viewCollection(){
 const NOUVEAUTES = [
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
-    "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup."]},
+    "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
+    "Communauté plus claire : une tuile Joueurs et une tuile Contributions, au lieu de neuf boutons."]},
   {v:"V2.2.0", titre:"Ouverture holographique", points:[
     "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
     "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
@@ -20445,6 +20452,20 @@ body.holo-ouvert{overflow:hidden}
 @keyframes holoJete{0%{transform:none}25%{transform:scale(.92,.82) rotateZ(-6deg)}100%{transform:translate(70vw,40vh) rotateZ(220deg) scale(.4);opacity:0}}
 .holo-suivant-titre{font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;letter-spacing:.12em;font-size:1rem;color:#fff;animation:holoInfo .3s ease-out}
 .holo-suivant{min-width:13rem;font-size:1rem;padding:.85rem 1.6rem;background:linear-gradient(135deg,color-mix(in srgb,var(--hg) 75%,#2a5cff),#2a62e8);color:#fff;border:none;box-shadow:0 10px 30px -10px var(--hg);text-transform:uppercase;letter-spacing:.08em;font-weight:900}
+
+/* Communauté : une tuile par page */
+.commpoles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
+.commpole{position:relative;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;gap:.6rem 1rem;align-items:center;text-align:left;min-height:150px;padding:1.3rem 1.4rem;border-radius:var(--rayon,22px);border:1px solid var(--line,#ffffff20);background:radial-gradient(120% 120% at 0% 0%,color-mix(in srgb,var(--p4,#e0489b) 16%,transparent),transparent 60%),var(--surface,#231c22);color:var(--text,#fff);cursor:pointer;transition:transform .16s,border-color .16s}
+.commpole:hover{border-color:var(--p4,#e0489b)}
+.commpole:active{transform:scale(.99)}
+.cp-ic{grid-row:1/3;display:grid;place-items:center;width:58px;height:58px;border-radius:18px;font-size:1.7rem;color:var(--p4,#e0489b);background:color-mix(in srgb,var(--p4,#e0489b) 14%,transparent)}
+.cp-txt b{display:block;font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;font-size:1.25rem;letter-spacing:.01em}
+.cp-txt small{display:block;margin-top:.3rem;color:var(--muted,#bbb);font-size:.85rem;line-height:1.4}
+.cp-tags{grid-column:2;display:flex;flex-wrap:wrap;gap:.35rem}
+.cp-tags i{font-style:normal;font-size:.74rem;font-weight:700;padding:.22rem .6rem;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--muted,#ccc)}
+.cp-tags i.chaud{background:var(--p4,#e0489b);border-color:transparent;color:#fff}
+.cp-fl{grid-column:3;grid-row:1/3;font-size:1.4rem;color:var(--muted,#aaa)}
+@media (max-width:700px){.commpoles{grid-template-columns:1fr}.commpole{min-height:0}}
 </style>
 <div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
