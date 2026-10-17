@@ -1531,6 +1531,7 @@ body.cardopen .wrap,body.cardopen .nav{visibility:hidden}
              repeating-linear-gradient(90deg,#ffffff0d 0 1px,transparent 1px 7px)}
 .item .pic{position:relative;z-index:2;width:64%;height:64%;display:grid;place-items:center}
 .isvg{width:100%;height:100%;filter:drop-shadow(0 2px 5px #000b)}
+.iimg{display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
 .item .n{position:absolute;right:4px;bottom:3px;z-index:3;font-family:var(--f-data);
   font-weight:400;font-size:.72rem;letter-spacing:.02em;color:var(--text);
   background:var(--panel);border:1px solid var(--line);border-radius:5px;
@@ -4174,7 +4175,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.2.1";
+const BUILD = "V2.2.2";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -15812,7 +15813,10 @@ function useItem(key, n=1){
   return n - left;
 }
 
+/* Illustrations des armements (dessinées, détourées, 256 px) */
+const ITEM_IMG = {arm1:"../assets/a4a7a4f1d3b7.webp", arm2:"../assets/0cba0ebc6dc4.webp", arm3:"../assets/6714a9544882.webp", arm4:"../assets/239664422c54.webp"};
 function itemSVG(key){
+  if(ITEM_IMG[key]) return `<img class="isvg iimg" src="${ITEM_IMG[key]}" alt="" loading="lazy" decoding="async" draggable="false">`;
   const d = item(key);
   return `<svg viewBox="0 0 64 64" class="isvg" aria-hidden="true">
     <defs><linearGradient id="g${key}" x1="0" y1="0" x2="0" y2="1">
@@ -19944,6 +19948,10 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.2.2", titre:"Nouveaux armements", points:[
+    "Les quatre armements ont de vraies illustrations : épée en bois, pistolet de fortune, fusil à plasma, bombe nucléaire.",
+    "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond."
+  ]},
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
     "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
@@ -20656,6 +20664,7 @@ body.holo-ouvert{overflow:hidden}
 /* Boutique : des fonds qui parlent du contenu (plus de plateaux de combat) */
 .fmart-vip{background:radial-gradient(70% 90% at 78% 40%,rgba(255,210,110,.28),transparent 60%),radial-gradient(60% 80% at 15% 100%,rgba(214,79,160,.45),transparent 65%),repeating-conic-gradient(from 0deg at 78% 40%,rgba(255,220,140,.07) 0 6deg,transparent 6deg 18deg),linear-gradient(135deg,#2a0f3d 0%,#4b1a66 45%,#7a2c8f 100%)}
 .fmart-roue{background:radial-gradient(60% 90% at 80% 50%,rgba(255,214,120,.45),transparent 62%),radial-gradient(50% 70% at 10% 0%,rgba(214,79,160,.4),transparent 60%),repeating-conic-gradient(from 0deg at 80% 50%,rgba(255,255,255,.06) 0 8deg,transparent 8deg 20deg),linear-gradient(135deg,#3a1420,#6b2333 50%,#a2462a)}
+<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 .fmart-arsenal{background:radial-gradient(55% 85% at 80% 50%,rgba(255,138,60,.45),transparent 62%),repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 14px,transparent 14px 28px),linear-gradient(135deg,#1c1412,#3a1f16 50%,#5e2a17)}
 .vit-eventail{position:absolute;right:9%;top:50%;width:clamp(150px,26vw,280px);height:clamp(150px,26vw,280px);transform:translateY(-50%);z-index:-1;pointer-events:none}
 .vit-eventail i{position:absolute;left:50%;top:50%;width:52%;aspect-ratio:63/88;border-radius:8px;background-size:cover;background-position:center 20%;box-shadow:0 0 0 2px rgba(255,215,106,.85),0 18px 40px -12px #000,0 0 40px -10px #ffd76a;transform:translate(-50%,-50%) rotate(calc(var(--k) * 14deg)) translateX(calc(var(--k) * 46%)) translateY(calc(var(--k) * var(--k) * 6%))}
@@ -20664,6 +20673,5 @@ body.holo-ouvert{overflow:hidden}
 .cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
 @media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
-<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
 </html>
