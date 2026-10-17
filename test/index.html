@@ -12916,8 +12916,10 @@ function holoOuverture(kind){
     el.dataset.rang = rang;
     scene.innerHTML = `<div class="holo-rayons"></div>
       <div class="holo-carte ${suspense ? "attente" : "arrive"}" data-rang="${rang}">
-        <div class="holo-dos" style="background-image:url('${HOLO_TEX[kind]}')"></div>
-        <div class="holo-face"></div><i class="holo-irise"></i>
+        <div class="flip"><div class="in">
+          <div class="face back ${kind === "mythic" ? "myth" : kind === "demon" ? "demon" : ""}"><span class="mk"></span></div>
+          <div class="face front"></div>
+        </div></div><i class="holo-irise"></i>
       </div>`;
     bas.innerHTML = `<div class="holo-info" hidden>
         <span class="holo-rar" style="background:${coul}">${esc(c.rarity)}</span>
@@ -12925,14 +12927,17 @@ function holoOuverture(kind){
         <small class="holo-univ">${esc(c.univ || "")}</small>
       </div>
       <p class="holo-msg">${suspense ? "Quelque chose de rare arrive…" : ""}</p>`;
-    const carte = scene.querySelector(".holo-carte"), face = scene.querySelector(".holo-face");
+    const carte = scene.querySelector(".holo-carte"), flip = scene.querySelector(".flip");
     const reveler = ()=>{
       const n = recevoir(i);
-      face.innerHTML = cardHTML(c, {count:n});
-      carte.classList.remove("attente"); carte.classList.add("revele");
-      /* une fois retournée, la carte repasse à plat : l'effet holographique au doigt
-         (qui l'incline en 3D) ne doit pas la faire passer « dos visible » */
-      setTimeout(()=>{ if(carte.isConnected) carte.classList.add("pose"); }, mouvement ? 600 : 0);
+      carte.classList.remove("attente", "arrive"); carte.classList.add("revele");
+      /* le vrai retournement du jeu : le dos pivote jusqu'à la tranche, le recto prend le relais */
+      animerRetournement(flip, c, n, ()=>suite());
+      setTimeout(()=>{ if(carte.isConnected) carte.classList.add("brille"); }, mouvement ? 650 : 0);
+    };
+    /* le nom et la rareté n'apparaissent qu'avec le recto, jamais pendant que le dos tourne */
+    const suite = ()=>{
+      if(ferme || !carte.isConnected) return;
       el.classList.add("eclat"); setTimeout(()=>el.classList.remove("eclat"), 500);
       sonCarte(c);
       const info = bas.querySelector(".holo-info"); if(info) info.hidden = false;
@@ -20199,21 +20204,19 @@ body.holo-ouvert{overflow:hidden}
 .holov[data-rang="0"] .holo-rayons,.holov[data-rang="1"] .holo-rayons{opacity:.18}
 .holov[data-rang="4"] .holo-rayons,.holov[data-rang="5"] .holo-rayons,.holov[data-rang="6"] .holo-rayons{opacity:.85;animation-duration:14s}
 @keyframes holoTourne{to{transform:rotate(360deg)}}
-.holo-carte{z-index:1;position:relative;width:min(62vw,300px,calc(52vh * .72));aspect-ratio:.72;transform-style:preserve-3d}
-.holo-dos,.holo-face{position:absolute;inset:0;border-radius:14px;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.holo-dos{background-size:230% auto;background-position:7.8% 45%;box-shadow:0 0 0 2px color-mix(in srgb,var(--rc) 80%,#fff),0 0 70px 6px var(--rc)}
-.holo-face{transform:rotateY(180deg);display:grid}
-.holo-face>.card{width:100%;height:100%;margin:0}
+.holo-carte{z-index:1;position:relative;width:min(62vw,300px,calc(52vh * .716))}
+.holo-carte .flip{width:100%;cursor:inherit}
+.holo-carte .flip .back{box-shadow:0 0 0 1px color-mix(in srgb,var(--rc) 70%,transparent),0 0 70px 4px color-mix(in srgb,var(--rc) 70%,transparent)}
+.holo-carte .flip .back .mk{max-width:96px}
+.holo-carte .flip.on .front .card{box-shadow:0 20px 60px -10px #000,0 0 80px -10px var(--rc)}
 .holo-carte.arrive{animation:holoArrive .32s cubic-bezier(.2,.8,.3,1) both}
 .holo-carte.attente{animation:holoBat .55s ease-in-out infinite}
-.holo-carte.revele{animation:holoRetourne .55s cubic-bezier(.2,.75,.3,1) forwards}
-.holo-carte.revele .holo-face{box-shadow:0 0 0 1px color-mix(in srgb,var(--rc) 60%,transparent),0 20px 60px -10px #000,0 0 80px -10px var(--rc)}
+
 @keyframes holoArrive{from{transform:translateY(30px) scale(.82) rotateY(0deg);opacity:0}to{transform:none;opacity:1}}
 @keyframes holoBat{0%,100%{transform:scale(1) rotateZ(-1deg)}50%{transform:scale(1.06) rotateZ(1deg);filter:brightness(1.35)}}
-@keyframes holoRetourne{0%{transform:rotateY(0deg) scale(1.06)}55%{transform:rotateY(200deg) scale(1.12)}100%{transform:rotateY(180deg) scale(1)}}
-.holo-carte.arrive.revele,.holo-carte.revele{transform:rotateY(180deg)}
+
 .holo-irise{position:absolute;inset:0;border-radius:14px;pointer-events:none;opacity:0;background:linear-gradient(115deg,transparent 30%,rgba(120,220,255,.35) 42%,rgba(255,120,220,.35) 52%,transparent 64%);background-size:250% 100%;mix-blend-mode:color-dodge}
-.holo-carte.revele[data-rang="2"] .holo-irise,.holo-carte.revele[data-rang="3"] .holo-irise,.holo-carte.revele[data-rang="4"] .holo-irise,.holo-carte.revele[data-rang="5"] .holo-irise,.holo-carte.revele[data-rang="6"] .holo-irise{opacity:1;animation:holoIrise 3.2s ease-in-out .5s infinite}
+.holo-carte.brille[data-rang="2"] .holo-irise,.holo-carte.brille[data-rang="3"] .holo-irise,.holo-carte.brille[data-rang="4"] .holo-irise,.holo-carte.brille[data-rang="5"] .holo-irise,.holo-carte.brille[data-rang="6"] .holo-irise{opacity:1;animation:holoIrise 3.2s ease-in-out .5s infinite}
 @keyframes holoIrise{0%{background-position:120% 0}100%{background-position:-120% 0}}
 .holov.eclat .holo-fond{animation:holoFlash .5s ease-out}
 @keyframes holoFlash{0%{filter:brightness(2.2)}100%{filter:none}}
@@ -20222,11 +20225,8 @@ body.holo-ouvert{overflow:hidden}
 .holo-nom{margin:.1rem 0 0;font-family:var(--f-affiche,inherit);font-weight:900;font-stretch:115%;text-transform:uppercase;font-size:clamp(1.4rem,5.4vw,2.3rem);line-height:1;text-shadow:0 4px 24px var(--rc)}
 .holo-univ{color:#b9c0e6;letter-spacing:.14em;text-transform:uppercase;font-size:.72rem}
 @keyframes holoInfo{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.holo-carte.pose{animation:none!important;transform:none!important;transform-style:flat}
-.holo-carte.pose .holo-face{transform:none;backface-visibility:visible;-webkit-backface-visibility:visible}
-.holo-carte.pose .holo-dos{display:none}
 .holov.calme *,.holov.calme *::before,.holov.calme *::after{animation:none!important;transition:none!important}
-.holov.calme .holo-carte.revele{transform:none}.holov.calme .holo-face{transform:none}.holov.calme .holo-carte.revele .holo-dos{display:none}
+
 @media (max-height:640px){.holo-bas{min-height:7.5rem}.holo-paquet{height:min(50vh,420px)}}
 
 /* Récapitulatif d'un paquet ouvert */
