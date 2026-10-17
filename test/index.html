@@ -15525,7 +15525,7 @@ function viewBoutique(){
            ["Combats classés et Top 100", "—", "✓"], ["Historique des ouvertures", "—", "✓"], ["Création de guilde", "—", "✓"], ["Vote du plateau de combat", "—", "✓"]]
           .map(([t, g, v]) => `<tr><td>${t}</td><td>${g}</td><td>${v}</td></tr>`).join("")}
       </tbody></table><p class="sub" style="margin:.6rem 0 0">Confort et personnalisation : le VIP ne donne aucun avantage de puissance en combat.</p></div></details>
-    <p class="sub shop-legal"><a href="#" data-legal="cgv">Conditions de vente</a> · <a href="#" data-legal="mentions">Mentions légales</a> · <a href="#" data-legal="confidentialite">Confidentialité</a> · <a href="#" data-legal="retractation">Rétractation</a></p>
+    <p class="sub shop-legal"><a href="#" data-legal="cgu">Conditions d'utilisation</a> · <a href="#" data-legal="regles">Règles de la communauté</a> · <a href="#" data-legal="confidentialite">Confidentialité</a> · <a href="#" data-legal="contact">Contact & rétractation</a></p>
     ${btq.historique.length ? `<details class="fold shopcomp"><summary>Vos derniers achats</summary><ul class="btqhist">${btq.historique.map(h => `
       <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
         <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`}`;
@@ -15542,125 +15542,166 @@ function viewBoutique(){
   if(btq.articles === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
 }
 /* =====================================================================
-   Informations légales : mentions légales, conditions de vente (CGV),
-   conditions d'utilisation (CGU), confidentialité, rétractation.
-   Les champs vides de EDITEUR s'affichent « à compléter » : tant qu'ils
-   ne sont pas remplis, la recharge payante reste fermée aux joueurs.
+   Informations légales : conditions d'utilisation (avec les achats),
+   règles de la communauté, confidentialité, et contact / rétractation.
+   Aucune coordonnée personnelle publiée : le joueur écrit au support
+   depuis le jeu (table « support », lue par les admins seulement).
    ===================================================================== */
-const EDITEUR = {
-  nom:"",            // nom et prénom de l'entrepreneur individuel
-  siret:"",          // n° SIRET de la micro-entreprise
-  adresse:"",        // adresse professionnelle (ou de domiciliation)
-  email:"",          // adresse de contact
-  mediateur:"",      // nom du médiateur de la consommation
-  mediateurSite:""   // site du médiateur
-};
 const LEGAL_MAJ = "18 octobre 2026";
-function legalComplet(){ return ["nom", "siret", "adresse", "email", "mediateur", "mediateurSite"].every(k => (EDITEUR[k] || "").trim()); }
-function legalChamp(k){ const v = (EDITEUR[k] || "").trim(); return v ? esc(v) : `<span class="lg-vide">à compléter</span>`; }
-const LEGAL_ONGLETS = [["mentions", "Mentions légales"], ["cgv", "Conditions de vente"], ["cgu", "Conditions d'utilisation"], ["confidentialite", "Confidentialité"], ["retractation", "Rétractation"]];
-const legal = {onglet:"mentions"};
-function ouvrirLegal(onglet){ legal.onglet = onglet || "mentions"; go("legal"); window.scrollTo({top:0}); }
+const LEGAL_ONGLETS = [["cgu", "Conditions d'utilisation"], ["regles", "Règles de la communauté"], ["confidentialite", "Confidentialité"], ["contact", "Contact & rétractation"]];
+const SUPPORT_SUJETS = [["achat", "Un achat (Cristaux non reçus, problème de paiement)"], ["retractation", "Rétractation ou remboursement"], ["donnees", "Mes données personnelles (accès, suppression…)"], ["droits", "Signaler un contenu (droits d'auteur, image, texte)"], ["autre", "Autre question"]];
+const legal = {onglet:"cgu", demandes:null, toutes:null, envoi:false, msg:""};
+function ouvrirLegal(onglet){ legal.onglet = onglet || "cgu"; go("legal"); window.scrollTo({top:0}); }
+const LIEN_CONTACT = `<a href="#" data-lg-go="contact">formulaire de contact du jeu</a>`;
 
 function legalTexte(o){
-  const nom = legalChamp("nom"), mail = (EDITEUR.email || "").trim();
-  const contact = mail ? `<a href="mailto:${esc(mail)}">${esc(mail)}</a>` : legalChamp("email");
-  if(o === "mentions") return `
-    <h3>Éditeur</h3>
-    <p>FandoMasters est édité par ${nom}, entrepreneur individuel (micro-entreprise).<br>
-    SIRET : ${legalChamp("siret")}<br>Adresse : ${legalChamp("adresse")}<br>Contact : ${contact}<br>
-    TVA non applicable, article 293 B du Code général des impôts.<br>Directeur de la publication : ${nom}.</p>
-    <h3>Hébergement</h3>
-    <p><b>Site</b> : GitHub Pages — GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis.<br>
-    <b>Comptes et sauvegardes</b> : Supabase, Inc. — serveurs situés à Dublin (Irlande, Union européenne).<br>
-    <b>Paiements</b> : Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Irlande.</p>
-    <h3>Contenus des cartes</h3>
-    <p>FandoMasters est un projet indépendant. Il n'est ni affilié, ni approuvé, ni sponsorisé par Fandom ou par les ayants droit des œuvres représentées.
-    Les noms, personnages, images et marques appartiennent à leurs propriétaires respectifs.
-    Les textes des cartes proviennent des wikis Fandom et sont diffusés sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a> ; chaque carte renvoie vers son article d'origine.</p>
-    <p><b>Signaler un contenu</b> : un ayant droit qui souhaite le retrait d'une image, d'un nom ou d'un texte peut écrire à ${contact} en précisant la carte concernée. Le contenu est retiré dans les meilleurs délais, au plus tard sous 7 jours.</p>
-    <p class="sub">Aucune carte, aucun booster et aucun objet obtenu au hasard n'est vendu : les cartes s'obtiennent uniquement en jouant.</p>`;
-  if(o === "cgv") return `
-    <p class="sub">Version du ${LEGAL_MAJ}. Ces conditions s'appliquent à tout achat de Cristaux sur FandoMasters, entre ${nom} (« l'éditeur ») et le joueur (« vous »).</p>
-    <h3>1. Ce qui est vendu</h3>
-    <p>L'éditeur vend des <b>Cristaux</b>, une monnaie virtuelle utilisable uniquement dans FandoMasters. Les Cristaux permettent d'obtenir, à prix fixe et affiché à l'avance :
-    l'abonnement <b>VIP</b> (12 mois, sans renouvellement automatique) et des <b>fournitures de campagne</b> (armements).</p>
-    <p><b>Rien n'est obtenu au hasard contre des Cristaux ou de l'argent.</b> Aucune carte, aucun booster et aucun tirage aléatoire n'est vendu. Les cartes se gagnent uniquement en jouant.</p>
-    <h3>2. Nature des Cristaux</h3>
-    <p>Les Cristaux n'ont aucune valeur monétaire. Ils ne peuvent être ni échangés contre de l'argent, ni revendus, ni transférés à un autre joueur. Ils sont liés à votre compte.</p>
-    <h3>3. Prix et paiement</h3>
-    <p>Les prix sont indiqués en euros, toutes taxes comprises (TVA non applicable, article 293 B du CGI). Le paiement se fait sur la page sécurisée de Stripe (carte bancaire et autres moyens proposés). L'éditeur n'a jamais accès à vos données bancaires. Le contrat est conclu à la validation du paiement.</p>
-    <h3>4. Livraison</h3>
-    <p>Les Cristaux sont crédités sur votre compte immédiatement après le paiement, en général en quelques secondes. Un reçu vous est envoyé par e-mail et l'achat apparaît dans « Vos derniers achats » en Boutique. Si les Cristaux n'arrivent pas, écrivez à ${contact} : l'achat est crédité ou intégralement remboursé.</p>
-    <h3>5. Droit de rétractation</h3>
-    <p>Les Cristaux sont un contenu numérique fourni immédiatement. Conformément à l'article L221-28, 13° du Code de la consommation, avant de payer vous donnez votre accord exprès pour cette fourniture immédiate et reconnaissez perdre votre droit de rétractation de 14 jours (case à cocher obligatoire). Si cet accord n'a pas été recueilli, ou si les Cristaux n'ont pas été livrés, vous pouvez vous rétracter depuis l'onglet « Rétractation ».</p>
-    <h3>6. Garantie légale de conformité</h3>
-    <p>Vous bénéficiez de la garantie légale de conformité des contenus numériques (articles L224-25-12 et suivants du Code de la consommation). En cas de défaut, contactez ${contact}.</p>
-    <h3>7. Mineurs</h3>
-    <p>Un joueur mineur doit obtenir l'accord de son représentant légal avant tout achat. Si un achat a été fait sans cet accord, le représentant légal peut écrire à ${contact} : les Cristaux achetés et non dépensés sont remboursés.</p>
-    <h3>8. Évolution et arrêt du jeu</h3>
-    <p>FandoMasters est en développement et peut évoluer. En cas d'arrêt définitif, les joueurs sont prévenus au moins 30 jours avant, et les Cristaux achetés dans les 12 derniers mois et non dépensés sont remboursés.</p>
-    <h3>9. Réclamations et médiation</h3>
-    <p>Pour toute réclamation : ${contact}. En cas de désaccord persistant, vous pouvez recourir gratuitement au médiateur de la consommation : ${legalChamp("mediateur")} — ${legalChamp("mediateurSite")}.</p>
-    <h3>10. Droit applicable</h3>
-    <p>Ces conditions sont soumises au droit français. Vous conservez la protection des règles impératives du pays où vous résidez.</p>`;
   if(o === "cgu") return `
-    <p class="sub">Version du ${LEGAL_MAJ}.</p>
-    <h3>Le jeu</h3>
-    <p>FandoMasters est un jeu de cartes à collectionner gratuit. Créer un compte et jouer ne coûte rien. Les achats sont facultatifs.</p>
-    <h3>Votre compte</h3>
-    <p>Vous êtes responsable de votre mot de passe. Un compte est personnel. La triche, l'exploitation de bugs, l'automatisation et le harcèlement d'autres joueurs peuvent entraîner la suspension du compte, après avertissement sauf urgence.</p>
-    <h3>Contributions</h3>
-    <p>Les propositions (noms, textes, recadrages, ajouts de cartes) restent sous votre responsabilité. En les envoyant, vous acceptez qu'elles soient publiées dans le jeu, sous la même licence CC BY-SA que les textes des wikis. Les contenus illicites ou offensants sont refusés.</p>
-    <h3>Pas de valeur monétaire</h3>
-    <p>Les cartes, Fandominus, Mana, Cristaux et objets du jeu n'ont aucune valeur monétaire et ne peuvent pas être vendus contre de l'argent, dans le jeu ou en dehors.</p>`;
+    <p class="sub">Dernière mise à jour : ${LEGAL_MAJ}</p>
+    <h3>1. Acceptation</h3>
+    <p>En créant un compte ou en utilisant FandoMasters (« le Service »), vous acceptez les présentes conditions, les <a href="#" data-lg-go="regles">Règles de la communauté</a> et la <a href="#" data-lg-go="confidentialite">Politique de confidentialité</a>. Si vous ne les acceptez pas, n'utilisez pas le Service.</p>
+    <h3>2. Compte</h3>
+    <p>Un compte est personnel. Vous êtes responsable de vos identifiants et de l'activité de votre compte ; prévenez-nous en cas d'utilisation non autorisée.
+    Les joueurs de moins de 15 ans doivent avoir l'accord d'un parent pour créer un compte. Les achats sont réservés aux majeurs ou aux mineurs autorisés par leur représentant légal.</p>
+    <h3>3. Utilisation acceptable</h3>
+    <p>Vous vous engagez à respecter les Règles de la communauté et les lois applicables. Les règles font partie des présentes conditions.</p>
+    <h3>4. Contenus et propriété intellectuelle</h3>
+    <p>Les cartes sont générées à partir d'articles des wikis Fandom. Leurs textes sont publiés sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a> et chaque carte renvoie vers son article d'origine.
+    Les noms, personnages, images et marques appartiennent à leurs propriétaires respectifs. FandoMasters est un projet indépendant, ni affilié, ni approuvé, ni sponsorisé par Fandom ou par ces ayants droit.
+    Un ayant droit peut demander le retrait d'un contenu via le ${LIEN_CONTACT} ; il est retiré au plus tard sous 7 jours.</p>
+    <p>Les éléments propres au Service (nom, interface, graphismes, mécaniques de jeu) appartiennent à l'éditeur. Vous restez responsable de ce que vous publiez (pseudonyme, propositions de noms ou de textes, messages) et nous accordez le droit de l'afficher dans le Service ; les textes proposés pour les cartes sont publiés sous la même licence CC BY-SA.</p>
+    <h3>5. Achats et monnaie virtuelle</h3>
+    <p>Le Service propose l'achat de <b>Cristaux</b>, une monnaie virtuelle utilisable uniquement dans FandoMasters, pour obtenir à prix fixe et affiché à l'avance le <b>VIP</b> (12 mois, sans renouvellement automatique) et des fournitures de campagne.
+    <b>Rien n'est obtenu au hasard contre des Cristaux ou de l'argent</b> : aucune carte, aucun booster et aucun tirage n'est vendu ; les cartes se gagnent uniquement en jouant.</p>
+    <p>Les Cristaux et tous les objets du jeu n'ont aucune valeur monétaire : ils ne sont ni échangeables contre de l'argent, ni revendables, ni transférables à un autre joueur.</p>
+    <p>Les prix sont indiqués en euros, toutes taxes comprises. Les paiements sont traités par Stripe ; nous n'avons jamais accès à vos données bancaires. Les Cristaux sont crédités immédiatement après le paiement et l'achat apparaît dans « Vos derniers achats » ; un reçu est envoyé par e-mail.</p>
+    <p><b>Rétractation</b> : les Cristaux sont un contenu numérique fourni immédiatement. Avant de payer, vous demandez cette fourniture immédiate et reconnaissez perdre votre droit de rétractation de 14 jours (article L221-28, 13° du Code de la consommation). Sauf disposition légale impérative contraire, les achats sont donc fermes une fois crédités. Restent toujours possibles, via le ${LIEN_CONTACT} : le remboursement d'un achat non crédité, d'un achat fait par un mineur sans l'accord de son représentant légal (Cristaux non dépensés), et la garantie légale de conformité des contenus numériques.</p>
+    <h3>6. Suspension et bannissement</h3>
+    <p>Nous pouvons avertir, restreindre, suspendre ou supprimer un compte, retirer un contenu, ou annuler des progrès, objets ou récompenses obtenus en violation des règles, notamment en cas de triche, d'automatisation, d'exploitation de failles, de multi-comptes, de fraude ou de comportement nuisible envers d'autres joueurs. En cas de bannissement définitif, l'accès au compte et à ses objets peut être perdu, dans les limites prévues par la loi.</p>
+    <h3>7. Suppression du compte</h3>
+    <p>Vous pouvez arrêter de jouer à tout moment et demander la suppression de votre compte via le ${LIEN_CONTACT}. Certaines données sont conservées le temps nécessaire à nos obligations légales (par exemple la comptabilité des achats).</p>
+    <h3>8. Disponibilité et arrêt du Service</h3>
+    <p>Le Service est en développement et fourni « en l'état ». Nous pouvons le faire évoluer. En cas d'arrêt définitif, les joueurs sont prévenus au moins 30 jours avant, et les Cristaux achetés au cours des 12 derniers mois et non dépensés sont remboursés.</p>
+    <h3>9. Responsabilité</h3>
+    <p>Dans les limites permises par la loi, nous ne sommes pas responsables des dommages indirects liés à l'utilisation ou à l'impossibilité d'utiliser le Service. Aucune disposition n'exclut une responsabilité qui ne peut légalement l'être, ni vos droits de consommateur.</p>
+    <h3>10. Modifications</h3>
+    <p>Ces conditions peuvent évoluer avec le Service ou la loi ; la date de mise à jour ci-dessus change alors. Les conditions applicables à un achat sont celles en vigueur au moment de cet achat.</p>
+    <h3>11. Contact et litiges</h3>
+    <p>Pour toute question ou réclamation : ${LIEN_CONTACT}. Ces conditions sont soumises au droit français ; vous conservez la protection des règles impératives du pays où vous résidez.</p>`;
+  if(o === "regles") return `
+    <p class="sub">Dernière mise à jour : ${LEGAL_MAJ}</p>
+    <p>Ces règles gardent FandoMasters amusant, sûr et équitable. Elles s'appliquent partout : profils, pseudonymes, guildes, combats, marché, échanges et propositions de la communauté. Les enfreindre peut entraîner un avertissement, une restriction, une suspension ou un bannissement.</p>
+    <h3>1. Respect</h3>
+    <p>Aucun propos haineux, discriminatoire, insultant ou dégradant. Les cartes, pseudonymes et propositions ne doivent pas servir à promouvoir la haine, la violence ou l'extrémisme, ni à viser quelqu'un. Restez courtois, même en compétition.</p>
+    <h3>2. Pas de harcèlement</h3>
+    <p>Pas de menaces, d'intimidation, de messages répétés non désirés, ni de divulgation d'informations personnelles sur autrui.</p>
+    <h3>3. Pas de triche ni d'automatisation</h3>
+    <p>Pas de bots, scripts, macros ou outils qui jouent, ouvrent des paquets, combattent ou échangent à votre place. Pas d'exploitation de bugs : signalez-les. Pas de modification ni d'interception du jeu ou de ses échanges avec le serveur.</p>
+    <h3>4. Un compte par personne</h3>
+    <p>Pas de multi-comptes pour contourner des limites, cumuler des récompenses, fausser un classement ou échapper à une sanction. Ne partagez, ne vendez et n'achetez pas de comptes.</p>
+    <h3>5. Pseudonymes et contributions</h3>
+    <p>Pseudonymes, titres de guilde et propositions (noms, textes, recadrages, ajouts de cartes) doivent rester respectueux, honnêtes et sans usurpation d'identité. Ne proposez pas de contenu dont vous savez qu'il viole les droits d'autrui.</p>
+    <h3>6. Jeu équitable</h3>
+    <p>Pas d'arnaque ni de tromperie au marché, dans les échanges ou les combats. Pas de collusion pour fausser un classement. <b>Aucune vente de cartes, d'objets ou de comptes contre de l'argent réel</b>, dans le jeu ou en dehors.</p>
+    <h3>7. Pas de spam ni d'escroquerie</h3>
+    <p>Pas de publicité non sollicitée, de liens malveillants, ni de tentative d'obtenir les identifiants d'autres joueurs.</p>
+    <h3>8. Sécurité</h3>
+    <p>N'essayez pas d'accéder à des comptes ou des données sans autorisation, ni de perturber le Service.</p>
+    <h3>9. Signalement</h3>
+    <p>Signalez un comportement contraire aux règles via le ${LIEN_CONTACT}. Chaque signalement est examiné ; la sanction dépend de la gravité et de la récidive.</p>`;
   if(o === "confidentialite") return `
-    <p class="sub">Version du ${LEGAL_MAJ}. Responsable du traitement : ${nom} — ${contact}.</p>
-    <h3>Données collectées</h3>
-    <p><b>Compte</b> : adresse e-mail et mot de passe (stocké chiffré, jamais lisible). <b>Jeu</b> : pseudo, collection, progression, historique des achats, contributions.
-    <b>Paiement</b> : traité par Stripe ; l'éditeur reçoit le nom, l'e-mail, le pays et le montant, jamais le numéro de carte.</p>
-    <h3>Pourquoi</h3>
-    <p>Faire fonctionner votre compte et le jeu (exécution du contrat) ; traiter les achats et tenir la comptabilité (obligation légale) ; prévenir la triche et la fraude (intérêt légitime).</p>
-    <h3>Durée de conservation</h3>
-    <p>Données de jeu : tant que le compte existe. Journal technique des actions : 120 jours. Pièces comptables liées aux achats : 10 ans (obligation légale). Un compte supprimé est effacé sous 30 jours, hors pièces comptables.</p>
-    <h3>Qui y a accès</h3>
-    <p>Uniquement l'éditeur et ses prestataires techniques : Supabase (serveurs en Irlande, UE), GitHub (hébergement du site), Stripe (paiements). Les images des cartes sont chargées depuis les serveurs de Fandom, qui reçoivent alors votre adresse IP. Aucune donnée n'est vendue ni utilisée pour de la publicité.</p>
-    <h3>Cookies et stockage</h3>
+    <p class="sub">Dernière mise à jour : ${LEGAL_MAJ}</p>
+    <h3>1. Responsable du traitement</h3>
+    <p>L'éditeur de FandoMasters, joignable via le ${LIEN_CONTACT}.</p>
+    <h3>2. Données traitées</h3>
+    <p><b>Compte</b> : adresse e-mail, identifiant et données de connexion (mot de passe stocké chiffré, jamais lisible), via notre prestataire d'authentification Supabase.<br>
+    <b>Jeu</b> : pseudonyme, progression, collection, decks, statistiques, guilde, amis, propositions et votes, historique des achats.<br>
+    <b>Paiements</b> : traités par Stripe. Nous recevons les informations nécessaires pour créditer l'achat (identifiants de paiement, montant, e-mail, nom et pays de l'acheteur), jamais le numéro de carte.<br>
+    <b>Support</b> : les messages que vous nous envoyez depuis le jeu.<br>
+    <b>Technique</b> : journaux de sécurité et de synchronisation, adresse IP lors des requêtes.</p>
+    <h3>3. Finalités et bases légales</h3>
+    <p>Fournir le Service et gérer votre compte (exécution du contrat) ; traiter les achats et tenir la comptabilité (obligation légale) ; sécuriser le Service et lutter contre la triche (intérêt légitime) ; répondre à vos demandes.</p>
+    <h3>4. Prestataires</h3>
+    <p>Supabase (base de données et authentification, serveurs en Irlande, UE) · Stripe (paiements) · GitHub (hébergement du site). Les images des cartes sont chargées depuis les serveurs de Fandom, qui reçoivent alors votre adresse IP. Certains prestataires peuvent traiter des données hors de l'UE, notamment aux États-Unis, avec les garanties prévues par le RGPD (clauses contractuelles types, Data Privacy Framework). Aucune donnée n'est vendue ni utilisée pour de la publicité.</p>
+    <h3>5. Cookies et stockage local</h3>
     <p>Aucun cookie publicitaire ni outil de mesure d'audience. Le jeu enregistre dans votre navigateur uniquement ce qui est nécessaire à son fonctionnement (session, sauvegarde hors ligne, réglages).</p>
-    <h3>Vos droits</h3>
-    <p>Vous pouvez demander l'accès, la rectification, la portabilité ou l'effacement de vos données, ou vous opposer à un traitement, en écrivant à ${contact}. Réponse sous un mois. Vous pouvez aussi saisir la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">CNIL</a>.</p>
-    <p>Les joueurs de moins de 15 ans doivent avoir l'accord d'un parent pour créer un compte.</p>`;
-  if(o === "retractation") return `
-    <p>Pour vous rétracter d'un achat, quand ce droit s'applique (voir l'article 5 des conditions de vente), utilisez le bouton ci-dessous. Une confirmation vous est envoyée par e-mail.</p>
-    ${legalAchatsHTML()}
-    <button class="btn" id="lg-retracter" ${mail ? "" : "disabled"}>Se rétracter du contrat</button>
-    <p class="sub" style="margin-top:.6rem">Vous pouvez aussi écrire directement à ${contact} en indiquant votre pseudo, la date et le montant de l'achat.</p>`;
+    <h3>6. Conservation</h3>
+    <p>Données de jeu : tant que le compte existe. Journal technique : 120 jours. Pièces liées aux achats : 10 ans (obligation comptable). Un compte supprimé est effacé sous 30 jours, hors pièces comptables.</p>
+    <h3>7. Vos droits</h3>
+    <p>Accès, rectification, effacement, limitation, portabilité et opposition : faites votre demande via le ${LIEN_CONTACT} (sujet « Mes données personnelles »), réponse sous un mois. Vous pouvez aussi saisir la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">CNIL</a>.</p>
+    <h3>8. Mineurs</h3>
+    <p>Les joueurs de moins de 15 ans doivent avoir l'accord d'un parent pour créer un compte. Un parent peut demander la suppression du compte de son enfant via le formulaire de contact.</p>
+    <h3>9. Modifications</h3>
+    <p>Cette politique peut évoluer ; la date de mise à jour ci-dessus change alors.</p>`;
   return "";
 }
-function legalAchatsHTML(){
-  const h = (btq.historique || []).filter(x => x.type === "paiement");
-  if(!h.length) return `<p class="sub">Aucun achat payant trouvé sur ce compte pour l'instant.</p>`;
-  return `<label class="lg-label">Achat concerné</label><select id="lg-achat" class="lg-select">${h.map((x, i) => `<option value="${i}">${esc(x.motif || "Achat")} · ${new Date(x.cree).toLocaleDateString("fr-FR")}</option>`).join("")}</select>`;
+function legalContactHTML(){
+  if(!nuageConnecte()) return `<p>Connectez-vous à votre compte pour écrire au support.</p>`;
+  const d = legal.demandes;
+  const sujetNom = k => (SUPPORT_SUJETS.find(x => x[0] === k) || [k, k])[1];
+  const ligne = (x, admin) => `<li class="lg-dem ${x.traite ? "ok" : ""}">
+      <div class="lg-dem-t"><b>${esc(sujetNom(x.sujet))}</b><span class="sub">${new Date(x.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})} · ${x.traite ? "traitée" : "en attente"}</span></div>
+      ${admin ? `<div class="sub">${esc((amis.profils.get(x.joueur) || {}).pseudo || x.joueur)}${x.courriel ? " · " + esc(x.courriel) : ""}</div>` : ""}
+      <p>${esc(x.texte)}</p>
+      ${x.reponse ? `<p class="lg-rep"><b>Réponse :</b> ${esc(x.reponse)}</p>` : ""}
+      ${admin && !x.traite ? `<div class="row" style="gap:.4rem"><input class="lg-rep-in" data-rep="${x.id}" placeholder="Réponse au joueur (facultatif)"><button class="btn small" data-traiter="${x.id}">Marquer traitée</button></div>` : ""}
+    </li>`;
+  return `
+    <p>Écrivez-nous ici pour un achat, une rétractation ou un remboursement, vos données personnelles, un signalement de contenu ou toute autre question. Nous répondons dans cet onglet et, si besoin, à l'adresse e-mail de votre compte.</p>
+    <label class="lg-label" for="lg-sujet">Sujet</label>
+    <select id="lg-sujet" class="lg-select">${SUPPORT_SUJETS.map(([k, t]) => `<option value="${k}" ${legal.sujet === k ? "selected" : ""}>${t}</option>`).join("")}</select>
+    <label class="lg-label" for="lg-texte">Message</label>
+    <textarea id="lg-texte" class="lg-area" maxlength="4000" placeholder="Décrivez votre demande. Pour un achat, indiquez la date et le montant.">${esc(legal.brouillon || "")}</textarea>
+    <div class="row" style="gap:.6rem;align-items:center;margin-top:.5rem">
+      <button class="btn" id="lg-envoyer" ${legal.envoi ? "disabled" : ""}>${legal.envoi ? "Envoi…" : "Envoyer"}</button>
+      ${legal.msg ? `<span class="sub">${esc(legal.msg)}</span>` : ""}
+    </div>
+    <p class="sub" style="margin-top:.8rem"><b>Rétractation</b> : pour vous rétracter d'un contrat lorsque ce droit s'applique (voir l'article 5 des conditions d'utilisation), choisissez le sujet « Rétractation ou remboursement » et indiquez l'achat concerné. Un accusé de réception s'affiche ci-dessous.</p>
+    ${d && d.length ? `<h3>Vos demandes</h3><ul class="lg-dems">${d.map(x => ligne(x, false)).join("")}</ul>` : ""}
+    ${estAdmin() && legal.toutes ? `<h3>Support · toutes les demandes (admin)</h3>${legal.toutes.length ? `<ul class="lg-dems">${legal.toutes.map(x => ligne(x, true)).join("")}</ul>` : `<p class="sub">Aucune demande.</p>`}` : ""}`;
+}
+async function legalChargerDemandes(){
+  const moi = moiId(); if(!moi) return;
+  try{
+    legal.demandes = await nuageRest("support?select=*&joueur=eq." + moi + "&order=cree.desc&limit=30") || [];
+    if(estAdmin()){
+      legal.toutes = await nuageRest("support?select=*&order=traite.nullsfirst,cree.desc&limit=100") || [];
+      const ids = [...new Set(legal.toutes.map(x => x.joueur))].filter(id => !amis.profils.has(id));
+      if(ids.length){ const pr = await nuageRest("profils?select=joueur,pseudo&joueur=in.(" + ids.join(",") + ")").catch(()=>[]); for(const x of (pr || [])) amis.profils.set(x.joueur, x); }
+    }
+  }catch(e){ legal.demandes = legal.demandes || []; }
+  if(state.view === "legal" && legal.onglet === "contact") viewLegal();
 }
 function viewLegal(){
-  if(!LEGAL_ONGLETS.some(([k]) => k === legal.onglet)) legal.onglet = "mentions";
+  if(!LEGAL_ONGLETS.some(([k]) => k === legal.onglet)) legal.onglet = "cgu";
   view.innerHTML = `
     <h2 class="vuetitre" data-ghost="LÉGAL">Informations légales</h2>
     <div class="lg-onglets" role="tablist">${LEGAL_ONGLETS.map(([k, t]) => `<button type="button" class="shoptab ${legal.onglet === k ? "on" : ""}" data-lg="${k}" role="tab" aria-selected="${legal.onglet === k}">${t}</button>`).join("")}</div>
-    <article class="panel lg-texte">${legalTexte(legal.onglet)}</article>`;
+    <article class="panel lg-texte">${legal.onglet === "contact" ? legalContactHTML() : legalTexte(legal.onglet)}</article>`;
   view.querySelectorAll("[data-lg]").forEach(b => b.onclick = ()=>{ legal.onglet = b.dataset.lg; viewLegal(); });
-  const r = view.querySelector("#lg-retracter");
-  if(r) r.onclick = ()=>{
-    const h = (btq.historique || []).filter(x => x.type === "paiement");
-    const sel = view.querySelector("#lg-achat"), a = sel ? h[+sel.value] : null;
-    const pseudo = (state.profile && state.profile.pseudo) || "";
-    const corps = `Bonjour,\n\nJe notifie par la présente ma rétractation du contrat portant sur l'achat suivant :\n` +
-      (a ? `${a.motif || "Achat"} du ${new Date(a.cree).toLocaleString("fr-FR")}\n` : "(précisez l'achat)\n") +
-      `\nPseudo : ${pseudo}\nCompte : ${nuageCourriel() || ""}\nIdentifiant : ${moiId() || ""}\n\nCordialement`;
-    location.href = "mailto:" + encodeURIComponent(EDITEUR.email) + "?subject=" + encodeURIComponent("Rétractation — FandoMasters") + "&body=" + encodeURIComponent(corps);
+  view.querySelectorAll("[data-lg-go]").forEach(a => a.onclick = e => { e.preventDefault(); legal.onglet = a.dataset.lgGo; viewLegal(); window.scrollTo({top:0}); });
+  if(legal.onglet !== "contact") return;
+  if(legal.demandes === null && nuageConnecte()){ legal.demandes = []; legalChargerDemandes(); }
+  const tx = view.querySelector("#lg-texte"), su = view.querySelector("#lg-sujet");
+  if(tx) tx.oninput = ()=>{ legal.brouillon = tx.value; };
+  if(su) su.onchange = ()=>{ legal.sujet = su.value; };
+  const env = view.querySelector("#lg-envoyer");
+  if(env) env.onclick = async ()=>{
+    const texte = (tx.value || "").trim();
+    if(texte.length < 5){ legal.msg = "Écrivez au moins quelques mots."; return viewLegal(); }
+    legal.envoi = true; legal.msg = ""; viewLegal();
+    try{
+      await nuageRest("support", {method:"POST", headers:{"Prefer":"return=minimal"}, body:JSON.stringify({sujet:su.value, texte, courriel:nuageCourriel() || null})});
+      legal.brouillon = ""; legal.msg = "Message envoyé. Accusé de réception : il apparaît dans « Vos demandes ».";
+      try{ sfx.tick(); }catch(e){}
+      await legalChargerDemandes();
+    }catch(e){ legal.msg = /5 messages/.test(String(e && (e.message || e))) ? "Limite atteinte : 5 messages par jour." : "Envoi impossible pour l'instant. Réessayez dans un moment."; }
+    legal.envoi = false; viewLegal();
   };
-  if(legal.onglet === "retractation" && !(btq.historique || []).length && nuageConnecte())
-    nuageRest("achats?select=type,article,cristaux,motif,cree&order=cree.desc&limit=20").then(h => { btq.historique = h || []; if(state.view === "legal" && legal.onglet === "retractation") viewLegal(); }).catch(()=>{});
+  view.querySelectorAll("[data-traiter]").forEach(b => b.onclick = async ()=>{
+    const id = b.dataset.traiter, rep = (view.querySelector(`[data-rep="${id}"]`) || {}).value || null;
+    try{ await nuageRest("support?id=eq." + id, {method:"PATCH", headers:{"Prefer":"return=minimal"}, body:JSON.stringify({traite:new Date().toISOString(), reponse:rep})}); }catch(e){ toast("Impossible", "réessayez", "lose"); }
+    await legalChargerDemandes();
+  });
 }
 
 /* ---- Recharge de Cristaux par paiement (Stripe) ----
@@ -15673,14 +15714,14 @@ const PACKS_CRISTAUX = [
   {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},
   {n:2400, prix:"19,99 €", url:"https://buy.stripe.com/8x23co6CxgF6eS6a1weZ202", bonus:"+20 %", top:true}
 ];
-function rechargeVisible(){ return ((PAIEMENT_OUVERT && legalComplet()) || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
+function rechargeVisible(){ return (PAIEMENT_OUVERT || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
 function rechargeHTML(){
   if(!rechargeVisible()) return "";
   return `<div class="sectionhead vit-sect"><div><h3>Recharger des Cristaux</h3></div><span class="sub">${PAIEMENT_OUVERT ? "Paiement sécurisé par Stripe." : "Visible des administrateurs seulement · phase de test"}</span></div>
     <div class="recharge">${PACKS_CRISTAUX.filter(p => p.url).map(p => `<button type="button" class="recharge-pack ${p.top ? "top" : ""}" data-recharge="${p.n}">
       ${p.bonus ? `<span class="rp-bonus">${p.bonus}</span>` : ""}<span class="rp-ic">${CRISTAL}</span>
       <b>${p.n.toLocaleString("fr-FR")}</b><small>Cristaux</small><span class="rp-prix">${p.prix}</span></button>`).join("")}</div>
-    <p class="sub rp-legal">Prix TTC · aucune carte ni aucun tirage au hasard n'est vendu · <a href="#" data-legal="cgv">Conditions de vente</a> · <a href="#" data-legal="retractation">Rétractation</a></p>`;
+    <p class="sub rp-legal">Prix TTC · aucune carte ni aucun tirage au hasard n'est vendu · <a href="#" data-legal="cgu">Conditions</a> · <a href="#" data-legal="contact">Rétractation & support</a></p>`;
 }
 function rechargerCristaux(n){
   const p = PACKS_CRISTAUX.find(x => x.n === n), id = moiId();
@@ -15690,7 +15731,7 @@ function rechargerCristaux(n){
   m.innerHTML = `<div class="inner" style="max-width:420px">
     <h3 style="font-size:1.15rem;margin-bottom:.4rem">${n.toLocaleString("fr-FR")} Cristaux · ${esc(p.prix)}</h3>
     <p class="sub" style="margin:0 0 .8rem">Vous allez payer sur la page sécurisée de Stripe. Les Cristaux arrivent sur votre compte dès le paiement validé, sur tous vos appareils.</p>
-    <label class="rp-accord"><input type="checkbox" id="rp-ok"> <span>J'ai lu et j'accepte les <a href="#" data-cgv>conditions de vente</a>. Je demande la livraison immédiate des Cristaux et je reconnais perdre mon droit de rétractation de 14 jours.</span></label>
+    <label class="rp-accord"><input type="checkbox" id="rp-ok"> <span>J'ai lu et j'accepte les <a href="#" data-cgv>conditions d'utilisation et de vente</a>. Je demande la livraison immédiate des Cristaux et je reconnais perdre mon droit de rétractation de 14 jours.</span></label>
     <div class="row" style="justify-content:flex-end;gap:.5rem;margin-top:1rem">
       <button class="btn small ghost" id="non">Annuler</button>
       <button class="btn small" id="oui" disabled>Payer ${esc(p.prix)}</button>
@@ -15698,7 +15739,7 @@ function rechargerCristaux(n){
   document.body.appendChild(m);
   const ok = m.querySelector("#rp-ok"), oui = m.querySelector("#oui");
   ok.onchange = ()=>{ oui.disabled = !ok.checked; };
-  m.querySelector("[data-cgv]").onclick = e => { e.preventDefault(); m.remove(); ouvrirLegal("cgv"); };
+  m.querySelector("[data-cgv]").onclick = e => { e.preventDefault(); m.remove(); ouvrirLegal("cgu"); };
   m.querySelector("#non").onclick = ()=>m.remove();
   m.onclick = e => { if(e.target === m) m.remove(); };
   oui.onclick = ()=>{
@@ -20105,7 +20146,7 @@ const NOUVEAUTES = [
     "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche.",
     "Combats & campagnes : la grande bannière en double a disparu, les modes de jeu sont affichés directement.",
     "La roue de la fortune est retirée. Les cartes déjà gagnées à la roue restent livrées dans votre album.",
-    "Nouvelle page « Mentions légales & CGV » (menu Plus) : conditions de vente, confidentialité, rétractation. Chaque carte cite son article et sa licence.",
+    "Nouvelle page « Conditions & confidentialité » (menu Plus) : conditions d'utilisation, règles de la communauté, confidentialité, et un formulaire de contact pour le support. Chaque carte cite son article et sa licence.",
     "Les polices sont désormais servies par le jeu lui-même : plus aucun appel à Google Fonts.",
     "Fin de campagne : toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, la dernière cachait les autres)."
   ]},
@@ -20181,7 +20222,7 @@ function viewMenu(){
     ]},
     {titre:"Le jeu", items:[
       ["nouveautes","✧","Nouveautés"],
-      ["legal","§","Mentions légales & CGV"]
+      ["legal","§","Conditions & confidentialité"]
     ]}
   ];
   view.innerHTML = `<div class="pagehub menuplus">
@@ -20458,7 +20499,11 @@ function openSettings(){
 .lg-onglets{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
 .lg-texte{line-height:1.6;max-width:820px}.lg-texte h3{font-size:1rem;margin:1.2rem 0 .3rem}.lg-texte h3:first-child{margin-top:0}
 .lg-texte p{margin:.3rem 0 .6rem}.lg-texte a{color:var(--p4)}
-.lg-vide{color:#ff8a80;font-weight:700;border-bottom:1px dashed currentColor}
+.lg-area{width:100%;max-width:640px;min-height:120px;resize:vertical;font:inherit;padding:.6rem .7rem;border-radius:12px}
+.lg-dems{list-style:none;padding:0;margin:.4rem 0 0;display:grid;gap:.6rem}
+.lg-dem{padding:.7rem .9rem;border-radius:12px;background:var(--creux);border-left:3px solid var(--p4)}.lg-dem.ok{border-left-color:#2fbf71;opacity:.85}
+.lg-dem-t{display:flex;flex-wrap:wrap;gap:.2rem .7rem;align-items:baseline}.lg-dem p{margin:.35rem 0}.lg-rep{color:#9fe3bf}
+.lg-rep-in{flex:1;min-width:160px}
 .lg-label{display:block;font-size:.8rem;margin:.6rem 0 .25rem;opacity:.8}.lg-select{width:100%;max-width:520px;margin-bottom:.8rem}
 .rp-legal{font-size:.78rem;margin:-1rem 0 1.6rem}.rp-legal a,.shop-legal a,.rp-accord a{color:inherit;text-decoration:underline}
 .shop-legal{font-size:.78rem;text-align:center;margin:1.4rem 0 .4rem;opacity:.75}
