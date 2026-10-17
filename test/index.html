@@ -6723,7 +6723,11 @@ function enregistrerTeintes(c){
 poserTeintes(teintesCourantes());
 
 
+/* nom et texte acceptés par la communauté : posés à l'affichage, la carte du joueur reste intacte */
+function nomAccepte(c){ const n = c && c.id && CORR_LIVE.nom && CORR_LIVE.nom[specParts(c.id) ? specParts(c.id).base : c.id]; return n || null; }
+function titreCarte(c){ const n = nomAccepte(c); return (n && n.titre) || (c && c.title) || ""; }
 function cardHTML(c, opts={}){
+  { const n = nomAccepte(c); if(n) c = Object.assign({}, c, n.titre ? {title:n.titre} : {}, n.texte ? {desc:n.texte} : {}); }
   if(c && c.id && !c.variant && c.rarity !== "Relique"){
     const rc = rareteEffective(c);
     if(rc && rc !== c.rarity) c = Object.assign({}, c, {rarity:rc});
@@ -9478,7 +9482,7 @@ function majCartesPerso(col){
    Ce que le développeur accepte vaut tout de suite pour tous les joueurs : le
    jeu relit les recadrages et raretés acceptés (quelques octets) et les pose
    par-dessus CORRECTIONS. Intégrer le code reste possible, mais plus nécessaire. */
-const CORR_LIVE = {cad:{}, rar:{}, aj:{}, emb:{}};
+const CORR_LIVE = {cad:{}, rar:{}, aj:{}, emb:{}, nom:{}};
 let RAR_TITRE = null;
 function rareteDe(id){
   const l = CORR_LIVE.rar[id]; if(l && l.r) return l.r;
@@ -9602,7 +9606,7 @@ async function corrLiveCache(){
   try{
     const sig = String(hashId(JSON.stringify(CORRECTIONS)));
     const c = await sget("fm:corr-live", true);
-    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; CORR_LIVE.emb = c.emb || {}; RAR_TITRE = null; appliquerEmblemes(); }
+    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; CORR_LIVE.emb = c.emb || {}; CORR_LIVE.nom = c.nom || {}; RAR_TITRE = null; appliquerEmblemes(); }
   }catch(e){}
 }
 /* emblèmes acceptés : la carte emblème d'un univers change pour tout le monde */
@@ -9642,14 +9646,21 @@ async function chargerCorrectionsLive(force){
       const sig = String(hashId(JSON.stringify(CORRECTIONS)));
       let c = await sget("fm:corr-live", true);
       /* le code a changé (nouvelles corrections intégrées) : on repart de zéro */
-      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", te:"", cad:{}, rar:{}, aj:{}, emb:{}};
-      c.aj = c.aj || {}; c.ta = c.ta || ""; c.emb = c.emb || {}; c.te = c.te || "";
-      const [ps, vs, as, es] = await Promise.all([
+      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", te:"", tn:"", cad:{}, rar:{}, aj:{}, emb:{}, nom:{}};
+      c.aj = c.aj || {}; c.ta = c.ta || ""; c.emb = c.emb || {}; c.te = c.te || ""; c.nom = c.nom || {}; c.tn = c.tn || "";
+      const [ps, vs, as, es, ns] = await Promise.all([
         corrLivePages("propositions?statut=eq.acceptee&cadrage=not.is.null&select=carte_id,cadrage,traite", c.tp).catch(()=>null),
         corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.rarete&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite", c.tv).catch(()=>null),
         corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.ajout&select=sujet,carte,r:proposition->>rarete,traite", c.ta).catch(()=>null),
-        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.embleme&select=sujet,univ:carte->>univ,titre:proposition->remplacant->>title,traite", c.te).catch(()=>null)
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.embleme&select=sujet,univ:carte->>univ,titre:proposition->remplacant->>title,traite", c.te).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.nom&select=sujet,titre:proposition->>titre,texte:proposition->>texte,traite", c.tn).catch(()=>null)
       ]);
+      for(const n of (ns || [])){
+        if(!n.sujet || (!n.titre && !n.texte)) continue;
+        const t = n.traite || "", o = c.nom[n.sujet];
+        if(!o || t >= o.t) c.nom[n.sujet] = {titre:n.titre || "", texte:n.texte || "", t};
+        if(t > c.tn) c.tn = t;
+      }
       for(const e of (es || [])){
         if(!e.univ || !e.titre) continue;
         const t = e.traite || "", o = c.emb[e.univ];
@@ -9675,11 +9686,11 @@ async function chargerCorrectionsLive(force){
         if(!o || t >= o.t) c.rar[v.sujet] = {r:v.r, titre:v.titre, univ:v.univ, t};
         if(t > c.tv) c.tv = t;
       }
-      if(ps || vs || as || es) await sset("fm:corr-live", c, true);
-      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj, CORR_LIVE.emb]);
-      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; CORR_LIVE.emb = c.emb; RAR_TITRE = null;
+      if(ps || vs || as || es || ns) await sset("fm:corr-live", c, true);
+      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj, CORR_LIVE.emb, CORR_LIVE.nom]);
+      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; CORR_LIVE.emb = c.emb; CORR_LIVE.nom = c.nom; RAR_TITRE = null;
       appliquerEmblemes();
-      change = avant !== JSON.stringify([c.cad, c.rar, c.aj, c.emb]);
+      change = avant !== JSON.stringify([c.cad, c.rar, c.aj, c.emb, c.nom]);
     }catch(e){}
     corrLiveVu = Date.now();
     return change;
@@ -9916,6 +9927,7 @@ function dejaIntegre(p){
   return !!p.cadrage && egalJ(k.cadrage, p.cadrage);
 }
 function voteIntegre(v){
+  if(v.type === "nom") return true;    // toujours appliqué en direct, rien à intégrer
   if(v.type === "ajout"){ const k = CORRECTIONS[v.sujet]; return !!(k && k.ajout && k.rarete === (v.proposition || {}).rarete); }
   if(v.type === "rarete") return (CORRECTIONS[v.sujet] || {}).rarete === (v.proposition || {}).rarete;
   if(v.type === "embleme") return ICONIC[(v.carte || {}).univ] === ((v.proposition || {}).remplacant || {}).title;
@@ -10048,6 +10060,8 @@ function blocVote(v){
     ? `Ajout au catalogue de ${esc((v.carte || {}).univ || "")} en <b style="color:var(--p5)">${esc((v.proposition || {}).rarete || "?")}</b>`
     : v.type === "rarete"
     ? `Rareté : ${esc((v.carte || {}).rarity || "?")} → <b style="color:var(--p5)">${esc(v.proposition.rarete)}</b>`
+    : v.type === "nom"
+    ? `${(v.proposition || {}).titre ? `Nouveau nom : <b style="color:var(--p5)">${esc(v.proposition.titre)}</b>` : ""}${(v.proposition || {}).titre && (v.proposition || {}).texte ? "<br>" : ""}${(v.proposition || {}).texte ? `Nouveau texte : <i>« ${esc(v.proposition.texte)} »</i>` : ""}`
     : `Emblème de ${esc((v.carte || {}).univ || "")} : <b style="color:var(--p5)">${esc(((v.proposition || {}).remplacant || {}).title || "?")}</b> à la place de ${esc(((v.carte || {}).title || "").replace(/ — .*$/, ""))}`;
   const etat = {ouvert:"vote en cours", acceptee:"acceptée", refusee:"refusée"}[v.statut];
   return `<div class="mvente prop" style="cursor:default">
@@ -10128,7 +10142,7 @@ function viewCommu(){
           </button>
           <button type="button" class="commpole" data-caction="contributions">
             <span class="cp-ic">✦</span>
-            <span class="cp-txt"><b>Contributions</b><small>Proposer une carte, proposer un recadrage et voter pour les cartes</small></span>
+            <span class="cp-txt"><b>Contributions</b><small>Proposer une carte, un recadrage, un nouveau nom ou texte, et voter pour les cartes</small></span>
             <span class="cp-tags">
               ${enCours ? `<i class="chaud">${enCours} vote${enCours > 1 ? "s" : ""} ouvert${enCours > 1 ? "s" : ""}</i>` : `<i>aucun vote ouvert</i>`}
             </span>
@@ -10155,9 +10169,11 @@ function viewCommu(){
   const moi = moiId();
   const ong = commu.onglet;
   const tab = (id, nom, n) => `<button class="chip" data-cong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
-  const ouverts = commu.votes.filter(v => v.statut === "ouvert" && v.type !== "ajout");
+  const ouverts = commu.votes.filter(v => v.statut === "ouvert" && v.type !== "ajout" && v.type !== "nom");
   const aVoter = ouverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const ajoutsOuverts = commu.votes.filter(v => v.statut === "ouvert" && v.type === "ajout");
+  const nomsOuverts = commu.votes.filter(v => v.statut === "ouvert" && v.type === "nom");
+  const aVoterNoms = nomsOuverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const aVoterAj = ajoutsOuverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const groupes = admin ? groupesRecadrage() : [];
   const exportP = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte && !dejaIntegre(p));
@@ -10182,8 +10198,24 @@ function viewCommu(){
       </div>
       ${ouverts.length ? `<div class="mliste">${ouverts.map(blocVote).join("")}</div>`
         : `<div class="panel"><p class="sub" style="margin:0">Aucun vote en cours.</p></div>`}
-      ${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
-        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+      ${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout" && v.type !== "nom").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
+        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout" && v.type !== "nom").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+  }else if(ong === "noms"){
+    const clos = commu.votes.filter(v => v.statut !== "ouvert" && v.type === "nom");
+    const plafond = vipActif() ? 10 : 2;
+    const jourParis = d => new Date(d).toLocaleDateString("fr-CA", {timeZone:"Europe/Paris"});
+    const faites = admin ? 0 : commu.votes.filter(v => v.type === "nom" && v.auteur === moi && v.cree && jourParis(v.cree) === jourParis(Date.now())).length;
+    const reste = Math.max(0, plafond - faites);
+    corps = `<div class="panel" style="margin-bottom:.8rem">
+        <p class="sub" style="margin:0 0 .6rem">Un nom mal traduit, un titre de page bizarre, un texte qui ne veut rien dire ? Proposez mieux : une fois accepté, le nouveau nom et le nouveau texte s'affichent sur la carte chez tout le monde.</p>
+        <div class="row" style="gap:.6rem;align-items:center;flex-wrap:wrap">
+          <button class="btn small" id="vnom" ${!admin && !reste ? "disabled" : ""}>Proposer un nom ou un texte</button>
+          <span class="sub">${admin ? "Développeur : sans limite" : `${reste} / ${plafond} aujourd'hui${vipActif() ? "" : " · 10 par jour avec le VIP"}`}</span>
+        </div>
+      </div>
+      ${nomsOuverts.length ? `<div class="mliste">${nomsOuverts.map(blocVote).join("")}</div>`
+        : `<div class="panel"><p class="sub" style="margin:0">Aucune proposition en cours.</p></div>`}
+      ${clos.length ? `<h3 class="amih" style="margin-top:1rem">Décidées</h3><div class="mliste">${clos.slice(0, 20).map(blocVote).join("")}</div>` : ""}`;
   }else if(ong === "ajouts"){
     const clos = commu.votes.filter(v => v.statut !== "ouvert" && v.type === "ajout");
     corps = `<div class="panel" style="margin-bottom:.8rem">
@@ -10243,6 +10275,7 @@ function viewCommu(){
       ${tab("votes", "Votes", aVoter)}
       ${tab("recadrer", "Recadrer", 0)}
       ${tab("ajouts", "Ajouts", aVoterAj)}
+      ${tab("noms", "Noms & textes", aVoterNoms)}
       ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Intégrées", 0) : ""}
     </div>
     ${corps}`;
@@ -10338,6 +10371,16 @@ function viewCommu(){
           [ok ? ok + " passée" + (ok > 1 ? "s" : "") + " en " + rarete : null, deja ? deja + " déjà à jour" : null, ko ? ko + " en échec" : null].filter(Boolean).join(" · "),
           ko ? "lose" : "info");
     await recharger();
+  };
+  const vnom = view.querySelector("#vnom");
+  if(vnom) vnom.onclick = async ()=>{
+    const c = await choisirDansCatalogue({titre:"Carte à renommer ou à réécrire", filtre:x => !specParts(x.id) && x.rarity !== "Relique"});
+    if(!c) return;
+    if(commu.votes.find(v => v.statut === "ouvert" && v.type === "nom" && v.sujet === c.id)){ toast("Déjà proposée", titreCarte(c) + " : votez dans la liste", "info"); return; }
+    const prop = await saisirNomTexte(c);
+    if(!prop) return;
+    commu.onglet = "noms";
+    lancerVote("nom", c.id, Object.assign(ficheCarte(c), {desc:(c.desc || "").slice(0, 300)}), prop);
   };
   const vaj = view.querySelector("#vajout");
   if(vaj) vaj.onclick = async ()=>{
@@ -10558,6 +10601,47 @@ function choisirAjout(){
 }
 /* même chose pour plusieurs cartes à la fois : une seule rareté cible,
    sans « actuellement » puisque chaque carte part d'un rang différent */
+/* saisie du nouveau nom et/ou du nouveau texte, avec l'aperçu de la carte */
+function saisirNomTexte(c){
+  return new Promise(res => {
+    const m = document.createElement("div");
+    m.className = "modal";
+    const t0 = titreCarte(c), d0 = (nomAccepte(c) || {}).texte || c.desc || "";
+    m.innerHTML = `<div class="inner nomtexte" style="max-width:640px">
+      <h3 style="font-size:1.1rem;margin-bottom:.6rem">Proposer un nom ou un texte</h3>
+      <div class="nt-grille">
+        <div class="nt-carte">${cardHTML(c)}</div>
+        <div class="nt-champs">
+          <label class="sub" for="nt-nom">Nom de la carte</label>
+          <input id="nt-nom" maxlength="60" value="${esc(t0)}">
+          <label class="sub" for="nt-texte" style="margin-top:.6rem">Texte de la carte</label>
+          <textarea id="nt-texte" maxlength="220" rows="4">${esc(d0)}</textarea>
+          <small class="sub" id="nt-compte"></small>
+          <p class="sub err" id="nt-err" hidden></p>
+          <div class="row" style="gap:.4rem;margin-top:.7rem">
+            <button class="btn small" id="nt-ok">Soumettre au vote</button>
+            <button class="btn small ghost" id="nt-no">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(m);
+    const nom = m.querySelector("#nt-nom"), txt = m.querySelector("#nt-texte"), apercu = m.querySelector(".nt-carte"), err = m.querySelector("#nt-err");
+    const peindre = ()=>{ apercu.innerHTML = cardHTML(Object.assign({}, c, {title:nom.value.trim() || t0, desc:txt.value.trim()})); m.querySelector("#nt-compte").textContent = txt.value.length + " / 220"; };
+    nom.oninput = peindre; txt.oninput = peindre; peindre();
+    m.querySelector("#nt-no").onclick = ()=>{ m.remove(); res(null); };
+    m.querySelector("#nt-ok").onclick = ()=>{
+      const n = nom.value.replace(/\s+/g, " ").trim(), t = txt.value.replace(/\s+/g, " ").trim();
+      const prop = {};
+      if(n && n !== t0) prop.titre = n;
+      if(t !== d0.replace(/\s+/g, " ").trim()) prop.texte = t;
+      if(!prop.titre && !("texte" in prop)){ err.textContent = "Changez le nom ou le texte avant de soumettre."; err.hidden = false; return; }
+      if("texte" in prop && !prop.texte){ err.textContent = "Le texte ne peut pas être vide."; err.hidden = false; return; }
+      m.remove(); res(prop);
+    };
+    setTimeout(()=>{ try{ nom.focus(); nom.select(); }catch(e){} }, 50);
+  });
+}
 function choisirRareteSimple(titre){
   return new Promise(res => {
     const m = document.createElement("div");
@@ -19797,7 +19881,8 @@ const NOUVEAUTES = [
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
     "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
     "Communauté plus claire : une tuile Joueurs et une tuile Contributions, au lieu de neuf boutons.",
-    "Les contributions acceptées (recadrages, raretés, ajouts et emblèmes) s'appliquent toutes, tout de suite, chez tout le monde."]},
+    "Les contributions acceptées (recadrages, raretés, ajouts et emblèmes) s'appliquent toutes, tout de suite, chez tout le monde.",
+    "Nouveau dans Contributions : proposer un nouveau nom ou un nouveau texte pour une carte (2 par jour, 10 avec le VIP)."]},
   {v:"V2.2.0", titre:"Ouverture holographique", points:[
     "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
     "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
@@ -20492,6 +20577,13 @@ body.holo-ouvert{overflow:hidden}
 .cp-tags i.chaud{background:var(--p4,#e0489b);border-color:transparent;color:#fff}
 .cp-fl{grid-column:3;grid-row:1/3;font-size:1.4rem;color:var(--muted,#aaa)}
 @media (max-width:700px){.commpoles{grid-template-columns:1fr}.commpole{min-height:0}}
+
+/* Proposer un nom ou un texte */
+.nt-grille{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:1rem;align-items:start}
+.nt-champs{display:grid;gap:.25rem}
+.nt-champs input,.nt-champs textarea{width:100%;margin:0;font:inherit}
+.nt-champs textarea{resize:vertical;min-height:5.5rem}
+@media (max-width:560px){.nt-grille{grid-template-columns:1fr}.nt-carte{max-width:170px;margin:0 auto}}
 </style>
 <div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
