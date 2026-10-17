@@ -3833,7 +3833,6 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
     var(--grain),
     linear-gradient(145deg,color-mix(in srgb,var(--g1) 85%,#fff),var(--g2) 32%,#17110e 49%,var(--g1) 77%,var(--g2));
   box-shadow:0 2cqw 4cqw -1.2cqw #000D,
-    0 0 0 .28cqw #0a0807,
     inset 0 .7cqw 0 #FFFFFF99,
     inset 0 0 0 .65cqw #00000070,
     inset 0 0 0 1.15cqw var(--g1),
@@ -11567,6 +11566,50 @@ function canRepeat(kind, n){
   if(kind === "fox")    return renardsDispo() >= n;
   return canAfford(n);
 }
+
+/* Le paquet une fois entièrement découvert : rangé de la plus rare à la plus
+   commune, la meilleure carte mise en avant, les nouveautés signalées. */
+function peindreRecapPaquet(stage, r){
+  const rang = c => Math.max(0, RARITIES.indexOf(c.rarity));
+  const ordre = r.cards.map((c, i)=>i).sort((a, b)=>rang(r.cards[b]) - rang(r.cards[a]) || a - b);
+  const parRar = {}; r.cards.forEach(c => parRar[c.rarity] = (parRar[c.rarity] || 0) + 1);
+  const nouvelle = c => { const x = state.collection.find(k => k.id === c.id); return x && (x.count || 1) <= 1; };
+  const nom = {normal:"Booster classique", mythic:"Booster mythique", demon:"Booster démoniaque", fox:"Booster renard"}[r.kind] || "Booster";
+  const coul = c => RAR_HEX[c.rarity] || (c.rarity === "Relique" ? "#C9A7FF" : "#B9AC9E");
+  const best = r.cards[ordre[0]];
+  const nbNeuves = r.cards.filter(nouvelle).length;
+  const tuile = (i, grande) => { const c = r.cards[i];
+    return `<figure class="pr-carte ${grande ? "pr-star" : ""}" style="--rc:${coul(c)}" data-id="${esc(c.id)}">
+      ${nouvelle(c) ? `<span class="pr-neuf">Nouvelle</span>` : ""}
+      ${cardHTML(c, {click:true})}
+      <figcaption><b>${esc(c.title || "")}</b><span style="color:${coul(c)}">${esc(c.rarity)}</span></figcaption>
+    </figure>`; };
+  stage.innerHTML = `
+    <section class="pr ${rang(best) >= 3 ? "pr-brille" : ""}" style="--rc:${coul(best)}">
+      <header class="pr-tete">
+        <div><small>${esc(nom)}</small><h3>Votre paquet</h3></div>
+        <div class="pr-pills">${RARITIES.slice().reverse().filter(x => parRar[x]).map(x => `<span style="--pc:${RAR_HEX[x] || "#C9A7FF"}">${esc(x)} <b>×${parRar[x]}</b></span>`).join("")}</div>
+      </header>
+      <div class="pr-corps">
+        ${tuile(ordre[0], true)}
+        <div class="pr-reste">${ordre.slice(1).map(i => tuile(i, false)).join("")}</div>
+      </div>
+      <p class="pr-bilan">${nbNeuves ? `<b>${nbNeuves}</b> nouvelle${nbNeuves > 1 ? "s" : ""} carte${nbNeuves > 1 ? "s" : ""} dans votre collection` : "Toutes ces cartes renforcent des cartes que vous aviez déjà"}</p>
+    </section>
+    <div class="row" style="justify-content:center">
+      ${againButton(r.kind, r.count||1)}
+      <button class="btn ghost" id="back">Retour aux ouvertures</button>
+      <button class="btn ghost" id="toalbum">Aller à l'album</button>
+    </div>
+    <div id="packmsg" class="sub">${esc(r.note||"")}</div>`;
+  stage.querySelectorAll(".pr-carte").forEach(el => el.onclick = ()=>showCard(state.collection.find(c => c.id === el.dataset.id)));
+  const again = stage.querySelector("#again");
+  if(again){ again.disabled = !canRepeat(r.kind, 1); again.onclick = ()=>repeatOpen(r.kind, 1); }
+  const tohub = stage.querySelector("#tohub"); if(tohub) tohub.onclick = ()=>go("hub");
+  const back = stage.querySelector("#back"); if(back) back.onclick = ()=>{ state.reveal=null; renderStage(); };
+  const ta = stage.querySelector("#toalbum"); if(ta) ta.onclick = ()=>go("album");
+}
+
 function againButton(kind, n){
   return canRepeat(kind, n)
     ? `<button class="btn" id="again">Encore</button>`
@@ -11782,6 +11825,7 @@ function renderStage(){
   }
 
   const left = r.cards.length - r.flipped.filter(Boolean).length;
+  if(!left && !r.fox){ peindreRecapPaquet(stage, r); return; }
   stage.innerHTML = `
     <div class="reveal" id="rev">
       ${r.cards.map((c,i)=>`
@@ -20184,6 +20228,32 @@ body.holo-ouvert{overflow:hidden}
 .holov.calme *,.holov.calme *::before,.holov.calme *::after{animation:none!important;transition:none!important}
 .holov.calme .holo-carte.revele{transform:none}.holov.calme .holo-face{transform:none}.holov.calme .holo-carte.revele .holo-dos{display:none}
 @media (max-height:640px){.holo-bas{min-height:7.5rem}.holo-paquet{height:min(50vh,420px)}}
+
+/* Récapitulatif d'un paquet ouvert */
+.pr{width:100%;max-width:980px;margin:0 auto 1rem;padding:clamp(1rem,3vw,1.6rem);border-radius:var(--rayon,22px);background:radial-gradient(120% 90% at 20% 0%,color-mix(in srgb,var(--rc) 22%,transparent),transparent 60%),var(--surface,#231c22);border:1px solid color-mix(in srgb,var(--rc) 30%,transparent)}
+.pr-tete{display:flex;justify-content:space-between;align-items:flex-end;gap:.8rem;flex-wrap:wrap;margin-bottom:1rem}
+.pr-tete small{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#bbb)}
+.pr-tete h3{margin:.1rem 0 0;font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;font-size:clamp(1.3rem,4vw,1.8rem)}
+.pr-pills{display:flex;flex-wrap:wrap;gap:.35rem}
+.pr-pills span{padding:.25rem .6rem;border-radius:999px;font-size:.74rem;font-weight:800;background:color-mix(in srgb,var(--pc) 22%,transparent);border:1px solid color-mix(in srgb,var(--pc) 55%,transparent);color:#fff}
+.pr-corps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:clamp(.8rem,2.5vw,1.6rem);align-items:start}
+.pr-reste{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(.6rem,2vw,1rem)}
+.pr-carte{position:relative;margin:0;cursor:pointer;display:grid;gap:.45rem}
+.pr-carte .card{width:100%}
+.pr-carte figcaption{display:grid;gap:.1rem;text-align:center;font-size:.82rem;line-height:1.2}
+.pr-carte figcaption b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-carte figcaption span{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.pr-star .card{box-shadow:0 0 0 2px color-mix(in srgb,var(--rc) 70%,#fff),0 0 50px -6px var(--rc),0 24px 40px -20px #000}
+.pr-star figcaption b{font-size:1rem}
+.pr-brille .pr-star{animation:prBrille 2.8s ease-in-out infinite}
+@keyframes prBrille{0%,100%{filter:none}50%{filter:drop-shadow(0 0 14px var(--rc))}}
+.pr-neuf{position:absolute;z-index:12;top:-.45rem;right:-.35rem;padding:.2rem .5rem;border-radius:999px;background:var(--p4,#e0489b);color:#fff;font-size:.62rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 4px 12px -4px #000}
+.pr-bilan{margin:1rem 0 0;text-align:center;color:var(--muted,#bbb);font-size:.88rem}
+.pr-bilan b{color:var(--text,#fff)}
+@media (max-width:620px){.pr-corps{grid-template-columns:1fr}.pr-star{width:58%;margin:0 auto}.pr-reste{grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem}.pr-reste figcaption{font-size:.66rem}.pr-reste figcaption span{font-size:.56rem;letter-spacing:.04em}.pr-reste .pr-neuf{font-size:.5rem;padding:.12rem .32rem;top:-.35rem;right:-.2rem}}
+@media (min-width:621px) and (max-width:900px){.pr-reste{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:901px){.pr-reste{grid-template-columns:repeat(4,minmax(0,1fr))}.pr-corps{grid-template-columns:minmax(0,1.1fr) minmax(0,3fr);align-items:center}}
+@media (prefers-reduced-motion:reduce){.pr-brille .pr-star{animation:none}}
 </style>
 <div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
