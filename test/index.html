@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta name="robots" content="noindex">
 <meta charset="utf-8">
+<meta name="robots" content="noindex">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
 <link rel="icon" type="image/png" href="../assets/f62e76609ade.png">
 <title>FandoMasters — tous les univers dans un seul jeu de cartes</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* Les fontes de l'habillage sont embarquées : le jeu doit pouvoir
    tourner sans réseau, et une fonte qui arrive en retard fait sauter
@@ -22,6 +19,15 @@
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:400;font-display:block;src:url(../assets/df0ee4f9fdbf.woff2) format("woff2")}
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:block;src:url(../assets/eb128c93678b.woff2) format("woff2")}
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:block;src:url(../assets/3b237255d05e.woff2) format("woff2")}
+/* Bricolage Grotesque et Cinzel : servies par le site lui-même (plus d'appel à Google Fonts, qui transmettait l'adresse IP des joueurs à Google). */
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;src:url(../assets/a79fdb52d4a5.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;src:url(../assets/776f6dcaf036.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:500;font-display:swap;src:url(../assets/2864b2c9db37.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:500;font-display:swap;src:url(../assets/08eac55c1178.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:600;font-display:swap;src:url(../assets/61efc27ceb7d.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:600;font-display:swap;src:url(../assets/a5779eb98b50.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:700;font-display:swap;src:url(../assets/8efa224fe70f.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:700;font-display:swap;src:url(../assets/55b110958b9b.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 
 :root{
   /* Teintes relevées sur la maquette : crème, encre, violet, vert, corail,
@@ -6951,7 +6957,7 @@ function render(){
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
      aventure:viewAventure, collection:viewCollection,
      village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur, communaute:viewCommu, menu:viewMenu,
-     shop:viewBoutique, market:viewMarche, nouveautes:viewNouveautes}[state.view]||viewHub)();
+     shop:viewBoutique, market:viewMarche, nouveautes:viewNouveautes, legal:viewLegal}[state.view]||viewHub)();
   poserSurtitre();
   poserRetour();
   majJauges();
@@ -6974,6 +6980,7 @@ function poserRetour(){
    recopié dans quinze fonctions d'affichage. */
 const SURTITRES = {
   nouveautes: "Le jeu · journal des versions",
+  legal: "Le jeu · informations légales",
   pack:   "Boutique · ouvertures",
   album:  "Collection",
   cat:    "Collection · catalogue",
@@ -13687,6 +13694,13 @@ function viewAlbum(){
   renderAlbumGrid();
 }
 
+/* adresse de l'article d'origine (attribution exigée par la licence CC BY-SA des wikis) */
+function sourceCarte(c){
+  if(!c) return "";
+  if(c.url) return c.url;
+  const m = /^([a-z0-9.-]+\.fandom\.com):(\d+)$/i.exec(c.id || "");
+  return m ? "https://" + m[1] + "/?curid=" + m[2] : "";
+}
 function showCard(c){
   if(!c) return;
   const busy = engagedIds().has(c.id);
@@ -13746,8 +13760,9 @@ function showCard(c){
           <button class="btn" id="sell" style="width:100%;margin-top:.6rem">Renvoyer ${c.count>1?`${qty} carte${qty>1?"s":""}`:"la carte"} · ${qty*unit} ◆</button>`}
       </div>
 
+      ${/\.fandom\.com\b/.test(sourceCarte(c) || "") ? `<p class="sub cv-licence">Texte : contributeurs du wiki ${esc(c.univ || "")} sur Fandom, sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a>. Image et personnage : droits réservés à leurs ayants droit. FandoMasters n'est affilié ni à Fandom ni aux ayants droit.</p>` : ""}
       <div class="row" style="margin-top:.7rem">
-        ${c.url ? `<a class="btn small ghost" href="${esc(c.url)}" target="_blank" rel="noopener">${/\.fandom\.com\//.test(c.url) ? "Lire l'article sur Fandom" : "Visiter le site"}</a>` : ""}
+        ${sourceCarte(c) ? `<a class="btn small ghost" href="${esc(sourceCarte(c))}" target="_blank" rel="noopener">${/\.fandom\.com\b/.test(sourceCarte(c)) ? "Lire l'article sur Fandom" : "Visiter le site"}</a>` : ""}
         <button class="btn small ghost" id="close">Fermer</button>
       </div>
       </div>`;
@@ -15380,13 +15395,9 @@ async function roueTourner(){
   if(state.view === "shop") viewBoutique();
 }
 /* onglets de la boutique : les articles, et la roue à part */
-function shopOnglets(){
-  const r = btq.roue, pret = r && r.dispo;
-  return `<div class="shoptabs" role="tablist">
-    <button type="button" class="shoptab ${btq.onglet !== "roue" ? "on" : ""}" data-shoptab="articles" role="tab" aria-selected="${btq.onglet !== "roue"}">Articles</button>
-    <button type="button" class="shoptab ${btq.onglet === "roue" ? "on" : ""}" data-shoptab="roue" role="tab" aria-selected="${btq.onglet === "roue"}">Roue de la fortune${pret ? `<span class="shoptab-pastille" title="Un tour disponible">1</span>` : ""}</button>
-  </div>`;
-}
+/* La roue de la fortune a été retirée (V2.2.2) : la boutique n'a plus qu'une page.
+   Le serveur garde les cartes déjà gagnées et le jeu les livre toujours (roueLivrerCartes). */
+function shopOnglets(){ return ""; }
 function roueMiniHTML(){
   const r = btq.roue; if(!r) return "";
   return `<button type="button" class="shoproue-mini" data-shoptab="roue">
@@ -15468,7 +15479,7 @@ function viewBoutique(){
   const vipBouton = vip
     ? (estAdmin() && !fin ? `<span class="vit-etat">✓ Accès développeur</span>` : `<button class="btn vit-btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>Prolonger d'un an</button>`)
     : `<button class="btn vit-btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>${btq.achat ? "Activation…" : solde < vipArt.prix ? "Cristaux insuffisants" : "Devenir VIP"}</button>`;
-  const roueDeco = `<span class="vit-roue" aria-hidden="true"></span>`;
+  btq.onglet = "articles";
   /* le VIP montre ce qu'il offre : la vitrine de vos plus belles cartes, en éventail */
   const belles = vitImages(3);
   const vipDeco = belles.length >= 2 ? `<span class="vit-eventail" aria-hidden="true">${belles.map((u, k) => `<i style="--k:${k - (belles.length - 1) / 2};background-image:url('${cssUrl(u)}')"></i>`).join("")}</span>` : `<span class="vit-grande-couronne" aria-hidden="true">♛</span>`;
@@ -15477,13 +15488,8 @@ function viewBoutique(){
      titreHTML:`<span class="vit-couronne">♛</span>FandoMasters <em>VIP</em>`,
      tags:["Combats classés", "Top 100", "Profil", "Guilde"],
      bas:`<span class="vit-pilule">${vip ? "✓ VIP actif" + (fin ? " jusqu'au " + fin : "") : "Valable 12 mois"}</span>`,
-     texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres, une vitrine de 10 cartes, jusqu'à 100 paquets d'un coup et la roue chaque jour.",
-     prix:prix(vipArt.prix), bouton:vipBouton},
-    {titre:"Roue de la fortune", court:"Roue", art:"fmart-roue", g1:"#e2ae3c", g2:"#d64fa0", deco:roueDeco,
-     tags:["Gratuit", vip ? "Chaque jour" : "Chaque semaine", "34 cases"],
-     bas:`<span class="vit-pilule">${r ? (r.dispo ? "Un tour vous attend" : "Prochain tour " + roueQuand(r.prochaine)) : "Chargement…"}</span>`,
-     texte:"Mana, Fandominus, armements, booster Renard, cartes rares, super rares… et une Légendaire à gagner. Les VIP tournent la roue tous les jours.",
-     prix:"Gratuit", bouton:`<button class="btn vit-btn" data-shoptab="roue">${r && r.dispo ? "Tourner la roue" : "Voir la roue"}</button>`}
+     texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres, une vitrine de 10 cartes et jusqu'à 100 paquets d'un coup.",
+     prix:prix(vipArt.prix), bouton:vipBouton}
   ];
   for(const a of lots){ const L = lotInfo(a);
     slides.push({titre:a.nom, court:"Armements", art:"fmart-arsenal", g1:"#ff8a3c", g2:"#c3261c",
@@ -15495,9 +15501,8 @@ function viewBoutique(){
   const covers = [
     {titre:"FandoMasters VIP", sous:vip ? "actif" : "12 mois", art:"fmart-vip", large:true, badge:"♛", prix:prix(vipArt.prix), attrs:`data-vitsel="0"`,
      deco:`<span class="cover-grand">VIP</span>`},
-    {titre:"Roue de la fortune", sous:r && r.dispo ? "un tour disponible" : "gratuite", art:"fmart-roue", badge:r && r.dispo ? "1" : "", prix:"Gratuit", attrs:`data-shoptab="roue"`, deco:roueDeco},
     ...lots.map(a => { const L = lotInfo(a); return {titre:a.nom.replace(/^Lot de /, ""), sous:"pour vos campagnes", art:"fmart-arsenal", prix:prix(a.prix),
-      attrs:`data-vitsel="${2 + lots.indexOf(a)}"`, deco:L.it ? `<span class="cover-objet">${itemSVG(L.cle)}</span>` : ""}; }),
+      attrs:`data-vitsel="${1 + lots.indexOf(a)}"`, deco:L.it ? `<span class="cover-objet">${itemSVG(L.cle)}</span>` : ""}; }),
     {titre:"Gratuit ou VIP", sous:"le comparatif", large:true, art:"fmart-vip", deco:`<span class="cover-grand cover-vs">Gratuit<i>ou</i>VIP</span>`, attrs:`data-ouvrir="comparatif"`}
   ];
   view.innerHTML = `
@@ -15515,11 +15520,12 @@ function viewBoutique(){
     <div class="covers">${covers.map(coverHTML).join("")}</div>
     <details class="fold shopcomp" id="comparatif"><summary>Gratuit ou VIP : le détail</summary><div class="shopcomp-in">
       <table class="shoptable"><thead><tr><th></th><th>Gratuit</th><th>VIP</th></tr></thead><tbody>
-        ${[["Roue de la fortune", "1 tour / semaine", "1 tour / jour"], ["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], ["Ouvertures groupées", "1 ou 10", "jusqu'à 100"],
+        ${[["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], ["Ouvertures groupées", "1 ou 10", "jusqu'à 100"],
            ["Titres affichés", "1", "3"], ["Cartes en vitrine", "3", "10"], ["Police du pseudo", "—", "gothique, médiévale"], ["Album public", "—", "✓"],
            ["Combats classés et Top 100", "—", "✓"], ["Historique des ouvertures", "—", "✓"], ["Création de guilde", "—", "✓"], ["Vote du plateau de combat", "—", "✓"]]
           .map(([t, g, v]) => `<tr><td>${t}</td><td>${g}</td><td>${v}</td></tr>`).join("")}
       </tbody></table><p class="sub" style="margin:.6rem 0 0">Confort et personnalisation : le VIP ne donne aucun avantage de puissance en combat.</p></div></details>
+    <p class="sub shop-legal"><a href="#" data-legal="cgv">Conditions de vente</a> · <a href="#" data-legal="mentions">Mentions légales</a> · <a href="#" data-legal="confidentialite">Confidentialité</a> · <a href="#" data-legal="retractation">Rétractation</a></p>
     ${btq.historique.length ? `<details class="fold shopcomp"><summary>Vos derniers achats</summary><ul class="btqhist">${btq.historique.map(h => `
       <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
         <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`}`;
@@ -15529,11 +15535,134 @@ function viewBoutique(){
   if(btq.onglet !== "roue") vitrineBrancher("shop", slides.length, ()=>{ if(state.view === "shop" && btq.onglet !== "roue" && !btq.tourne) viewBoutique(); });
   const vb = view.querySelector("#vip-achat"); if(vb) vb.onclick = ()=>acheterVipAnnuel(vip);
   view.querySelectorAll("[data-recharge]").forEach(b => b.onclick = ()=>rechargerCristaux(+b.dataset.recharge));
+  view.querySelectorAll("[data-legal]").forEach(a => a.onclick = e => { e.preventDefault(); ouvrirLegal(a.dataset.legal); });
   const rg = view.querySelector("#roue-go"); if(rg) rg.onclick = roueTourner;
   if(!btq.roue && enLigne) regRpc("roue_etat").then(r => { btq.roue = r; if(state.view === "shop" && !btq.tourne) viewBoutique(); roueLivrerCartes(); }).catch(()=>{});
   view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{ const a = (btq.articles || []).find(x => x.id === b.dataset.acheter); if(a) acheterArticle(a); });
   if(btq.articles === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
 }
+/* =====================================================================
+   Informations légales : mentions légales, conditions de vente (CGV),
+   conditions d'utilisation (CGU), confidentialité, rétractation.
+   Les champs vides de EDITEUR s'affichent « à compléter » : tant qu'ils
+   ne sont pas remplis, la recharge payante reste fermée aux joueurs.
+   ===================================================================== */
+const EDITEUR = {
+  nom:"",            // nom et prénom de l'entrepreneur individuel
+  siret:"",          // n° SIRET de la micro-entreprise
+  adresse:"",        // adresse professionnelle (ou de domiciliation)
+  email:"",          // adresse de contact
+  mediateur:"",      // nom du médiateur de la consommation
+  mediateurSite:""   // site du médiateur
+};
+const LEGAL_MAJ = "18 octobre 2026";
+function legalComplet(){ return ["nom", "siret", "adresse", "email", "mediateur", "mediateurSite"].every(k => (EDITEUR[k] || "").trim()); }
+function legalChamp(k){ const v = (EDITEUR[k] || "").trim(); return v ? esc(v) : `<span class="lg-vide">à compléter</span>`; }
+const LEGAL_ONGLETS = [["mentions", "Mentions légales"], ["cgv", "Conditions de vente"], ["cgu", "Conditions d'utilisation"], ["confidentialite", "Confidentialité"], ["retractation", "Rétractation"]];
+const legal = {onglet:"mentions"};
+function ouvrirLegal(onglet){ legal.onglet = onglet || "mentions"; go("legal"); window.scrollTo({top:0}); }
+
+function legalTexte(o){
+  const nom = legalChamp("nom"), mail = (EDITEUR.email || "").trim();
+  const contact = mail ? `<a href="mailto:${esc(mail)}">${esc(mail)}</a>` : legalChamp("email");
+  if(o === "mentions") return `
+    <h3>Éditeur</h3>
+    <p>FandoMasters est édité par ${nom}, entrepreneur individuel (micro-entreprise).<br>
+    SIRET : ${legalChamp("siret")}<br>Adresse : ${legalChamp("adresse")}<br>Contact : ${contact}<br>
+    TVA non applicable, article 293 B du Code général des impôts.<br>Directeur de la publication : ${nom}.</p>
+    <h3>Hébergement</h3>
+    <p><b>Site</b> : GitHub Pages — GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis.<br>
+    <b>Comptes et sauvegardes</b> : Supabase, Inc. — serveurs situés à Dublin (Irlande, Union européenne).<br>
+    <b>Paiements</b> : Stripe Payments Europe, Ltd., 1 Grand Canal Street Lower, Dublin 2, Irlande.</p>
+    <h3>Contenus des cartes</h3>
+    <p>FandoMasters est un projet indépendant. Il n'est ni affilié, ni approuvé, ni sponsorisé par Fandom ou par les ayants droit des œuvres représentées.
+    Les noms, personnages, images et marques appartiennent à leurs propriétaires respectifs.
+    Les textes des cartes proviennent des wikis Fandom et sont diffusés sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a> ; chaque carte renvoie vers son article d'origine.</p>
+    <p><b>Signaler un contenu</b> : un ayant droit qui souhaite le retrait d'une image, d'un nom ou d'un texte peut écrire à ${contact} en précisant la carte concernée. Le contenu est retiré dans les meilleurs délais, au plus tard sous 7 jours.</p>
+    <p class="sub">Aucune carte, aucun booster et aucun objet obtenu au hasard n'est vendu : les cartes s'obtiennent uniquement en jouant.</p>`;
+  if(o === "cgv") return `
+    <p class="sub">Version du ${LEGAL_MAJ}. Ces conditions s'appliquent à tout achat de Cristaux sur FandoMasters, entre ${nom} (« l'éditeur ») et le joueur (« vous »).</p>
+    <h3>1. Ce qui est vendu</h3>
+    <p>L'éditeur vend des <b>Cristaux</b>, une monnaie virtuelle utilisable uniquement dans FandoMasters. Les Cristaux permettent d'obtenir, à prix fixe et affiché à l'avance :
+    l'abonnement <b>VIP</b> (12 mois, sans renouvellement automatique) et des <b>fournitures de campagne</b> (armements).</p>
+    <p><b>Rien n'est obtenu au hasard contre des Cristaux ou de l'argent.</b> Aucune carte, aucun booster et aucun tirage aléatoire n'est vendu. Les cartes se gagnent uniquement en jouant.</p>
+    <h3>2. Nature des Cristaux</h3>
+    <p>Les Cristaux n'ont aucune valeur monétaire. Ils ne peuvent être ni échangés contre de l'argent, ni revendus, ni transférés à un autre joueur. Ils sont liés à votre compte.</p>
+    <h3>3. Prix et paiement</h3>
+    <p>Les prix sont indiqués en euros, toutes taxes comprises (TVA non applicable, article 293 B du CGI). Le paiement se fait sur la page sécurisée de Stripe (carte bancaire et autres moyens proposés). L'éditeur n'a jamais accès à vos données bancaires. Le contrat est conclu à la validation du paiement.</p>
+    <h3>4. Livraison</h3>
+    <p>Les Cristaux sont crédités sur votre compte immédiatement après le paiement, en général en quelques secondes. Un reçu vous est envoyé par e-mail et l'achat apparaît dans « Vos derniers achats » en Boutique. Si les Cristaux n'arrivent pas, écrivez à ${contact} : l'achat est crédité ou intégralement remboursé.</p>
+    <h3>5. Droit de rétractation</h3>
+    <p>Les Cristaux sont un contenu numérique fourni immédiatement. Conformément à l'article L221-28, 13° du Code de la consommation, avant de payer vous donnez votre accord exprès pour cette fourniture immédiate et reconnaissez perdre votre droit de rétractation de 14 jours (case à cocher obligatoire). Si cet accord n'a pas été recueilli, ou si les Cristaux n'ont pas été livrés, vous pouvez vous rétracter depuis l'onglet « Rétractation ».</p>
+    <h3>6. Garantie légale de conformité</h3>
+    <p>Vous bénéficiez de la garantie légale de conformité des contenus numériques (articles L224-25-12 et suivants du Code de la consommation). En cas de défaut, contactez ${contact}.</p>
+    <h3>7. Mineurs</h3>
+    <p>Un joueur mineur doit obtenir l'accord de son représentant légal avant tout achat. Si un achat a été fait sans cet accord, le représentant légal peut écrire à ${contact} : les Cristaux achetés et non dépensés sont remboursés.</p>
+    <h3>8. Évolution et arrêt du jeu</h3>
+    <p>FandoMasters est en développement et peut évoluer. En cas d'arrêt définitif, les joueurs sont prévenus au moins 30 jours avant, et les Cristaux achetés dans les 12 derniers mois et non dépensés sont remboursés.</p>
+    <h3>9. Réclamations et médiation</h3>
+    <p>Pour toute réclamation : ${contact}. En cas de désaccord persistant, vous pouvez recourir gratuitement au médiateur de la consommation : ${legalChamp("mediateur")} — ${legalChamp("mediateurSite")}.</p>
+    <h3>10. Droit applicable</h3>
+    <p>Ces conditions sont soumises au droit français. Vous conservez la protection des règles impératives du pays où vous résidez.</p>`;
+  if(o === "cgu") return `
+    <p class="sub">Version du ${LEGAL_MAJ}.</p>
+    <h3>Le jeu</h3>
+    <p>FandoMasters est un jeu de cartes à collectionner gratuit. Créer un compte et jouer ne coûte rien. Les achats sont facultatifs.</p>
+    <h3>Votre compte</h3>
+    <p>Vous êtes responsable de votre mot de passe. Un compte est personnel. La triche, l'exploitation de bugs, l'automatisation et le harcèlement d'autres joueurs peuvent entraîner la suspension du compte, après avertissement sauf urgence.</p>
+    <h3>Contributions</h3>
+    <p>Les propositions (noms, textes, recadrages, ajouts de cartes) restent sous votre responsabilité. En les envoyant, vous acceptez qu'elles soient publiées dans le jeu, sous la même licence CC BY-SA que les textes des wikis. Les contenus illicites ou offensants sont refusés.</p>
+    <h3>Pas de valeur monétaire</h3>
+    <p>Les cartes, Fandominus, Mana, Cristaux et objets du jeu n'ont aucune valeur monétaire et ne peuvent pas être vendus contre de l'argent, dans le jeu ou en dehors.</p>`;
+  if(o === "confidentialite") return `
+    <p class="sub">Version du ${LEGAL_MAJ}. Responsable du traitement : ${nom} — ${contact}.</p>
+    <h3>Données collectées</h3>
+    <p><b>Compte</b> : adresse e-mail et mot de passe (stocké chiffré, jamais lisible). <b>Jeu</b> : pseudo, collection, progression, historique des achats, contributions.
+    <b>Paiement</b> : traité par Stripe ; l'éditeur reçoit le nom, l'e-mail, le pays et le montant, jamais le numéro de carte.</p>
+    <h3>Pourquoi</h3>
+    <p>Faire fonctionner votre compte et le jeu (exécution du contrat) ; traiter les achats et tenir la comptabilité (obligation légale) ; prévenir la triche et la fraude (intérêt légitime).</p>
+    <h3>Durée de conservation</h3>
+    <p>Données de jeu : tant que le compte existe. Journal technique des actions : 120 jours. Pièces comptables liées aux achats : 10 ans (obligation légale). Un compte supprimé est effacé sous 30 jours, hors pièces comptables.</p>
+    <h3>Qui y a accès</h3>
+    <p>Uniquement l'éditeur et ses prestataires techniques : Supabase (serveurs en Irlande, UE), GitHub (hébergement du site), Stripe (paiements). Les images des cartes sont chargées depuis les serveurs de Fandom, qui reçoivent alors votre adresse IP. Aucune donnée n'est vendue ni utilisée pour de la publicité.</p>
+    <h3>Cookies et stockage</h3>
+    <p>Aucun cookie publicitaire ni outil de mesure d'audience. Le jeu enregistre dans votre navigateur uniquement ce qui est nécessaire à son fonctionnement (session, sauvegarde hors ligne, réglages).</p>
+    <h3>Vos droits</h3>
+    <p>Vous pouvez demander l'accès, la rectification, la portabilité ou l'effacement de vos données, ou vous opposer à un traitement, en écrivant à ${contact}. Réponse sous un mois. Vous pouvez aussi saisir la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">CNIL</a>.</p>
+    <p>Les joueurs de moins de 15 ans doivent avoir l'accord d'un parent pour créer un compte.</p>`;
+  if(o === "retractation") return `
+    <p>Pour vous rétracter d'un achat, quand ce droit s'applique (voir l'article 5 des conditions de vente), utilisez le bouton ci-dessous. Une confirmation vous est envoyée par e-mail.</p>
+    ${legalAchatsHTML()}
+    <button class="btn" id="lg-retracter" ${mail ? "" : "disabled"}>Se rétracter du contrat</button>
+    <p class="sub" style="margin-top:.6rem">Vous pouvez aussi écrire directement à ${contact} en indiquant votre pseudo, la date et le montant de l'achat.</p>`;
+  return "";
+}
+function legalAchatsHTML(){
+  const h = (btq.historique || []).filter(x => x.type === "paiement");
+  if(!h.length) return `<p class="sub">Aucun achat payant trouvé sur ce compte pour l'instant.</p>`;
+  return `<label class="lg-label">Achat concerné</label><select id="lg-achat" class="lg-select">${h.map((x, i) => `<option value="${i}">${esc(x.motif || "Achat")} · ${new Date(x.cree).toLocaleDateString("fr-FR")}</option>`).join("")}</select>`;
+}
+function viewLegal(){
+  if(!LEGAL_ONGLETS.some(([k]) => k === legal.onglet)) legal.onglet = "mentions";
+  view.innerHTML = `
+    <h2 class="vuetitre" data-ghost="LÉGAL">Informations légales</h2>
+    <div class="lg-onglets" role="tablist">${LEGAL_ONGLETS.map(([k, t]) => `<button type="button" class="shoptab ${legal.onglet === k ? "on" : ""}" data-lg="${k}" role="tab" aria-selected="${legal.onglet === k}">${t}</button>`).join("")}</div>
+    <article class="panel lg-texte">${legalTexte(legal.onglet)}</article>`;
+  view.querySelectorAll("[data-lg]").forEach(b => b.onclick = ()=>{ legal.onglet = b.dataset.lg; viewLegal(); });
+  const r = view.querySelector("#lg-retracter");
+  if(r) r.onclick = ()=>{
+    const h = (btq.historique || []).filter(x => x.type === "paiement");
+    const sel = view.querySelector("#lg-achat"), a = sel ? h[+sel.value] : null;
+    const pseudo = (state.profile && state.profile.pseudo) || "";
+    const corps = `Bonjour,\n\nJe notifie par la présente ma rétractation du contrat portant sur l'achat suivant :\n` +
+      (a ? `${a.motif || "Achat"} du ${new Date(a.cree).toLocaleString("fr-FR")}\n` : "(précisez l'achat)\n") +
+      `\nPseudo : ${pseudo}\nCompte : ${nuageCourriel() || ""}\nIdentifiant : ${moiId() || ""}\n\nCordialement`;
+    location.href = "mailto:" + encodeURIComponent(EDITEUR.email) + "?subject=" + encodeURIComponent("Rétractation — FandoMasters") + "&body=" + encodeURIComponent(corps);
+  };
+  if(legal.onglet === "retractation" && !(btq.historique || []).length && nuageConnecte())
+    nuageRest("achats?select=type,article,cristaux,motif,cree&order=cree.desc&limit=20").then(h => { btq.historique = h || []; if(state.view === "legal" && legal.onglet === "retractation") viewLegal(); }).catch(()=>{});
+}
+
 /* ---- Recharge de Cristaux par paiement (Stripe) ----
    Le joueur paie sur la page sécurisée de Stripe ; Stripe prévient le serveur
    (fonction « stripe-webhook »), qui crédite les Cristaux. Le jeu ne voit jamais
@@ -15544,13 +15673,14 @@ const PACKS_CRISTAUX = [
   {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},
   {n:2400, prix:"19,99 €", url:"https://buy.stripe.com/8x23co6CxgF6eS6a1weZ202", bonus:"+20 %", top:true}
 ];
-function rechargeVisible(){ return (PAIEMENT_OUVERT || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
+function rechargeVisible(){ return ((PAIEMENT_OUVERT && legalComplet()) || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
 function rechargeHTML(){
   if(!rechargeVisible()) return "";
   return `<div class="sectionhead vit-sect"><div><h3>Recharger des Cristaux</h3></div><span class="sub">${PAIEMENT_OUVERT ? "Paiement sécurisé par Stripe." : "Visible des administrateurs seulement · phase de test"}</span></div>
     <div class="recharge">${PACKS_CRISTAUX.filter(p => p.url).map(p => `<button type="button" class="recharge-pack ${p.top ? "top" : ""}" data-recharge="${p.n}">
       ${p.bonus ? `<span class="rp-bonus">${p.bonus}</span>` : ""}<span class="rp-ic">${CRISTAL}</span>
-      <b>${p.n.toLocaleString("fr-FR")}</b><small>Cristaux</small><span class="rp-prix">${p.prix}</span></button>`).join("")}</div>`;
+      <b>${p.n.toLocaleString("fr-FR")}</b><small>Cristaux</small><span class="rp-prix">${p.prix}</span></button>`).join("")}</div>
+    <p class="sub rp-legal">Prix TTC · aucune carte ni aucun tirage au hasard n'est vendu · <a href="#" data-legal="cgv">Conditions de vente</a> · <a href="#" data-legal="retractation">Rétractation</a></p>`;
 }
 function rechargerCristaux(n){
   const p = PACKS_CRISTAUX.find(x => x.n === n), id = moiId();
@@ -15560,7 +15690,7 @@ function rechargerCristaux(n){
   m.innerHTML = `<div class="inner" style="max-width:420px">
     <h3 style="font-size:1.15rem;margin-bottom:.4rem">${n.toLocaleString("fr-FR")} Cristaux · ${esc(p.prix)}</h3>
     <p class="sub" style="margin:0 0 .8rem">Vous allez payer sur la page sécurisée de Stripe. Les Cristaux arrivent sur votre compte dès le paiement validé, sur tous vos appareils.</p>
-    <label class="rp-accord"><input type="checkbox" id="rp-ok"> <span>J'accepte que les Cristaux me soient livrés immédiatement et je renonce à mon droit de rétractation de 14 jours.</span></label>
+    <label class="rp-accord"><input type="checkbox" id="rp-ok"> <span>J'ai lu et j'accepte les <a href="#" data-cgv>conditions de vente</a>. Je demande la livraison immédiate des Cristaux et je reconnais perdre mon droit de rétractation de 14 jours.</span></label>
     <div class="row" style="justify-content:flex-end;gap:.5rem;margin-top:1rem">
       <button class="btn small ghost" id="non">Annuler</button>
       <button class="btn small" id="oui" disabled>Payer ${esc(p.prix)}</button>
@@ -15568,6 +15698,7 @@ function rechargerCristaux(n){
   document.body.appendChild(m);
   const ok = m.querySelector("#rp-ok"), oui = m.querySelector("#oui");
   ok.onchange = ()=>{ oui.disabled = !ok.checked; };
+  m.querySelector("[data-cgv]").onclick = e => { e.preventDefault(); m.remove(); ouvrirLegal("cgv"); };
   m.querySelector("#non").onclick = ()=>m.remove();
   m.onclick = e => { if(e.target === m) m.remove(); };
   oui.onclick = ()=>{
@@ -19916,7 +20047,7 @@ document.addEventListener("keydown", e=>{
 /* ---------- amorçage ---------- */
 const SCRIM = document.getElementById("scrim");
 const MENU = document.getElementById("menupanel");
-const SECONDARY = ["menu","nouveautes","decks","inv","ach","shop","camp","duel","theme","compte","aventure","collection","farm"];
+const SECONDARY = ["menu","nouveautes","legal","decks","inv","ach","shop","camp","duel","theme","compte","aventure","collection","farm"];
 function setMenu(open){
   MENU.classList.toggle("open", open);
   SCRIM.classList.toggle("open", open);
@@ -19973,6 +20104,9 @@ const NOUVEAUTES = [
     "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond.",
     "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche.",
     "Combats & campagnes : la grande bannière en double a disparu, les modes de jeu sont affichés directement.",
+    "La roue de la fortune est retirée. Les cartes déjà gagnées à la roue restent livrées dans votre album.",
+    "Nouvelle page « Mentions légales & CGV » (menu Plus) : conditions de vente, confidentialité, rétractation. Chaque carte cite son article et sa licence.",
+    "Les polices sont désormais servies par le jeu lui-même : plus aucun appel à Google Fonts.",
     "Fin de campagne : toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, la dernière cachait les autres)."
   ]},
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
@@ -20046,7 +20180,8 @@ function viewMenu(){
       ["shop","♛","Boutique VIP"]
     ]},
     {titre:"Le jeu", items:[
-      ["nouveautes","✧","Nouveautés"]
+      ["nouveautes","✧","Nouveautés"],
+      ["legal","§","Mentions légales & CGV"]
     ]}
   ];
   view.innerHTML = `<div class="pagehub menuplus">
@@ -20320,6 +20455,14 @@ function openSettings(){
 .cbchoixdeck .cbbilan > div{display:flex;flex-direction:column}
 
 /* ---- boutique : sobre, dans la charte du site ---- */
+.lg-onglets{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
+.lg-texte{line-height:1.6;max-width:820px}.lg-texte h3{font-size:1rem;margin:1.2rem 0 .3rem}.lg-texte h3:first-child{margin-top:0}
+.lg-texte p{margin:.3rem 0 .6rem}.lg-texte a{color:var(--p4)}
+.lg-vide{color:#ff8a80;font-weight:700;border-bottom:1px dashed currentColor}
+.lg-label{display:block;font-size:.8rem;margin:.6rem 0 .25rem;opacity:.8}.lg-select{width:100%;max-width:520px;margin-bottom:.8rem}
+.rp-legal{font-size:.78rem;margin:-1rem 0 1.6rem}.rp-legal a,.shop-legal a,.rp-accord a{color:inherit;text-decoration:underline}
+.shop-legal{font-size:.78rem;text-align:center;margin:1.4rem 0 .4rem;opacity:.75}
+.cv-licence{font-size:.72rem;line-height:1.4;margin:.8rem 0 0;opacity:.75}.cv-licence a{color:inherit}
 .recharge{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin:0 0 1.6rem}
 .recharge-pack{position:relative;display:flex;flex-direction:column;align-items:center;gap:.15rem;padding:1.1rem .8rem 1rem;border-radius:18px;cursor:pointer;color:inherit;font:inherit;
   background:radial-gradient(120% 90% at 50% 0%,#d64fa033,transparent 60%),var(--creux);border:1px solid color-mix(in srgb,#d64fa0 35%,transparent);transition:transform .15s,border-color .15s}
@@ -20630,7 +20773,6 @@ body.holo-ouvert{overflow:hidden}
 .holo-info{display:grid;justify-items:center;gap:.25rem;animation:holoInfo .4s ease-out}
 .holo-rar{padding:.22rem .7rem;border-radius:999px;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#14101a}
 .holo-nom{margin:.1rem 0 0;font-family:var(--f-affiche,inherit);font-weight:900;font-stretch:115%;text-transform:uppercase;font-size:clamp(1.4rem,5.4vw,2.3rem);line-height:1;text-shadow:0 4px 24px var(--rc)}
-<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 .holo-univ{color:#b9c0e6;letter-spacing:.14em;text-transform:uppercase;font-size:.72rem}
 @keyframes holoInfo{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .holov.calme *,.holov.calme *::before,.holov.calme *::after{animation:none!important;transition:none!important}
@@ -20708,5 +20850,6 @@ body.holo-ouvert{overflow:hidden}
 .cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
 @media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
+<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
 </body>
 </html>
