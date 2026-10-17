@@ -3832,7 +3832,6 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
     var(--grain),
     linear-gradient(145deg,color-mix(in srgb,var(--g1) 85%,#fff),var(--g2) 32%,#17110e 49%,var(--g1) 77%,var(--g2));
   box-shadow:0 2cqw 4cqw -1.2cqw #000D,
-    0 0 0 .28cqw #0a0807,
     inset 0 .7cqw 0 #FFFFFF99,
     inset 0 0 0 .65cqw #00000070,
     inset 0 0 0 1.15cqw var(--g1),
@@ -4174,7 +4173,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.1.10";
+const BUILD = "V2.2.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -6987,7 +6986,7 @@ function poserSurtitre(){
 let navRetour = false;
 var navPret = false;   // l'historique du jeu est en place
 function go(v){
-  if(v!=="pack"){ flushReveal(); state.reveal=null; }
+  if(v!=="pack"){ try{ if(HOLO.fermer) HOLO.fermer(); }catch(e){} flushReveal(); state.reveal=null; }
   if(v!=="duel" && state.duel){ clearTimer(); state.duel=null; }
   if(v!=="duel") document.body.classList.remove("cbjeu");
   const autre = state.view !== v;
@@ -11566,6 +11565,50 @@ function canRepeat(kind, n){
   if(kind === "fox")    return renardsDispo() >= n;
   return canAfford(n);
 }
+
+/* Le paquet une fois entièrement découvert : rangé de la plus rare à la plus
+   commune, la meilleure carte mise en avant, les nouveautés signalées. */
+function peindreRecapPaquet(stage, r){
+  const rang = c => Math.max(0, RARITIES.indexOf(c.rarity));
+  const ordre = r.cards.map((c, i)=>i).sort((a, b)=>rang(r.cards[b]) - rang(r.cards[a]) || a - b);
+  const parRar = {}; r.cards.forEach(c => parRar[c.rarity] = (parRar[c.rarity] || 0) + 1);
+  const nouvelle = c => { const x = state.collection.find(k => k.id === c.id); return x && (x.count || 1) <= 1; };
+  const nom = {normal:"Booster classique", mythic:"Booster mythique", demon:"Booster démoniaque", fox:"Booster renard"}[r.kind] || "Booster";
+  const coul = c => RAR_HEX[c.rarity] || (c.rarity === "Relique" ? "#C9A7FF" : "#B9AC9E");
+  const best = r.cards[ordre[0]];
+  const nbNeuves = r.cards.filter(nouvelle).length;
+  const tuile = (i, grande) => { const c = r.cards[i];
+    return `<figure class="pr-carte ${grande ? "pr-star" : ""}" style="--rc:${coul(c)}" data-id="${esc(c.id)}">
+      ${nouvelle(c) ? `<span class="pr-neuf">Nouvelle</span>` : ""}
+      ${cardHTML(c, {click:true})}
+      <figcaption><b>${esc(c.title || "")}</b><span style="color:${coul(c)}">${esc(c.rarity)}</span></figcaption>
+    </figure>`; };
+  stage.innerHTML = `
+    <section class="pr ${rang(best) >= 3 ? "pr-brille" : ""}" style="--rc:${coul(best)}">
+      <header class="pr-tete">
+        <div><small>${esc(nom)}</small><h3>Votre paquet</h3></div>
+        <div class="pr-pills">${RARITIES.slice().reverse().filter(x => parRar[x]).map(x => `<span style="--pc:${RAR_HEX[x] || "#C9A7FF"}">${esc(x)} <b>×${parRar[x]}</b></span>`).join("")}</div>
+      </header>
+      <div class="pr-corps">
+        ${tuile(ordre[0], true)}
+        <div class="pr-reste">${ordre.slice(1).map(i => tuile(i, false)).join("")}</div>
+      </div>
+      <p class="pr-bilan">${nbNeuves ? `<b>${nbNeuves}</b> nouvelle${nbNeuves > 1 ? "s" : ""} carte${nbNeuves > 1 ? "s" : ""} dans votre collection` : "Toutes ces cartes renforcent des cartes que vous aviez déjà"}</p>
+    </section>
+    <div class="row" style="justify-content:center">
+      ${againButton(r.kind, r.count||1)}
+      <button class="btn ghost" id="back">Retour aux ouvertures</button>
+      <button class="btn ghost" id="toalbum">Aller à l'album</button>
+    </div>
+    <div id="packmsg" class="sub">${esc(r.note||"")}</div>`;
+  stage.querySelectorAll(".pr-carte").forEach(el => el.onclick = ()=>showCard(state.collection.find(c => c.id === el.dataset.id)));
+  const again = stage.querySelector("#again");
+  if(again){ again.disabled = !canRepeat(r.kind, 1); again.onclick = ()=>repeatOpen(r.kind, 1); }
+  const tohub = stage.querySelector("#tohub"); if(tohub) tohub.onclick = ()=>go("hub");
+  const back = stage.querySelector("#back"); if(back) back.onclick = ()=>{ state.reveal=null; renderStage(); };
+  const ta = stage.querySelector("#toalbum"); if(ta) ta.onclick = ()=>go("album");
+}
+
 function againButton(kind, n){
   return canRepeat(kind, n)
     ? `<button class="btn" id="again">Encore</button>`
@@ -11781,6 +11824,7 @@ function renderStage(){
   }
 
   const left = r.cards.length - r.flipped.filter(Boolean).length;
+  if(!left && !r.fox){ peindreRecapPaquet(stage, r); return; }
   stage.innerHTML = `
     <div class="reveal" id="rev">
       ${r.cards.map((c,i)=>`
@@ -12787,6 +12831,164 @@ function finaleRarete(wrap, meilleure, total){
   });
 }
 
+
+/* =========================================================================
+   OUVERTURE HOLOGRAPHIQUE d'un booster unique
+   Le paquet est scanné pendant le tirage ; le joueur l'ouvre ; une onde de
+   lumière l'emporte ; puis chaque carte se dévoile une par une, au toucher,
+   de la plus commune à la plus rare. Chaque carte entre dans la collection
+   au moment où elle apparaît (comme une carte retournée) ; quitter avant
+   d'ouvrir rembourse le paquet, quitter en cours range le reste.
+   ========================================================================= */
+const HOLO = {fermer:null};
+const HOLO_NOM = {normal:"Booster classique", mythic:"Booster mythique", demon:"Booster démoniaque"};
+const HOLO_TEX = {normal:BOOSTER3D.base, mythic:BOOSTER3D.mythic, demon:BOOSTER3D.demon};
+sfx.holoScan  = ()=>{ try{ noise(0, 0.5, {gain:0.035, freq:900, sweep:2400, q:2}); }catch(e){} };
+sfx.holoMonte = ()=>{ try{ noise(0, 1.1, {gain:0.12, freq:260, sweep:3400, q:0.7}); tone(80, 0, 1.1, {type:"sawtooth", gain:0.045, to:520}); }catch(e){} };
+sfx.holoAttente = ()=>{ try{ tone(150, 0, 0.9, {type:"sine", gain:0.08, to:300}); noise(0.1, 0.8, {gain:0.05, freq:500, sweep:1800, q:1}); }catch(e){} };
+function holoOuverture(kind){
+  let finirChargement = ()=>{}, resoudre;
+  const done = new Promise(res => resoudre = res);
+  if(!HOLO_TEX[kind]){ const i = playBoosterIntro(kind); return i; }
+  const mouvement = !reducedMotion();
+  const glow = (B3D_TINT[kind] || B3D_TINT.normal).glow;
+  const el = document.createElement("div");
+  el.className = "holov k-" + kind + (mouvement ? "" : " calme");
+  el.style.setProperty("--hg", glow);
+  el.innerHTML = `<div class="holo-fond"><i class="holo-etoiles"></i></div>
+    <button type="button" class="holo-passer" hidden>Tout voir</button>
+    <div class="holo-scene">
+      <div class="holo-paquet" style="background-image:url('${HOLO_TEX[kind]}')"><i class="holo-reflet"></i><i class="holo-scan"></i></div>
+    </div>
+    <div class="holo-bas">
+      <p class="holo-msg">Préparation de votre ${esc((HOLO_NOM[kind] || "booster").toLowerCase())}…</p>
+      <button type="button" class="btn holo-ouvrir" disabled>Ouvrir le paquet</button>
+    </div>`;
+  document.body.appendChild(el);
+  document.body.classList.add("holo-ouvert");
+  requestAnimationFrame(()=>el.classList.add("on"));
+  const scene = el.querySelector(".holo-scene"), bas = el.querySelector(".holo-bas"), passer = el.querySelector(".holo-passer");
+  let ferme = false, r = null, ordre = [], pos = -1, verrou = false;
+  const scanSon = mouvement ? setInterval(()=>{ if(!state.profile.mute) sfx.holoScan(); }, 2200) : null;
+
+  function fermer(){
+    if(ferme) return; ferme = true;
+    clearInterval(scanSon);
+    el.classList.add("off");
+    document.body.classList.remove("holo-ouvert");
+    setTimeout(()=>el.remove(), mouvement ? 380 : 0);
+    HOLO.fermer = null;
+    resoudre();
+  }
+  HOLO.fermer = fermer;
+
+  function recevoir(i){             // la carte i entre dans la collection
+    if(!r || r.flipped[i]) return 0;
+    r.flipped[i] = true;
+    const n = addCard(r.cards[i]);
+    sset("fm:col", state.collection);
+    try{ checkAch(); }catch(e){}
+    return n;
+  }
+  function toutRecevoir(){
+    if(!r) return;
+    let fait = false;
+    r.cards.forEach((c, i)=>{ if(!r.flipped[i]){ r.flipped[i] = true; addCard(c); fait = true; } });
+    if(fait){ sset("fm:col", state.collection); try{ checkAch(); }catch(e){} }
+  }
+  function sonCarte(c){
+    if(state.profile.mute) return;
+    try{
+      if(kind === "demon" && RARITIES.indexOf(c.rarity) >= 4) sfx.demonRare();
+      else sfxForRarity(c.rarity);
+    }catch(e){}
+  }
+
+  function montrer(){
+    pos++;
+    if(pos >= ordre.length){ fermer(); return; }
+    const i = ordre[pos], c = r.cards[i], rang = Math.max(0, RARITIES.indexOf(c.rarity));
+    const coul = RAR_HEX[c.rarity] || (c.rarity === "Relique" ? "#C9A7FF" : "#B9AC9E");
+    const suspense = mouvement && rang >= 3;
+    verrou = true;
+    el.style.setProperty("--rc", coul);
+    el.dataset.rang = rang;
+    scene.innerHTML = `<div class="holo-rayons"></div>
+      <div class="holo-carte ${suspense ? "attente" : "arrive"}" data-rang="${rang}">
+        <div class="flip"><div class="in">
+          <div class="face back ${kind === "mythic" ? "myth" : kind === "demon" ? "demon" : ""}"><span class="mk"></span></div>
+          <div class="face front"></div>
+        </div></div><i class="holo-irise"></i>
+      </div>`;
+    bas.innerHTML = `<div class="holo-info" hidden>
+        <span class="holo-rar" style="background:${coul}">${esc(c.rarity)}</span>
+        <h2 class="holo-nom">${esc(c.title || "")}</h2>
+        <small class="holo-univ">${esc(c.univ || "")}</small>
+      </div>
+      <p class="holo-msg">${suspense ? "Quelque chose de rare arrive…" : ""}</p>`;
+    const carte = scene.querySelector(".holo-carte"), flip = scene.querySelector(".flip");
+    const reveler = ()=>{
+      const n = recevoir(i);
+      carte.classList.remove("attente", "arrive"); carte.classList.add("revele");
+      /* le vrai retournement du jeu : le dos pivote jusqu'à la tranche, le recto prend le relais */
+      animerRetournement(flip, c, n, ()=>suite());
+      setTimeout(()=>{ if(carte.isConnected) carte.classList.add("brille"); }, mouvement ? 650 : 0);
+    };
+    /* le nom et la rareté n'apparaissent qu'avec le recto, jamais pendant que le dos tourne */
+    const suite = ()=>{
+      if(ferme || !carte.isConnected) return;
+      el.classList.add("eclat"); setTimeout(()=>el.classList.remove("eclat"), 500);
+      sonCarte(c);
+      const info = bas.querySelector(".holo-info"); if(info) info.hidden = false;
+      const reste = ordre.length - pos - 1;
+      bas.querySelector(".holo-msg").innerHTML = reste
+        ? `Carte ${pos + 1} / ${ordre.length} · <b>touchez pour la suivante</b>`
+        : `<button type="button" class="btn holo-fin">Voir mon paquet</button>`;
+      const fin = bas.querySelector(".holo-fin"); if(fin) fin.onclick = ev => { ev.stopPropagation(); fermer(); };
+      passer.hidden = !reste;
+      setTimeout(()=>{ verrou = false; }, mouvement ? 420 : 0);
+    };
+    if(suspense){
+      if(!state.profile.mute) sfx.holoAttente();
+      setTimeout(reveler, rang >= 5 ? 1500 : 1050);
+    } else {
+      if(!state.profile.mute) try{ sfx.flip(); }catch(e){}
+      setTimeout(reveler, mouvement ? 160 : 0);
+    }
+  }
+
+  function ouvrir(){
+    if(!r) return;
+    el.querySelector(".holo-ouvrir").disabled = true;
+    el.classList.add("ouverture");
+    if(!state.profile.mute) sfx.holoMonte();
+    clearInterval(scanSon);
+    const meilleur = Math.max(...r.cards.map(c => RARITIES.indexOf(c.rarity)));
+    el.style.setProperty("--onde", RAR_HEX[RARITIES[meilleur]] || "var(--hg)");
+    setTimeout(()=>{ el.classList.remove("ouverture"); el.classList.add("cartes"); montrer(); }, mouvement ? 1250 : 0);
+  }
+
+  el.addEventListener("click", ev=>{
+    if(!el.classList.contains("cartes") || verrou) return;
+    if(ev.target.closest("button")) return;
+    montrer();
+  });
+  el.querySelector(".holo-ouvrir").onclick = ev => { ev.stopPropagation(); ouvrir(); };
+  passer.onclick = ev => { ev.stopPropagation(); toutRecevoir(); fermer(); };
+
+  finirChargement = ()=>{
+    if(ferme) return;
+    const rv = state.reveal;
+    if(!rv || rv.loading || rv.bulk || !rv.cards || !rv.cards.length){ fermer(); return; }
+    r = rv;
+    ordre = r.cards.map((c, i)=>i).sort((a, b)=>RARITIES.indexOf(r.cards[a].rarity) - RARITIES.indexOf(r.cards[b].rarity) || a - b);
+    el.classList.add("pret");
+    el.querySelector(".holo-msg").textContent = (HOLO_NOM[kind] || "Booster") + " prêt : " + r.cards.length + " cartes vous attendent";
+    const b = el.querySelector(".holo-ouvrir"); b.disabled = false; try{ b.focus({preventScroll:true}); }catch(e){}
+  };
+  return {done, finish:()=>finirChargement(), tick:()=>{}};
+}
+
 function playBoosterIntro(kind){
   let finish = ()=>{};
   const done = runBoosterIntro(kind, fn=>{ finish = fn; });
@@ -12953,7 +13155,7 @@ async function openPack(n, kind){
     state.reveal = null; renderStage(); return;
   }
 
-  const intro = n >= COUNTDOWN_FROM ? playBoosterCountdown(kind, n) : playBoosterIntro(kind);
+  const intro = n >= COUNTDOWN_FROM ? playBoosterCountdown(kind, n) : holoOuverture(kind);
   flushReveal();
   const token = (state.openToken||0) + 1;
   state.openToken = token;
@@ -19384,6 +19586,10 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.2.0", titre:"Ouverture holographique", points:[
+    "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
+    "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
+    "Vos collections sont désormais protégées par un historique précis : en cas de souci, l'équipe peut remettre une collection exactement comme elle était."]},
   {v:"V2.1.10", titre:"Outils de l'équipe", points:[
     "Améliorations internes pour surveiller la santé du jeu."]},
   {v:"V2.1.9", titre:"Un jeu bien plus rapide", points:[
@@ -19955,6 +20161,98 @@ function openSettings(){
 .capa-l.rouge .capa-t strong{color:#ef4444}
 .capa-l small{display:block;margin-top:.3rem;font-size:.75rem;color:var(--muted,#aaa);line-height:1.4}
 .capa-note{font-size:.75rem;margin:.8rem 0 0}
+
+/* ===== Ouverture holographique ===== */
+body.holo-ouvert{overflow:hidden}
+.holov{position:fixed;inset:0;z-index:9000;display:grid;grid-template-rows:1fr auto;justify-items:center;align-items:center;padding:max(16px,env(safe-area-inset-top)) 16px max(22px,env(safe-area-inset-bottom));color:#fff;opacity:0;transition:opacity .35s;cursor:default;-webkit-tap-highlight-color:transparent;user-select:none}
+.holov.on{opacity:1}.holov.off{opacity:0}
+.holov.cartes{cursor:pointer}
+.holo-fond{position:absolute;inset:0;z-index:-1;background:radial-gradient(70vmax 70vmax at 50% 42%, color-mix(in srgb,var(--hg) 30%,#0b0f1e) 0%, #070a16 46%, #03040a 100%);overflow:hidden}
+.holo-fond::before{content:"";position:absolute;inset:-20%;background:repeating-radial-gradient(circle at 50% 42%, transparent 0 60px, color-mix(in srgb,var(--hg) 7%,transparent) 61px 62px);animation:holoRonds 9s linear infinite;opacity:.6}
+.holo-etoiles,.holo-etoiles::after{position:absolute;inset:0;background-image:radial-gradient(1.4px 1.4px at 12% 18%,#fff8 50%,transparent 51%),radial-gradient(1px 1px at 78% 12%,#fff6 50%,transparent 51%),radial-gradient(1.2px 1.2px at 64% 74%,#fff7 50%,transparent 51%),radial-gradient(1px 1px at 22% 82%,#fff5 50%,transparent 51%),radial-gradient(1.6px 1.6px at 88% 56%,#fff6 50%,transparent 51%),radial-gradient(1px 1px at 40% 36%,#fff4 50%,transparent 51%);animation:holoScintille 4s ease-in-out infinite alternate}
+.holo-etoiles::after{content:"";transform:rotate(140deg) scale(1.3);animation-delay:-2s}
+@keyframes holoRonds{to{transform:scale(1.25);opacity:0}}
+@keyframes holoScintille{from{opacity:.35}to{opacity:1}}
+.holo-scene{position:relative;display:grid;place-items:center;width:100%;height:100%;min-height:0;perspective:1200px}
+.holo-paquet{position:relative;height:min(58vh,520px);aspect-ratio:.6;border-radius:10px;background-size:230% 138.4%;background-position:7.8% 41.5%;box-shadow:0 0 0 1px color-mix(in srgb,var(--hg) 60%,transparent),0 0 60px -6px var(--hg),0 30px 60px -20px #000;overflow:hidden;animation:holoFlotte 4.5s ease-in-out infinite;transform-style:preserve-3d}
+.holo-reflet{position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 18px,rgba(255,255,255,.07) 18px 30px);mix-blend-mode:screen;animation:holoStries 6s linear infinite}
+.holo-scan{position:absolute;left:-12%;right:-12%;height:3px;top:0;background:#fff;box-shadow:0 0 18px 6px color-mix(in srgb,var(--hg) 80%,#fff),0 0 60px 18px color-mix(in srgb,var(--hg) 45%,transparent);animation:holoScan 2.2s cubic-bezier(.45,0,.55,1) infinite}
+.holov.pret .holo-paquet{animation:holoFlotte 4.5s ease-in-out infinite,holoPret 1.6s ease-in-out infinite}
+@keyframes holoFlotte{0%,100%{transform:translateY(0) rotateY(-6deg) rotateX(3deg)}50%{transform:translateY(-10px) rotateY(6deg) rotateX(-2deg)}}
+@keyframes holoStries{to{background-position:220px 0}}
+@keyframes holoScan{0%{top:-2%;opacity:0}8%{opacity:1}50%{top:100%;opacity:1}58%{opacity:0}100%{top:100%;opacity:0}}
+@keyframes holoPret{0%,100%{box-shadow:0 0 0 1px color-mix(in srgb,var(--hg) 60%,transparent),0 0 60px -6px var(--hg),0 30px 60px -20px #000}50%{box-shadow:0 0 0 2px #fff,0 0 110px 4px var(--hg),0 30px 60px -20px #000}}
+.holo-bas{position:relative;z-index:1;display:grid;justify-items:center;gap:.7rem;text-align:center;min-height:9.5rem;align-content:start;width:min(560px,100%)}
+.holo-msg{margin:0;font-size:.95rem;color:#cfd6ff;letter-spacing:.02em}
+.holo-msg b{color:#fff}
+.holo-ouvrir,.holo-fin{min-width:13rem;font-size:1rem;padding:.85rem 1.6rem;background:linear-gradient(135deg,color-mix(in srgb,var(--hg) 75%,#2a5cff),#2a62e8);color:#fff;border:none;box-shadow:0 10px 30px -10px var(--hg);text-transform:uppercase;letter-spacing:.08em;font-weight:900}
+.holo-ouvrir:disabled{opacity:.45}
+.holo-passer{position:absolute;top:max(14px,env(safe-area-inset-top));right:16px;z-index:2;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:.45rem .9rem;font-weight:700;font-size:.8rem;cursor:pointer}
+/* l'onde : le paquet tremble, se dissout dans un anneau de lumière */
+.holov.ouverture .holo-paquet{animation:holoTremble .09s linear infinite,holoDissout 1.25s ease-in forwards}
+.holov.ouverture .holo-scan{display:none}
+.holov.ouverture .holo-scene::before,.holov.ouverture .holo-scene::after{content:"";position:absolute;left:50%;top:50%;width:40vmin;height:40vmin;margin:-20vmin 0 0 -20vmin;border-radius:50%;border:2px solid color-mix(in srgb,var(--onde,var(--hg)) 80%,#fff);box-shadow:0 0 40px var(--onde,var(--hg)),inset 0 0 40px var(--onde,var(--hg));animation:holoOnde 1.25s ease-out forwards;pointer-events:none}
+.holov.ouverture .holo-scene::after{animation-delay:.35s;opacity:0}
+.holov.ouverture .holo-fond{animation:holoLueur 1.25s ease-in forwards}
+@keyframes holoTremble{0%{translate:0 0}25%{translate:-2px 1px}50%{translate:2px -1px}75%{translate:-1px -2px}100%{translate:1px 2px}}
+@keyframes holoDissout{0%{filter:none;opacity:1;scale:1}60%{filter:brightness(1.8) blur(1px);opacity:.9;scale:1.04}100%{filter:brightness(3) blur(14px);opacity:0;scale:1.25}}
+@keyframes holoOnde{0%{transform:scale(.2);opacity:1}100%{transform:scale(3.4);opacity:0}}
+@keyframes holoLueur{100%{filter:brightness(1.7) saturate(1.3)}}
+/* les cartes */
+.holo-rayons{pointer-events:none;z-index:0;position:absolute;left:50%;top:50%;width:170vmax;height:170vmax;margin:-85vmax 0 0 -85vmax;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 34%,transparent) 0deg 4deg,transparent 4deg 14deg);-webkit-mask:radial-gradient(circle,#000 0,#0008 22%,transparent 46%);mask:radial-gradient(circle,#000 0,#0008 22%,transparent 46%);animation:holoTourne 26s linear infinite;opacity:.45;transition:opacity .4s}
+.holov[data-rang="0"] .holo-rayons,.holov[data-rang="1"] .holo-rayons{opacity:.18}
+.holov[data-rang="4"] .holo-rayons,.holov[data-rang="5"] .holo-rayons,.holov[data-rang="6"] .holo-rayons{opacity:.85;animation-duration:14s}
+@keyframes holoTourne{to{transform:rotate(360deg)}}
+.holo-carte{z-index:1;position:relative;width:min(62vw,300px,calc(52vh * .716))}
+.holo-carte .flip{width:100%;cursor:inherit}
+.holo-carte .flip .back{box-shadow:0 0 0 1px color-mix(in srgb,var(--rc) 70%,transparent),0 0 70px 4px color-mix(in srgb,var(--rc) 70%,transparent)}
+.holo-carte .flip .back .mk{max-width:96px}
+.holo-carte .flip.on .front .card{box-shadow:0 20px 60px -10px #000,0 0 80px -10px var(--rc)}
+.holo-carte.arrive{animation:holoArrive .32s cubic-bezier(.2,.8,.3,1) both}
+.holo-carte.attente{animation:holoBat .55s ease-in-out infinite}
+
+@keyframes holoArrive{from{transform:translateY(30px) scale(.82) rotateY(0deg);opacity:0}to{transform:none;opacity:1}}
+@keyframes holoBat{0%,100%{transform:scale(1) rotateZ(-1deg)}50%{transform:scale(1.06) rotateZ(1deg);filter:brightness(1.35)}}
+
+.holo-irise{position:absolute;inset:0;border-radius:14px;pointer-events:none;opacity:0;background:linear-gradient(115deg,transparent 30%,rgba(120,220,255,.35) 42%,rgba(255,120,220,.35) 52%,transparent 64%);background-size:250% 100%;mix-blend-mode:color-dodge}
+.holo-carte.brille[data-rang="2"] .holo-irise,.holo-carte.brille[data-rang="3"] .holo-irise,.holo-carte.brille[data-rang="4"] .holo-irise,.holo-carte.brille[data-rang="5"] .holo-irise,.holo-carte.brille[data-rang="6"] .holo-irise{opacity:1;animation:holoIrise 3.2s ease-in-out .5s infinite}
+@keyframes holoIrise{0%{background-position:120% 0}100%{background-position:-120% 0}}
+.holov.eclat .holo-fond{animation:holoFlash .5s ease-out}
+@keyframes holoFlash{0%{filter:brightness(2.2)}100%{filter:none}}
+.holo-info{display:grid;justify-items:center;gap:.25rem;animation:holoInfo .4s ease-out}
+.holo-rar{padding:.22rem .7rem;border-radius:999px;font-size:.72rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#14101a}
+.holo-nom{margin:.1rem 0 0;font-family:var(--f-affiche,inherit);font-weight:900;font-stretch:115%;text-transform:uppercase;font-size:clamp(1.4rem,5.4vw,2.3rem);line-height:1;text-shadow:0 4px 24px var(--rc)}
+.holo-univ{color:#b9c0e6;letter-spacing:.14em;text-transform:uppercase;font-size:.72rem}
+@keyframes holoInfo{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.holov.calme *,.holov.calme *::before,.holov.calme *::after{animation:none!important;transition:none!important}
+
+@media (max-height:640px){.holo-bas{min-height:7.5rem}.holo-paquet{height:min(50vh,420px)}}
+
+/* Récapitulatif d'un paquet ouvert */
+.pr{width:100%;max-width:980px;margin:0 auto 1rem;padding:clamp(1rem,3vw,1.6rem);border-radius:var(--rayon,22px);background:radial-gradient(120% 90% at 20% 0%,color-mix(in srgb,var(--rc) 22%,transparent),transparent 60%),var(--surface,#231c22);border:1px solid color-mix(in srgb,var(--rc) 30%,transparent)}
+.pr-tete{display:flex;justify-content:space-between;align-items:flex-end;gap:.8rem;flex-wrap:wrap;margin-bottom:1rem}
+.pr-tete small{display:block;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted,#bbb)}
+.pr-tete h3{margin:.1rem 0 0;font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;font-size:clamp(1.3rem,4vw,1.8rem)}
+.pr-pills{display:flex;flex-wrap:wrap;gap:.35rem}
+.pr-pills span{padding:.25rem .6rem;border-radius:999px;font-size:.74rem;font-weight:800;background:color-mix(in srgb,var(--pc) 22%,transparent);border:1px solid color-mix(in srgb,var(--pc) 55%,transparent);color:#fff}
+.pr-corps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:clamp(.8rem,2.5vw,1.6rem);align-items:start}
+.pr-reste{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(.6rem,2vw,1rem)}
+.pr-carte{position:relative;margin:0;cursor:pointer;display:grid;gap:.45rem}
+.pr-carte .card{width:100%}
+.pr-carte figcaption{display:grid;gap:.1rem;text-align:center;font-size:.82rem;line-height:1.2}
+.pr-carte figcaption b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-carte figcaption span{font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.pr-star .card{box-shadow:0 0 0 2px color-mix(in srgb,var(--rc) 70%,#fff),0 0 50px -6px var(--rc),0 24px 40px -20px #000}
+.pr-star figcaption b{font-size:1rem}
+.pr-brille .pr-star{animation:prBrille 2.8s ease-in-out infinite}
+@keyframes prBrille{0%,100%{filter:none}50%{filter:drop-shadow(0 0 14px var(--rc))}}
+.pr-neuf{position:absolute;z-index:12;top:-.45rem;right:-.35rem;padding:.2rem .5rem;border-radius:999px;background:var(--p4,#e0489b);color:#fff;font-size:.62rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;box-shadow:0 4px 12px -4px #000}
+.pr-bilan{margin:1rem 0 0;text-align:center;color:var(--muted,#bbb);font-size:.88rem}
+.pr-bilan b{color:var(--text,#fff)}
+@media (max-width:620px){.pr-corps{grid-template-columns:1fr}.pr-star{width:58%;margin:0 auto}.pr-reste{grid-template-columns:repeat(4,minmax(0,1fr));gap:.45rem}.pr-reste figcaption{font-size:.66rem}.pr-reste figcaption span{font-size:.56rem;letter-spacing:.04em}.pr-reste .pr-neuf{font-size:.5rem;padding:.12rem .32rem;top:-.35rem;right:-.2rem}}
+@media (min-width:621px) and (max-width:900px){.pr-reste{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (min-width:901px){.pr-reste{grid-template-columns:repeat(4,minmax(0,1fr))}.pr-corps{grid-template-columns:minmax(0,1.1fr) minmax(0,3fr);align-items:center}}
+@media (prefers-reduced-motion:reduce){.pr-brille .pr-star{animation:none}}
 </style>
 </body>
 </html>
