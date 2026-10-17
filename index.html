@@ -4173,7 +4173,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.2.0";
+const BUILD = "V2.2.1";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -6722,11 +6722,18 @@ function enregistrerTeintes(c){
 poserTeintes(teintesCourantes());
 
 
+/* nom et texte acceptés par la communauté : posés à l'affichage, la carte du joueur reste intacte */
+function nomAccepte(c){ const n = c && c.id && CORR_LIVE.nom && CORR_LIVE.nom[specParts(c.id) ? specParts(c.id).base : c.id]; return n || null; }
+function titreCarte(c){ const n = nomAccepte(c); return (n && n.titre) || (c && c.title) || ""; }
 function cardHTML(c, opts={}){
-  if(c && c.id && !c.variant && c.rarity !== "Relique"){
+  /* la rareté se décide sur le VRAI titre de la carte ; le nom accepté n'est posé
+     qu'ensuite, pour l'affichage (sinon un nouveau nom identique au titre d'une autre
+     carte lui prendrait sa rareté) */
+  if(!opts.rareteFixe && c && c.id && !c.variant && c.rarity !== "Relique"){
     const rc = rareteEffective(c);
     if(rc && rc !== c.rarity) c = Object.assign({}, c, {rarity:rc});
   }
+  { const n = nomAccepte(c); if(n) c = Object.assign({}, c, n.titre ? {title:n.titre} : {}, n.texte ? {desc:n.texte} : {}); }
   const src = c.img && !artRefusee(c.img) ? c.img : null;
   const cadre = styleCadrage(cadrageDe(c));
   const art = src
@@ -9477,7 +9484,7 @@ function majCartesPerso(col){
    Ce que le développeur accepte vaut tout de suite pour tous les joueurs : le
    jeu relit les recadrages et raretés acceptés (quelques octets) et les pose
    par-dessus CORRECTIONS. Intégrer le code reste possible, mais plus nécessaire. */
-const CORR_LIVE = {cad:{}, rar:{}, aj:{}};
+const CORR_LIVE = {cad:{}, rar:{}, aj:{}, emb:{}, nom:{}};
 let RAR_TITRE = null;
 function rareteDe(id){
   const l = CORR_LIVE.rar[id]; if(l && l.r) return l.r;
@@ -9601,8 +9608,28 @@ async function corrLiveCache(){
   try{
     const sig = String(hashId(JSON.stringify(CORRECTIONS)));
     const c = await sget("fm:corr-live", true);
-    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; RAR_TITRE = null; }
+    if(c && c.sig === sig){ CORR_LIVE.cad = c.cad || {}; CORR_LIVE.rar = c.rar || {}; CORR_LIVE.aj = c.aj || {}; CORR_LIVE.emb = c.emb || {}; CORR_LIVE.nom = c.nom || {}; RAR_TITRE = null; appliquerEmblemes(); }
   }catch(e){}
+}
+/* emblèmes acceptés : la carte emblème d'un univers change pour tout le monde */
+let ICONIC_BASE = null;
+function appliquerEmblemes(){
+  try{
+    if(!ICONIC_BASE) ICONIC_BASE = Object.assign({}, ICONIC);
+    for(const [u, e] of Object.entries(CORR_LIVE.emb || {})) if(e && e.titre) ICONIC[u] = e.titre;
+  }catch(e){}
+}
+/* lit TOUTES les lignes, par pages de 1000 (et plus seulement les 1000 premières) */
+async function corrLivePages(base, depuis){
+  const out = []; let t = depuis || "";
+  for(let k = 0; k < 30; k++){
+    const page = await nuageRest(base + (t ? "&traite=gt." + encodeURIComponent(t) : "") + "&order=traite.asc&limit=1000");
+    if(!Array.isArray(page)) return k ? out : null;
+    out.push(...page);
+    if(page.length < 1000) break;
+    t = page[page.length - 1].traite || t;
+  }
+  return out;
 }
 function appliquerLive(){
   try{
@@ -9621,16 +9648,27 @@ async function chargerCorrectionsLive(force){
       const sig = String(hashId(JSON.stringify(CORRECTIONS)));
       let c = await sget("fm:corr-live", true);
       /* le code a changé (nouvelles corrections intégrées) : on repart de zéro */
-      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", cad:{}, rar:{}, aj:{}};
-      c.aj = c.aj || {}; c.ta = c.ta || "";
-      const [ps, vs] = await Promise.all([
-        nuageRest("propositions?statut=eq.acceptee&cadrage=not.is.null" + (c.tp ? "&traite=gt." + encodeURIComponent(c.tp) : "") +
-                  "&select=carte_id,cadrage,traite&order=traite.asc&limit=1000").catch(()=>null),
-        nuageRest("votes_cartes?statut=eq.acceptee&type=eq.rarete" + (c.tv ? "&traite=gt." + encodeURIComponent(c.tv) : "") +
-                  "&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite&order=traite.asc&limit=1000").catch(()=>null)
+      if(!c || c.sig !== sig) c = {sig, tp:"", tv:"", ta:"", te:"", tn:"", cad:{}, rar:{}, aj:{}, emb:{}, nom:{}};
+      c.aj = c.aj || {}; c.ta = c.ta || ""; c.emb = c.emb || {}; c.te = c.te || ""; c.nom = c.nom || {}; c.tn = c.tn || "";
+      const [ps, vs, as, es, ns] = await Promise.all([
+        corrLivePages("propositions?statut=eq.acceptee&cadrage=not.is.null&select=carte_id,cadrage,traite", c.tp).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.rarete&select=sujet,r:proposition->>rarete,titre:carte->>title,univ:carte->>univ,traite", c.tv).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.ajout&select=sujet,carte,r:proposition->>rarete,traite", c.ta).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.embleme&select=sujet,univ:carte->>univ,titre:proposition->remplacant->>title,traite", c.te).catch(()=>null),
+        corrLivePages("votes_cartes?statut=eq.acceptee&type=eq.nom&select=sujet,titre:proposition->>titre,texte:proposition->>texte,traite", c.tn).catch(()=>null)
       ]);
-      const as = await nuageRest("votes_cartes?statut=eq.acceptee&type=eq.ajout" + (c.ta ? "&traite=gt." + encodeURIComponent(c.ta) : "") +
-                  "&select=sujet,carte,r:proposition->>rarete,traite&order=traite.asc&limit=1000").catch(()=>null);
+      for(const n of (ns || [])){
+        if(!n.sujet || (!n.titre && !n.texte)) continue;
+        const t = n.traite || "", o = c.nom[n.sujet];
+        if(!o || t >= o.t) c.nom[n.sujet] = {titre:n.titre || "", texte:n.texte || "", t};
+        if(t > c.tn) c.tn = t;
+      }
+      for(const e of (es || [])){
+        if(!e.univ || !e.titre) continue;
+        const t = e.traite || "", o = c.emb[e.univ];
+        if(!o || t >= o.t) c.emb[e.univ] = {titre:e.titre, t};
+        if(t > c.te) c.te = t;
+      }
       for(const a of (as || [])){
         if(!a.sujet || !a.carte) continue;
         const t = a.traite || "", o = c.aj[a.sujet];
@@ -9650,10 +9688,11 @@ async function chargerCorrectionsLive(force){
         if(!o || t >= o.t) c.rar[v.sujet] = {r:v.r, titre:v.titre, univ:v.univ, t};
         if(t > c.tv) c.tv = t;
       }
-      if(ps || vs || as) await sset("fm:corr-live", c, true);
-      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj]);
-      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; RAR_TITRE = null;
-      change = avant !== JSON.stringify([c.cad, c.rar, c.aj]);
+      if(ps || vs || as || es || ns) await sset("fm:corr-live", c, true);
+      const avant = JSON.stringify([CORR_LIVE.cad, CORR_LIVE.rar, CORR_LIVE.aj, CORR_LIVE.emb, CORR_LIVE.nom]);
+      CORR_LIVE.cad = c.cad; CORR_LIVE.rar = c.rar; CORR_LIVE.aj = c.aj; CORR_LIVE.emb = c.emb; CORR_LIVE.nom = c.nom; RAR_TITRE = null;
+      appliquerEmblemes();
+      change = avant !== JSON.stringify([c.cad, c.rar, c.aj, c.emb, c.nom]);
     }catch(e){}
     corrLiveVu = Date.now();
     return change;
@@ -9890,6 +9929,7 @@ function dejaIntegre(p){
   return !!p.cadrage && egalJ(k.cadrage, p.cadrage);
 }
 function voteIntegre(v){
+  if(v.type === "nom") return true;    // toujours appliqué en direct, rien à intégrer
   if(v.type === "ajout"){ const k = CORRECTIONS[v.sujet]; return !!(k && k.ajout && k.rarete === (v.proposition || {}).rarete); }
   if(v.type === "rarete") return (CORRECTIONS[v.sujet] || {}).rarete === (v.proposition || {}).rarete;
   if(v.type === "embleme") return ICONIC[(v.carte || {}).univ] === ((v.proposition || {}).remplacant || {}).title;
@@ -10022,6 +10062,8 @@ function blocVote(v){
     ? `Ajout au catalogue de ${esc((v.carte || {}).univ || "")} en <b style="color:var(--p5)">${esc((v.proposition || {}).rarete || "?")}</b>`
     : v.type === "rarete"
     ? `Rareté : ${esc((v.carte || {}).rarity || "?")} → <b style="color:var(--p5)">${esc(v.proposition.rarete)}</b>`
+    : v.type === "nom"
+    ? `${(v.proposition || {}).titre ? `Nouveau nom : <b style="color:var(--p5)">${esc(v.proposition.titre)}</b>` : ""}${(v.proposition || {}).titre && (v.proposition || {}).texte ? "<br>" : ""}${(v.proposition || {}).texte ? `Nouveau texte : <i>« ${esc(v.proposition.texte)} »</i>` : ""}`
     : `Emblème de ${esc((v.carte || {}).univ || "")} : <b style="color:var(--p5)">${esc(((v.proposition || {}).remplacant || {}).title || "?")}</b> à la place de ${esc(((v.carte || {}).title || "").replace(/ — .*$/, ""))}`;
   const etat = {ouvert:"vote en cours", acceptee:"acceptée", refusee:"refusée"}[v.statut];
   return `<div class="mvente prop" style="cursor:default">
@@ -10089,24 +10131,30 @@ function viewCommu(){
           <div class="statbox"><b>${demandeN}</b><span>Demandes reçues</span></div>
           <div class="statbox"><b>${enCours}</b><span>Votes ouverts</span></div>
         </div>
-        <div class="sectionhead"><div><h3>Joueurs</h3></div></div>
-        <div class="featuregrid">
-          <button type="button" class="featurecard commtile" data-caction="amis"><span class="featureicon">♧</span><h3>Amis</h3><span class="commcount">${socialN}</span></button>
-          <button type="button" class="featurecard commtile" data-caction="chercher"><span class="featureicon">⌕</span><h3>Rechercher un joueur</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="demandes"><span class="featureicon">♙</span><h3>Demandes d’amis</h3><span class="commcount">${demandeN}</span></button>
-          <button type="button" class="featurecard commtile" data-caction="echanges"><span class="featureicon">⇄</span><h3>Échanges</h3><span class="commcount">${echangeN}</span></button>
-          <button type="button" class="featurecard commtile" data-caction="guilde"><span class="featureicon">♜</span><h3>Guildes</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="classement"><span class="featureicon">🏆</span><h3>Classement</h3></button>
-        </div>
-        <div class="sectionhead"><div><h3>Contributions</h3></div></div>
-        <div class="featuregrid">
-          <button type="button" class="featurecard commtile" data-caction="ajouts"><span class="featureicon">＋</span><h3>Proposer une carte</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="partager"><span class="featureicon">▧</span><h3>Proposer un recadrage</h3></button>
-          <button type="button" class="featurecard commtile" data-caction="votes"><span class="featureicon">✦</span><h3>Votes de cartes</h3><span class="commcount">${enCours}</span></button>
+        <div class="commpoles">
+          <button type="button" class="commpole" data-caction="amis">
+            <span class="cp-ic">♧</span>
+            <span class="cp-txt"><b>Joueurs</b><small>Amis, demandes, échanges, guildes, classement et recherche de joueurs</small></span>
+            <span class="cp-tags">
+              <i>${socialN} ami${socialN > 1 ? "s" : ""}</i>
+              ${demandeN ? `<i class="chaud">${demandeN} demande${demandeN > 1 ? "s" : ""}</i>` : ""}
+              ${echangeN ? `<i class="chaud">${echangeN} échange${echangeN > 1 ? "s" : ""} à voir</i>` : ""}
+            </span>
+            <span class="cp-fl">→</span>
+          </button>
+          <button type="button" class="commpole" data-caction="contributions">
+            <span class="cp-ic">✦</span>
+            <span class="cp-txt"><b>Contributions</b><small>Proposer une carte, un recadrage, un nouveau nom ou texte, et voter pour les cartes</small></span>
+            <span class="cp-tags">
+              ${enCours ? `<i class="chaud">${enCours} vote${enCours > 1 ? "s" : ""} ouvert${enCours > 1 ? "s" : ""}</i>` : `<i>aucun vote ouvert</i>`}
+            </span>
+            <span class="cp-fl">→</span>
+          </button>
         </div>
       </div>`;
     view.querySelectorAll('[data-caction]').forEach(b=>b.onclick=()=>{
       const a=b.dataset.caction;
+      if(a === "contributions"){ commu.onglet = "votes"; viewCommu(); return; }
       if(["amis","demandes","echanges","guilde","classement","chercher"].includes(a)){
         amis.onglet = ({amis:"amis",demandes:"demandes",echanges:"echanges",guilde:"guilde",classement:"classement",chercher:"chercher"})[a];
         go("amis");
@@ -10123,9 +10171,11 @@ function viewCommu(){
   const moi = moiId();
   const ong = commu.onglet;
   const tab = (id, nom, n) => `<button class="chip" data-cong="${id}" aria-pressed="${ong === id}">${nom}${n ? " · " + n : ""}</button>`;
-  const ouverts = commu.votes.filter(v => v.statut === "ouvert" && v.type !== "ajout");
+  const ouverts = commu.votes.filter(v => v.statut === "ouvert" && v.type !== "ajout" && v.type !== "nom");
   const aVoter = ouverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const ajoutsOuverts = commu.votes.filter(v => v.statut === "ouvert" && v.type === "ajout");
+  const nomsOuverts = commu.votes.filter(v => v.statut === "ouvert" && v.type === "nom");
+  const aVoterNoms = nomsOuverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const aVoterAj = ajoutsOuverts.filter(v => commu.mesVoix[v.id] === undefined).length;
   const groupes = admin ? groupesRecadrage() : [];
   const exportP = commu.toutes.filter(p => p.statut === "acceptee" && !p.exporte && !dejaIntegre(p));
@@ -10150,8 +10200,24 @@ function viewCommu(){
       </div>
       ${ouverts.length ? `<div class="mliste">${ouverts.map(blocVote).join("")}</div>`
         : `<div class="panel"><p class="sub" style="margin:0">Aucun vote en cours.</p></div>`}
-      ${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
-        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+      ${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout" && v.type !== "nom").length ? `<h3 class="amih" style="margin-top:1rem">Votes clos</h3>
+        <div class="mliste">${commu.votes.filter(v => v.statut !== "ouvert" && v.type !== "ajout" && v.type !== "nom").slice(0, 12).map(blocVote).join("")}</div>` : ""}`;
+  }else if(ong === "noms"){
+    const clos = commu.votes.filter(v => v.statut !== "ouvert" && v.type === "nom");
+    const plafond = vipActif() ? 10 : 2;
+    const jourParis = d => new Date(d).toLocaleDateString("fr-CA", {timeZone:"Europe/Paris"});
+    const faites = admin ? 0 : commu.votes.filter(v => v.type === "nom" && v.auteur === moi && v.cree && jourParis(v.cree) === jourParis(Date.now())).length;
+    const reste = Math.max(0, plafond - faites);
+    corps = `<div class="panel" style="margin-bottom:.8rem">
+        <p class="sub" style="margin:0 0 .6rem">Un nom mal traduit, un titre de page bizarre, un texte qui ne veut rien dire ? Proposez mieux : une fois accepté, le nouveau nom et le nouveau texte s'affichent sur la carte chez tout le monde.</p>
+        <div class="row" style="gap:.6rem;align-items:center;flex-wrap:wrap">
+          <button class="btn small" id="vnom" ${!admin && !reste ? "disabled" : ""}>Proposer un nom ou un texte</button>
+          <span class="sub">${admin ? "Développeur : sans limite" : `${reste} / ${plafond} aujourd'hui${vipActif() ? "" : " · 10 par jour avec le VIP"}`}</span>
+        </div>
+      </div>
+      ${nomsOuverts.length ? `<div class="mliste">${nomsOuverts.map(blocVote).join("")}</div>`
+        : `<div class="panel"><p class="sub" style="margin:0">Aucune proposition en cours.</p></div>`}
+      ${clos.length ? `<h3 class="amih" style="margin-top:1rem">Décidées</h3><div class="mliste">${clos.slice(0, 20).map(blocVote).join("")}</div>` : ""}`;
   }else if(ong === "ajouts"){
     const clos = commu.votes.filter(v => v.statut !== "ouvert" && v.type === "ajout");
     corps = `<div class="panel" style="margin-bottom:.8rem">
@@ -10188,7 +10254,7 @@ function viewCommu(){
   }else if(ong === "export" && admin){
     const n = nbExport;
     corps = `<div class="panel">
-      ${n ? `<p class="sub" style="margin:0 0 .6rem">${n} correction${n > 1 ? "s" : ""} acceptée${n > 1 ? "s" : ""}, déjà actives pour tous les joueurs. Le code ci-dessous sert à les intégrer définitivement.</p>
+      ${n ? `<p class="sub" style="margin:0 0 .6rem">${n} correction${n > 1 ? "s" : ""} acceptée${n > 1 ? "s" : ""} : <b>déjà actives automatiquement pour tous les joueurs</b> (recadrages, raretés, ajouts et emblèmes). Rien à envoyer : la liste ci-dessous n'est qu'un historique.</p>
         <div class="mliste">${entreesExport(exportP, exportV).map(blocExport).join("")}</div>
         <div class="row" style="gap:.4rem;margin:.8rem 0 .4rem">
           <button class="btn small" id="pcopier">Copier le code</button>
@@ -10211,7 +10277,8 @@ function viewCommu(){
       ${tab("votes", "Votes", aVoter)}
       ${tab("recadrer", "Recadrer", 0)}
       ${tab("ajouts", "Ajouts", aVoterAj)}
-      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Export", nbExport) : ""}
+      ${tab("noms", "Noms & textes", aVoterNoms)}
+      ${admin ? tab("valider", "Recadrages", groupes.length) + tab("export", "Intégrées", 0) : ""}
     </div>
     ${corps}`;
 
@@ -10306,6 +10373,16 @@ function viewCommu(){
           [ok ? ok + " passée" + (ok > 1 ? "s" : "") + " en " + rarete : null, deja ? deja + " déjà à jour" : null, ko ? ko + " en échec" : null].filter(Boolean).join(" · "),
           ko ? "lose" : "info");
     await recharger();
+  };
+  const vnom = view.querySelector("#vnom");
+  if(vnom) vnom.onclick = async ()=>{
+    const c = await choisirDansCatalogue({titre:"Carte à renommer ou à réécrire", filtre:x => !specParts(x.id) && x.rarity !== "Relique"});
+    if(!c) return;
+    if(commu.votes.find(v => v.statut === "ouvert" && v.type === "nom" && v.sujet === c.id)){ toast("Déjà proposée", titreCarte(c) + " : votez dans la liste", "info"); return; }
+    const prop = await saisirNomTexte(c);
+    if(!prop) return;
+    commu.onglet = "noms";
+    lancerVote("nom", c.id, Object.assign(ficheCarte(c), {desc:(c.desc || "").slice(0, 300)}), prop);
   };
   const vaj = view.querySelector("#vajout");
   if(vaj) vaj.onclick = async ()=>{
@@ -10526,6 +10603,48 @@ function choisirAjout(){
 }
 /* même chose pour plusieurs cartes à la fois : une seule rareté cible,
    sans « actuellement » puisque chaque carte part d'un rang différent */
+/* saisie du nouveau nom et/ou du nouveau texte, avec l'aperçu de la carte */
+function saisirNomTexte(c){
+  return new Promise(res => {
+    const m = document.createElement("div");
+    m.className = "modal";
+    const t0 = titreCarte(c), d0 = (nomAccepte(c) || {}).texte || c.desc || "";
+    m.innerHTML = `<div class="inner nomtexte" style="max-width:640px">
+      <h3 style="font-size:1.1rem;margin-bottom:.6rem">Proposer un nom ou un texte</h3>
+      <div class="nt-grille">
+        <div class="nt-carte">${cardHTML(c)}</div>
+        <div class="nt-champs">
+          <label class="sub" for="nt-nom">Nom de la carte</label>
+          <input id="nt-nom" maxlength="60" value="${esc(t0)}">
+          <label class="sub" for="nt-texte" style="margin-top:.6rem">Texte de la carte</label>
+          <textarea id="nt-texte" maxlength="220" rows="4">${esc(d0)}</textarea>
+          <small class="sub" id="nt-compte"></small>
+          <p class="sub err" id="nt-err" hidden></p>
+          <div class="row" style="gap:.4rem;margin-top:.7rem">
+            <button class="btn small" id="nt-ok">Soumettre au vote</button>
+            <button class="btn small ghost" id="nt-no">Annuler</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+    document.body.appendChild(m);
+    const nom = m.querySelector("#nt-nom"), txt = m.querySelector("#nt-texte"), apercu = m.querySelector(".nt-carte"), err = m.querySelector("#nt-err");
+    const rarVraie = rareteEffective(c) || c.rarity;
+    const peindre = ()=>{ apercu.innerHTML = cardHTML(Object.assign({}, c, {rarity:rarVraie, title:nom.value.trim() || t0, desc:txt.value.trim()}), {rareteFixe:true}); m.querySelector("#nt-compte").textContent = txt.value.length + " / 220"; };
+    nom.oninput = peindre; txt.oninput = peindre; peindre();
+    m.querySelector("#nt-no").onclick = ()=>{ m.remove(); res(null); };
+    m.querySelector("#nt-ok").onclick = ()=>{
+      const n = nom.value.replace(/\s+/g, " ").trim(), t = txt.value.replace(/\s+/g, " ").trim();
+      const prop = {};
+      if(n && n !== t0) prop.titre = n;
+      if(t !== d0.replace(/\s+/g, " ").trim()) prop.texte = t;
+      if(!prop.titre && !("texte" in prop)){ err.textContent = "Changez le nom ou le texte avant de soumettre."; err.hidden = false; return; }
+      if("texte" in prop && !prop.texte){ err.textContent = "Le texte ne peut pas être vide."; err.hidden = false; return; }
+      m.remove(); res(prop);
+    };
+    setTimeout(()=>{ try{ nom.focus(); nom.select(); }catch(e){} }, 50);
+  });
+}
 function choisirRareteSimple(titre){
   return new Promise(res => {
     const m = document.createElement("div");
@@ -12650,10 +12769,16 @@ async function mountIdleBooster(host, kind){
    chacun une tranche. Ils s'envolent au fur et à mesure du chargement. */
 const COUNTDOWN_FROM = 2;
 function playBoosterCountdown(kind, total){
-  let tick = ()=>{}, finish = ()=>{}, meilleure = ()=>{};
+  /* Les appels qui arrivent avant que la scène 3D soit prête (tirage très rapide)
+     sont retenus puis rejoués : sans ça, le compteur pouvait attendre pour toujours. */
+  let tick = null, finish = null, meilleure = null, dernierTick = 0, fini = false, best = null;
   const done = runBoosterCountdown(kind, total,
-    (t, f, m)=>{ tick = t; finish = f; meilleure = m || meilleure; });
-  return {done, tick:n=>tick(n), finish:()=>finish(), meilleure:(r, c)=>meilleure(r, c)};
+    (t, f, m)=>{ tick = t; finish = f; meilleure = m || null;
+      if(dernierTick) t(dernierTick); if(best && m) m(best[0], best[1]); if(fini) f(); });
+  return {done,
+    tick:n=>{ dernierTick = n; if(tick) tick(n); },
+    finish:()=>{ fini = true; if(finish) finish(); },
+    meilleure:(r, c)=>{ best = [r, c]; if(meilleure) meilleure(r, c); }};
 }
 
 async function runBoosterCountdown(kind, total, expose){
@@ -12989,6 +13114,169 @@ function holoOuverture(kind){
   return {done, finish:()=>finirChargement(), tick:()=>{}};
 }
 
+
+/* =========================================================================
+   SÉRIE DE BOOSTERS (jusqu'à 10) : chaque paquet s'ouvre comme un booster seul,
+   cartes une par une ; entre deux, l'emballage vide est jeté (booster 3D) et le
+   suivant arrive. Les cartes sont déjà rangées dans la collection avant : quitter
+   ou « Tout voir » ne fait rien perdre.
+   ========================================================================= */
+const HOLO_SERIE_MAX = 10;
+function holoSerie(kind, paquets){
+  return new Promise(resoudre=>{
+    if(!paquets.length || !HOLO_TEX[kind]) return resoudre();
+    const mouvement = !reducedMotion();
+    const glow = (B3D_TINT[kind] || B3D_TINT.normal).glow;
+    const total = paquets.reduce((s, p)=>s + p.length, 0);
+    const el = document.createElement("div");
+    el.className = "holov k-" + kind + " serie" + (mouvement ? "" : " calme");
+    el.style.setProperty("--hg", glow);
+    el.innerHTML = `<div class="holo-fond"><i class="holo-etoiles"></i></div>
+      <canvas class="holo-jet"></canvas>
+      <div class="holo-compteur"></div>
+      <button type="button" class="holo-passer">Tout voir</button>
+      <div class="holo-scene"></div><div class="holo-bas"></div>`;
+    document.body.appendChild(el);
+    document.body.classList.add("holo-ouvert");
+    requestAnimationFrame(()=>el.classList.add("on"));
+    const scene = el.querySelector(".holo-scene"), bas = el.querySelector(".holo-bas"), compteur = el.querySelector(".holo-compteur"), cv = el.querySelector(".holo-jet");
+    let ferme = false, pk = -1, ordre = [], pos = -1, verrou = false, gl = null, phase = "paquet";
+    const muet = ()=>state.profile && state.profile.mute;
+
+    /* le booster 3D qui sera jeté : préparé dès le début, sans bloquer */
+    if(mouvement){
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      cv.width = Math.round(window.innerWidth * dpr); cv.height = Math.round(window.innerHeight * dpr);
+      makeBoosterGL(cv, kind, window.innerWidth / window.innerHeight < 0.62 ? 16.5 : 13.5).then(v => { if(ferme){ try{ v && v.dispose(); }catch(e){} } else gl = v; }).catch(()=>{});
+    }
+    function fermer(){
+      if(ferme) return; ferme = true;
+      el.classList.add("off");
+      document.body.classList.remove("holo-ouvert");
+      setTimeout(()=>{ try{ gl && gl.dispose(); }catch(e){} el.remove(); }, mouvement ? 380 : 0);
+      HOLO.fermer = null;
+      resoudre();
+    }
+    HOLO.fermer = fermer;
+    const majCompteur = ()=>{ compteur.innerHTML = `Booster <b>${pk + 1}</b> / ${paquets.length}`; };
+
+    function montrerPaquet(){
+      pk++;
+      if(pk >= paquets.length){ fermer(); return; }
+      phase = "paquet"; pos = -1; verrou = false;
+      const p = paquets[pk];
+      ordre = p.map((c, i)=>i).sort((a, b)=>RARITIES.indexOf(p[a].rarity) - RARITIES.indexOf(p[b].rarity) || a - b);
+      el.classList.remove("cartes", "ouverture"); el.classList.add("pret");
+      el.removeAttribute("data-rang");
+      majCompteur();
+      scene.innerHTML = `<div class="holo-paquet arrive" style="background-image:url('${HOLO_TEX[kind]}')"><i class="holo-reflet"></i><i class="holo-scan"></i></div>`;
+      bas.innerHTML = `<p class="holo-msg">${pk === 0 ? (HOLO_NOM[kind] || "Booster") + " · " + paquets.length + " paquets, " + total + " cartes" : "Booster suivant"}</p>
+        <button type="button" class="btn holo-ouvrir">Ouvrir le paquet</button>`;
+      bas.querySelector(".holo-ouvrir").onclick = ev => { ev.stopPropagation(); ouvrir(); };
+    }
+
+    function ouvrir(){
+      if(phase !== "paquet") return;
+      phase = "onde";
+      bas.querySelector(".holo-ouvrir").disabled = true;
+      el.classList.remove("pret"); el.classList.add("ouverture");
+      if(!muet()) sfx.holoMonte();
+      const p = paquets[pk];
+      const meilleur = Math.max(...p.map(c => RARITIES.indexOf(c.rarity)));
+      el.style.setProperty("--onde", RAR_HEX[RARITIES[meilleur]] || "var(--hg)");
+      setTimeout(()=>{ if(ferme) return; el.classList.remove("ouverture"); el.classList.add("cartes"); phase = "cartes"; montrerCarte(); }, mouvement ? 1000 : 0);
+    }
+
+    function montrerCarte(){
+      pos++;
+      const p = paquets[pk];
+      if(pos >= ordre.length) return jeter();
+      const c = p[ordre[pos]], rang = Math.max(0, RARITIES.indexOf(c.rarity));
+      const coul = RAR_HEX[c.rarity] || (c.rarity === "Relique" ? "#C9A7FF" : "#B9AC9E");
+      const suspense = mouvement && rang >= 3;
+      verrou = true;
+      el.style.setProperty("--rc", coul);
+      el.dataset.rang = rang;
+      scene.innerHTML = `<div class="holo-rayons"></div>
+        <div class="holo-carte ${suspense ? "attente" : "arrive"}" data-rang="${rang}">
+          <div class="flip"><div class="in">
+            <div class="face back ${kind === "mythic" ? "myth" : kind === "demon" ? "demon" : ""}"><span class="mk"></span></div>
+            <div class="face front"></div>
+          </div></div><i class="holo-irise"></i>
+        </div>`;
+      bas.innerHTML = `<div class="holo-info" hidden>
+          <span class="holo-rar" style="background:${coul}">${esc(c.rarity)}</span>
+          <h2 class="holo-nom">${esc(c.title || "")}</h2>
+          <small class="holo-univ">${esc(c.univ || "")}</small>
+        </div>
+        <p class="holo-msg">${suspense ? "Quelque chose de rare arrive…" : ""}</p>`;
+      const carte = scene.querySelector(".holo-carte"), flip = scene.querySelector(".flip");
+      const x = state.collection.find(k => k.id === c.id);
+      const suite = ()=>{
+        if(ferme || !carte.isConnected) return;
+        el.classList.add("eclat"); setTimeout(()=>el.classList.remove("eclat"), 500);
+        if(!muet()){ try{ if(kind === "demon" && rang >= 4) sfx.demonRare(); else sfxForRarity(c.rarity); }catch(e){} }
+        const info = bas.querySelector(".holo-info"); if(info) info.hidden = false;
+        const dernierPaquet = pk === paquets.length - 1, derniereCarte = pos === ordre.length - 1;
+        bas.querySelector(".holo-msg").innerHTML = !derniereCarte
+          ? `Carte ${pos + 1} / ${ordre.length} · <b>touchez pour la suivante</b>`
+          : dernierPaquet
+            ? `<button type="button" class="btn holo-fin">Voir mes ${total} cartes</button>`
+            : `<button type="button" class="btn holo-suivant">Booster suivant ›</button>`;
+        const fin = bas.querySelector(".holo-fin"); if(fin) fin.onclick = ev => { ev.stopPropagation(); fermer(); };
+        const sv = bas.querySelector(".holo-suivant"); if(sv) sv.onclick = ev => { ev.stopPropagation(); jeter(); };
+        setTimeout(()=>{ verrou = false; }, mouvement ? 420 : 0);
+      };
+      const reveler = ()=>{
+        carte.classList.remove("attente", "arrive");
+        animerRetournement(flip, c, x ? (x.count || 1) : 1, suite);
+        setTimeout(()=>{ if(carte.isConnected) carte.classList.add("brille"); }, mouvement ? 650 : 0);
+      };
+      if(suspense){ if(!muet()) sfx.holoAttente(); setTimeout(reveler, rang >= 5 ? 1500 : 1050); }
+      else { if(!muet()) try{ sfx.flip(); }catch(e){} setTimeout(reveler, mouvement ? 160 : 0); }
+    }
+
+    /* l'emballage vide est jeté hors de l'écran, en tournoyant */
+    function jeter(){
+      if(phase === "jet") return;
+      if(pk >= paquets.length - 1){ fermer(); return; }
+      phase = "jet"; verrou = true;
+      el.classList.remove("cartes"); el.removeAttribute("data-rang");
+      scene.innerHTML = ""; bas.innerHTML = `<p class="holo-msg holo-suivant-titre">Booster suivant</p>`;
+      if(!muet()){ try{ noise(0, 0.35, {gain:0.09, freq:1800, sweep:500, q:0.8}); }catch(e){} }
+      const fini = ()=>{ cv.classList.remove("on"); if(!ferme) montrerPaquet(); };
+      if(!mouvement) return fini();
+      if(gl){
+        cv.classList.add("on");
+        const sens = pk % 2 ? -1 : 1, T0 = performance.now(), D = 620;
+        const pas = ()=>{
+          if(ferme) return;
+          const u = Math.min(1, (performance.now() - T0) / D), e = u * u;
+          /* il se froisse un peu, s'envole en arc et part en vrille hors de l'écran */
+          const froisse = 1 - 0.18 * Math.sin(Math.min(1, u * 3) * Math.PI);
+          gl.draw([sens * (e * 9), 1.2 * Math.sin(u * Math.PI) - e * 6, -e * 2],
+                  [0.5 * u, sens * u * 7.5, sens * u * 2.4], 0.9 * froisse * (1 - 0.25 * u), 0.15, -99, 0);
+          cv.style.opacity = String(1 - Math.max(0, (u - 0.75) / 0.25));
+          if(u < 1) requestAnimationFrame(pas); else { cv.style.opacity = ""; fini(); }
+        };
+        requestAnimationFrame(pas);
+      } else {
+        const b = document.createElement("div");
+        b.className = "holo-paquet jete"; b.style.backgroundImage = `url('${HOLO_TEX[kind]}')`;
+        scene.appendChild(b);
+        setTimeout(fini, 560);
+      }
+    }
+
+    el.addEventListener("click", ev=>{
+      if(phase !== "cartes" || verrou || ev.target.closest("button")) return;
+      montrerCarte();
+    });
+    el.querySelector(".holo-passer").onclick = ev => { ev.stopPropagation(); fermer(); };
+    montrerPaquet();
+  });
+}
+
 function playBoosterIntro(kind){
   let finish = ()=>{};
   const done = runBoosterIntro(kind, fn=>{ finish = fn; });
@@ -13254,6 +13542,12 @@ async function openPack(n, kind){
     await saveAll();
     intro.finish();                      // le paquet se déchire une fois les cartes prêtes
     await intro.done;
+    /* Jusqu'à 10 boosters : on les ouvre ensuite un par un, comme un booster seul.
+       Les cartes sont déjà toutes dans la collection : ce n'est que le spectacle. */
+    if(n > 1 && n <= HOLO_SERIE_MAX && state.openToken === token){
+      stopShaking();
+      try{ await holoSerie(kind, resultats.filter(p => p && p.length)); }catch(e){}
+    }
     state.busy = false;
     stopShaking();
     document.getElementById("coins").textContent = short(state.profile.coins);
@@ -19291,7 +19585,7 @@ async function viewCatalog(){
       </div>
       <p class="sub" style="margin:.4rem 0 0">${list.length? `${Math.min(list.length,175)} emplacements répertoriés pour cet univers. Le wiki en compte des milliers d'autres : chaque carte tirée ailleurs vient s'ajouter en bas de page.` : "Ce wiki n'expose pas de palmarès exploitable ; seules vos cartes obtenues sont listées."}</p>
     </div>
-    <input id="catq" placeholder="Rechercher dans cet univers…" value="${esc(state.catQ||"")}" style="margin-bottom:.8rem">
+    <input id="catq" placeholder="Rechercher une carte, même pas encore trouvée…" value="${esc(state.catQ||"")}" style="margin-bottom:.8rem">
     <div id="catlist"></div>
   </div>`;
 
@@ -19445,11 +19739,71 @@ function renderCatList(){
     </div>`;
   }
 
+  /* au-delà du palmarès : toute carte du wiki, trouvée ou non */
+  if(q.length >= 2) html = `<div class="catsec" id="catwiki"><h3><span class="pill" style="background:#6E8BD8">Sur le wiki</span>
+      <span class="prog">recherche de « ${esc(state.catQ.trim())} »…</span></h3><div class="cgrid"></div></div>` + html;
   box.innerHTML = html || `<div class="panel">Rien à afficher pour cette recherche.</div>`;
   box.querySelectorAll(".cslot.got").forEach(el=>{
     el.onclick = ()=>showCard(state.collection.find(c=>c.id===el.dataset.id));
   });
   peindreFantomes(box, state.catW);
+  if(q.length >= 2) catWikiChercher(state.catW, state.catQ.trim(), new Set([...list.map(e => e.t), ...mine.map(c => c.title)]));
+}
+
+/* Recherche dans tout le wiki de l'univers, comme Wiki Masters : chaque résultat
+   devient la carte qu'il serait (même rareté, mêmes stats que s'il sortait d'un
+   paquet), grisée tant qu'on ne l'a pas. Résultats gardés en mémoire. */
+const CAT_WIKI = {cache:new Map(), jeton:0, minuteur:null};
+function catWikiChercher(w, q, dejaVus){
+  clearTimeout(CAT_WIKI.minuteur);
+  const mon = ++CAT_WIKI.jeton;
+  CAT_WIKI.minuteur = setTimeout(async ()=>{
+    const cle = w.host + (w.path || "") + "\u0001" + q.toLowerCase();
+    let cartes = CAT_WIKI.cache.get(cle);
+    if(!cartes){
+      try{
+        const d = await api({action:"query", list:"search", srsearch:q, srnamespace:"0", srlimit:"20", srwhat:"text"}, w);
+        /* un univers restreint à ses pages de référence ne tire rien d'autre : on n'affiche que celles-là */
+        const restreint = hotesRestreints().has(w.host), refs = new Set((state.catList || []).map(e => e.t));
+        const titres = ((d.query && d.query.search) || []).map(x => x.title)
+          .filter(t => t && !isRelic(t) && (!restreint || refs.has(t)) && !(restreint && HORS_SUJET.test(t))).slice(0, 12);
+        const liste = state.catList || [];
+        const pages = await Promise.all(titres.map(t => pageByTitle(w, t).catch(()=>null)));
+        cartes = pages.filter(p => p && p.thumbnail && !artRefusee(p.thumbnail.source)).map(p => makeCard(p, w, intrinsicRarity(p, liste, w)));
+        CAT_WIKI.cache.set(cle, cartes);
+      }catch(e){ cartes = null; }
+    }
+    if(mon !== CAT_WIKI.jeton || state.view !== "cat") return;
+    const sec = view.querySelector("#catwiki"); if(!sec) return;
+    const prog = sec.querySelector(".prog"), grille = sec.querySelector(".cgrid");
+    if(!cartes){ prog.textContent = "le wiki ne répond pas, réessayez"; return; }
+    const res = cartes.filter(c => !dejaVus.has(c.title));
+    if(!res.length){ prog.textContent = cartes.length ? "déjà toutes affichées plus haut" : "aucun résultat"; return; }
+    const a = res.filter(c => state.collection.some(x => x.id === c.id)).length;
+    prog.textContent = `${res.length} résultat${res.length > 1 ? "s" : ""} · ${a} obtenue${a > 1 ? "s" : ""}`;
+    grille.innerHTML = res.map(c => {
+      const moi = state.collection.find(x => x.id === c.id);
+      return moi ? `<div class="cslot got" data-id="${esc(moi.id)}">${cardHTML(moi)}</div>`
+                 : `<div class="cslot fantome" data-wiki="${esc(c.id)}">${cardHTML(c, {count:0})}<span class="lock">à trouver</span></div>`;
+    }).join("");
+    grille.querySelectorAll(".cslot.got").forEach(el => el.onclick = ()=>showCard(state.collection.find(c => c.id === el.dataset.id)));
+    grille.querySelectorAll("[data-wiki]").forEach(el => el.onclick = ()=>apercuNonTrouvee(res.find(c => c.id === el.dataset.wiki)));
+  }, CAT_WIKI.cache.size && CAT_WIKI.cache.has(w.host + (w.path || "") + "\u0001" + q.toLowerCase()) ? 0 : 450);
+}
+/* une carte pas encore trouvée, en grand : on voit ce qu'elle vaut, sans pouvoir l'utiliser */
+function apercuNonTrouvee(c){
+  if(!c) return;
+  const m = document.createElement("div");
+  m.className = "modal";
+  m.innerHTML = `<div class="inner" style="max-width:360px;text-align:center">
+      <div style="width:min(260px,70vw);margin:0 auto .8rem">${cardHTML(c, {count:0})}</div>
+      <p class="sub" style="margin:0 0 .3rem"><b>Pas encore dans votre collection.</b></p>
+      <p class="sub" style="margin:0 0 .8rem">Elle peut sortir des paquets de ${esc(c.univ)}, en ${esc(c.rarity)}.</p>
+      <button class="btn small ghost" id="anf">Fermer</button>
+    </div>`;
+  document.body.appendChild(m);
+  m.querySelector("#anf").onclick = ()=>m.remove();
+  m.onclick = ev => { if(ev.target === m) m.remove(); };
 }
 
 /* Les cartes pas encore trouvées restent visibles, grisées : on voit ce
@@ -19586,6 +19940,13 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
+    "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
+    "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
+    "Communauté plus claire : une tuile Joueurs et une tuile Contributions, au lieu de neuf boutons.",
+    "Les contributions acceptées (recadrages, raretés, ajouts et emblèmes) s'appliquent toutes, tout de suite, chez tout le monde.",
+    "Nouveau dans Contributions : proposer un nouveau nom ou un nouveau texte pour une carte (2 par jour, 10 avec le VIP).",
+    "Toutes les cartes : la recherche fouille maintenant tout le wiki de l'univers, y compris les cartes jamais trouvées."]},
   {v:"V2.2.0", titre:"Ouverture holographique", points:[
     "Ouvrir un booster devient un moment : le paquet est scanné, s'ouvre dans une onde de lumière, puis vous découvrez chaque carte une par une, la meilleure en dernier.",
     "Plus la carte est rare, plus l'attente monte avant qu'elle se dévoile.",
@@ -20253,6 +20614,40 @@ body.holo-ouvert{overflow:hidden}
 @media (min-width:621px) and (max-width:900px){.pr-reste{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (min-width:901px){.pr-reste{grid-template-columns:repeat(4,minmax(0,1fr))}.pr-corps{grid-template-columns:minmax(0,1.1fr) minmax(0,3fr);align-items:center}}
 @media (prefers-reduced-motion:reduce){.pr-brille .pr-star{animation:none}}
+
+/* Série de boosters */
+.holo-jet{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:3;opacity:0}
+.holo-jet.on{opacity:1}
+.holo-compteur{position:absolute;top:max(18px,env(safe-area-inset-top));left:16px;z-index:2;font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;color:#cfd6ff;padding:.4rem .8rem;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.holo-compteur b{color:#fff;font-size:1rem}
+.holo-paquet.arrive{animation:holoTombe .45s cubic-bezier(.2,.9,.3,1.15) both,holoFlotte 4.5s ease-in-out .45s infinite}
+.holov.pret .holo-paquet.arrive{animation:holoTombe .45s cubic-bezier(.2,.9,.3,1.15) both,holoFlotte 4.5s ease-in-out .45s infinite,holoPret 1.6s ease-in-out .45s infinite}
+@keyframes holoTombe{from{transform:translateY(-55vh) rotateZ(-14deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.holo-paquet.jete{position:absolute;animation:holoJete .56s cubic-bezier(.5,0,.9,.5) forwards}
+@keyframes holoJete{0%{transform:none}25%{transform:scale(.92,.82) rotateZ(-6deg)}100%{transform:translate(70vw,40vh) rotateZ(220deg) scale(.4);opacity:0}}
+.holo-suivant-titre{font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;letter-spacing:.12em;font-size:1rem;color:#fff;animation:holoInfo .3s ease-out}
+.holo-suivant{min-width:13rem;font-size:1rem;padding:.85rem 1.6rem;background:linear-gradient(135deg,color-mix(in srgb,var(--hg) 75%,#2a5cff),#2a62e8);color:#fff;border:none;box-shadow:0 10px 30px -10px var(--hg);text-transform:uppercase;letter-spacing:.08em;font-weight:900}
+
+/* Communauté : une tuile par page */
+.commpoles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem;margin-top:1rem}
+.commpole{position:relative;display:grid;grid-template-columns:auto 1fr auto;grid-template-rows:auto auto;gap:.6rem 1rem;align-items:center;text-align:left;min-height:150px;padding:1.3rem 1.4rem;border-radius:var(--rayon,22px);border:1px solid var(--line,#ffffff20);background:radial-gradient(120% 120% at 0% 0%,color-mix(in srgb,var(--p4,#e0489b) 16%,transparent),transparent 60%),var(--surface,#231c22);color:var(--text,#fff);cursor:pointer;transition:transform .16s,border-color .16s}
+.commpole:hover{border-color:var(--p4,#e0489b)}
+.commpole:active{transform:scale(.99)}
+.cp-ic{grid-row:1/3;display:grid;place-items:center;width:58px;height:58px;border-radius:18px;font-size:1.7rem;color:var(--p4,#e0489b);background:color-mix(in srgb,var(--p4,#e0489b) 14%,transparent)}
+.cp-txt b{display:block;font-family:var(--f-affiche,inherit);font-weight:900;text-transform:uppercase;font-size:1.25rem;letter-spacing:.01em}
+.cp-txt small{display:block;margin-top:.3rem;color:var(--muted,#bbb);font-size:.85rem;line-height:1.4}
+.cp-tags{grid-column:2;display:flex;flex-wrap:wrap;gap:.35rem}
+.cp-tags i{font-style:normal;font-size:.74rem;font-weight:700;padding:.22rem .6rem;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--muted,#ccc)}
+.cp-tags i.chaud{background:var(--p4,#e0489b);border-color:transparent;color:#fff}
+.cp-fl{grid-column:3;grid-row:1/3;font-size:1.4rem;color:var(--muted,#aaa)}
+@media (max-width:700px){.commpoles{grid-template-columns:1fr}.commpole{min-height:0}}
+
+/* Proposer un nom ou un texte */
+.nt-grille{display:grid;grid-template-columns:minmax(0,200px) minmax(0,1fr);gap:1rem;align-items:start}
+.nt-champs{display:grid;gap:.25rem}
+.nt-champs input,.nt-champs textarea{width:100%;margin:0;font:inherit}
+.nt-champs textarea{resize:vertical;min-height:5.5rem}
+@media (max-width:560px){.nt-grille{grid-template-columns:1fr}.nt-carte{max-width:170px;margin:0 auto}}
 </style>
 </body>
 </html>
