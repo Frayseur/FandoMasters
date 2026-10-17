@@ -6727,11 +6727,14 @@ poserTeintes(teintesCourantes());
 function nomAccepte(c){ const n = c && c.id && CORR_LIVE.nom && CORR_LIVE.nom[specParts(c.id) ? specParts(c.id).base : c.id]; return n || null; }
 function titreCarte(c){ const n = nomAccepte(c); return (n && n.titre) || (c && c.title) || ""; }
 function cardHTML(c, opts={}){
-  { const n = nomAccepte(c); if(n) c = Object.assign({}, c, n.titre ? {title:n.titre} : {}, n.texte ? {desc:n.texte} : {}); }
-  if(c && c.id && !c.variant && c.rarity !== "Relique"){
+  /* la rareté se décide sur le VRAI titre de la carte ; le nom accepté n'est posé
+     qu'ensuite, pour l'affichage (sinon un nouveau nom identique au titre d'une autre
+     carte lui prendrait sa rareté) */
+  if(!opts.rareteFixe && c && c.id && !c.variant && c.rarity !== "Relique"){
     const rc = rareteEffective(c);
     if(rc && rc !== c.rarity) c = Object.assign({}, c, {rarity:rc});
   }
+  { const n = nomAccepte(c); if(n) c = Object.assign({}, c, n.titre ? {title:n.titre} : {}, n.texte ? {desc:n.texte} : {}); }
   const src = c.img && !artRefusee(c.img) ? c.img : null;
   const cadre = styleCadrage(cadrageDe(c));
   const art = src
@@ -10627,7 +10630,8 @@ function saisirNomTexte(c){
     </div>`;
     document.body.appendChild(m);
     const nom = m.querySelector("#nt-nom"), txt = m.querySelector("#nt-texte"), apercu = m.querySelector(".nt-carte"), err = m.querySelector("#nt-err");
-    const peindre = ()=>{ apercu.innerHTML = cardHTML(Object.assign({}, c, {title:nom.value.trim() || t0, desc:txt.value.trim()})); m.querySelector("#nt-compte").textContent = txt.value.length + " / 220"; };
+    const rarVraie = rareteEffective(c) || c.rarity;
+    const peindre = ()=>{ apercu.innerHTML = cardHTML(Object.assign({}, c, {rarity:rarVraie, title:nom.value.trim() || t0, desc:txt.value.trim()}), {rareteFixe:true}); m.querySelector("#nt-compte").textContent = txt.value.length + " / 220"; };
     nom.oninput = peindre; txt.oninput = peindre; peindre();
     m.querySelector("#nt-no").onclick = ()=>{ m.remove(); res(null); };
     m.querySelector("#nt-ok").onclick = ()=>{
