@@ -15515,6 +15515,7 @@ function viewBoutique(){
       ${shopOnglets()}
       <div class="shopsolde"><span>Solde</span><b>${prix(solde)}</b><small>Cristaux</small></div>
     </div>
+    ${BOUTIQUE_PAUSE ? `<div class="panel shop-pause"><b>⏸ Boutique en pause</b><p class="sub" style="margin:.3rem 0 0">Les achats sont temporairement suspendus. Vos Cristaux, votre VIP et vos objets sont conservés.</p></div>` : ""}
     ${btq.erreur ? `<div class="panel" style="margin-bottom:1rem"><b>Boutique indisponible pour l'instant</b><p class="sub" style="margin:.3rem 0 0">${esc(btq.erreur)}</p></div>` : ""}
     ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
     ${btq.onglet === "roue" ? roueHTML() || `<p class="sub">Chargement de la roue…</p>` : `
@@ -15542,6 +15543,7 @@ function viewBoutique(){
   view.querySelectorAll("[data-legal]").forEach(a => a.onclick = e => { e.preventDefault(); ouvrirLegal(a.dataset.legal); });
   const rg = view.querySelector("#roue-go"); if(rg) rg.onclick = roueTourner;
   if(!btq.roue && enLigne) regRpc("roue_etat").then(r => { btq.roue = r; if(state.view === "shop" && !btq.tourne) viewBoutique(); roueLivrerCartes(); }).catch(()=>{});
+  if(BOUTIQUE_PAUSE) view.querySelectorAll("[data-acheter], #vip-achat").forEach(b => { b.disabled = true; b.textContent = "En pause"; });
   view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{ const a = (btq.articles || []).find(x => x.id === b.dataset.acheter); if(a) acheterArticle(a); });
   if(btq.articles === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
 }
@@ -16043,13 +16045,16 @@ function ouvrirAdmin(){ adm.onglet = "apercu"; adm.tab = null; adm.tentatives.ap
    Le joueur paie sur la page sécurisée de Stripe ; Stripe prévient le serveur
    (fonction « stripe-webhook »), qui crédite les Cristaux. Le jeu ne voit jamais
    la carte bancaire et ne peut pas créditer lui-même. */
-const PAIEMENT_OUVERT = true;           // false : visible des administrateurs seulement (phase de test)
+const PAIEMENT_OUVERT = true; 
+/* Boutique en pause (18/10/2026) : aucun achat, ni en euros ni en Cristaux. Le serveur refuse aussi
+   (articles désactivés) et les liens de paiement Stripe sont désactivés. Remettre à false pour rouvrir. */
+const BOUTIQUE_PAUSE = true;          // false : visible des administrateurs seulement (phase de test)
 const PACKS_CRISTAUX = [
   {n:500,  prix:"4,99 €",  url:"https://buy.stripe.com/dRmfZa7GBagIbFU2z4eZ200"},
   {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},
   {n:2400, prix:"19,99 €", url:"https://buy.stripe.com/8x23co6CxgF6eS6a1weZ202", bonus:"+20 %", top:true}
 ];
-function rechargeVisible(){ return (PAIEMENT_OUVERT || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
+function rechargeVisible(){ return !BOUTIQUE_PAUSE && (PAIEMENT_OUVERT || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
 function rechargeHTML(){
   if(!rechargeVisible()) return "";
   return `<div class="sectionhead vit-sect"><div><h3>Recharger des Cristaux</h3></div><span class="sub">${PAIEMENT_OUVERT ? "Paiement sécurisé par Stripe." : "Visible des administrateurs seulement · phase de test"}</span></div>
@@ -16128,6 +16133,7 @@ function demanderConfirmation(titre, texte, bouton){
   });
 }
 async function acheterVipAnnuel(prolonger){
+  if(BOUTIQUE_PAUSE){ toast("Boutique en pause", "Les achats reviennent bientôt.", "info"); return; }
   if(btq.achat || (vipActif() && !prolonger)) return;
   if(soldeCristaux() < 1000){ toast("Cristaux insuffisants", "Il faut 1 000 Cristaux pour le VIP annuel.", "lose"); return; }
   if(!(await demanderConfirmation("FandoMasters VIP", prolonger ? "Prolonger votre VIP d'un an pour 1 000 Cristaux ?" : "Devenir VIP pendant un an pour 1 000 Cristaux ?", prolonger ? "Prolonger" : "Devenir VIP"))) return;
@@ -16148,6 +16154,7 @@ async function acheterVipAnnuel(prolonger){
   finally{ REG.achat=false; btq.achat=false; render(); }
 }
 async function acheterArticle(a){
+  if(BOUTIQUE_PAUSE){ toast("Boutique en pause", "Les achats reviennent bientôt.", "info"); return; }
   if(btq.achat) return;
   const obj = articleObjets(a);
   if(obj) for(const [cle, n] of Object.entries(obj)) if(invFreeSpace(cle) < n){
@@ -20893,6 +20900,7 @@ function openSettings(){
 .rp-legal{font-size:.78rem;margin:-1rem 0 1.6rem}.rp-legal a,.shop-legal a,.rp-accord a{color:inherit;text-decoration:underline}
 .shop-legal{font-size:.78rem;text-align:center;margin:1.4rem 0 .4rem;opacity:.75}
 .cv-licence{font-size:.72rem;line-height:1.4;margin:.8rem 0 0;opacity:.75}.cv-licence a{color:inherit}
+.shop-pause{margin:0 0 1.2rem;border-color:#ffd36a88;background:color-mix(in srgb,#ffd36a 10%,var(--panel))}
 .recharge{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin:0 0 1.6rem}
 .recharge-pack{position:relative;display:flex;flex-direction:column;align-items:center;gap:.15rem;padding:1.1rem .8rem 1rem;border-radius:18px;cursor:pointer;color:inherit;font:inherit;
   background:radial-gradient(120% 90% at 50% 0%,#d64fa033,transparent 60%),var(--creux);border:1px solid color-mix(in srgb,#d64fa0 35%,transparent);transition:transform .15s,border-color .15s}
