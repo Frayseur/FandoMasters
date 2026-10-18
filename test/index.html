@@ -4198,7 +4198,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.3.0";
+const BUILD = "V2.4.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -5059,6 +5059,7 @@ async function regPersister(){
   const moi = acct();
   await ecrireEspace(moi, "srv:confirme", REG.confirme ? {version:REG.confirme.version, etat:REG.confirme.etat, cartes:[...REG.confirme.cartes.values()]} : null);
   await ecrireEspace(moi, "srv:envoi", REG.envoi);
+  if(REG.confirme && REG.pret) await ecrireEspace(moi, "srv:build", BUILD);
 }
 function regDepuisStock(c){ return {version:c.version, etat:c.etat || {}, cartes:regMap(c.cartes)}; }
 const regRpc = (nom, corps)=>nuageRest("rpc/" + nom, {method:"POST", body:JSON.stringify(corps || {})});
@@ -5137,6 +5138,7 @@ function registrePlanifier(urgent){
 async function registreEnvoyer(){
   if(!nuageConfigure() || !nuageConnecte() || ongletFige) return;
   if(REG.achat) return;                  // un achat en boutique est en cours : l'envoi suit juste après
+  if(REG.majRequise) return;             // version périmée : plus rien n'est envoyé avant le rechargement
   if(!REG.pret){ if(fmPret) registreDemarrer(); return; }
   if(REG.enCours){ REG.aRefaire = true; return; }
   REG.enCours = true;
@@ -5167,6 +5169,7 @@ async function registreEnvoyer(){
         return;
       }
       REG.vidageAutorise = false;
+      delta.build = BUILD;
       REG.envoi = {cle:regUid(), delta, version:REG.confirme.version};
       REG.confirme = regAppliquer(REG.confirme, delta);    // optimiste : ce que le serveur va confirmer
       await regPersister();                                  // gardé AVANT l'appel réseau
@@ -5188,6 +5191,7 @@ async function registreEnvoyer(){
       const raison = regRaison(e);
       REG.refus++;
       diagLog("refusé par le serveur : " + raison);
+      if(/^MAJ:/.test(raison)){ REG.envoi = null; majDisponible(); nuageEtat = "repos"; return; }
       const opt = REG.confirme;
       REG.envoi = null;
       try{ await regRecharger(opt); }catch(e2){}
@@ -5217,12 +5221,17 @@ async function registreDemarrer(){
     let env = await lireEspace(moi, "srv:envoi");
     /* l'état local de référence : la partie en mémoire si le jeu tourne déjà,
        sinon la copie gardée sur l'appareil */
+    /* Ce qui attend sur l'appareil vient-il d'une version d'avant la V2.4 ? Alors il part
+       avec les règles de cette version (plafonds), tant que le compte n'est pas encore
+       passé sous verrou : rien de ce qui a été joué hors ligne ne se perd à la mise à jour. */
+    const buildReprise = (await lireEspace(moi, "srv:build")) ? BUILD : "V2.3.9";
     const lp = fmPret ? JSON.parse(JSON.stringify(state.profile)) : await lireEspace(moi, "fm:profile");
     const lc = fmPret ? JSON.parse(JSON.stringify(state.collection)) : await lireEspace(moi, "fm:col");
     let S;
     try{
       if(env && env.cle){
         /* un envoi resté en suspens part tel quel : même clé, jamais appliqué deux fois */
+        if(env.delta && !env.delta.build) env.delta.build = buildReprise;
         try{ await regRpc("synchroniser", {p_cle:env.cle, p_delta:env.delta, p_version:env.version}); }
         catch(e){ if(!regRefus(e)) throw e; diagLog("envoi en suspens refusé : " + regRaison(e)); }
         env = null;
@@ -5261,7 +5270,7 @@ async function registreDemarrer(){
     const ancienLocal = {etat:L.etat || S.etat, cartes:L.cartes || S.cartes};
     REG.confirme = S;
     if(!regVide(delta) && !(lectureEchouee["fm:col"] || lectureEchouee["fm:profile"])){
-      delta.motif = motif;
+      delta.motif = motif; delta.build = buildReprise;
       REG.envoi = {cle:regUid(), delta, version:S.version};
       REG.confirme = regAppliquer(S, delta);
       await regPersister();
@@ -5664,7 +5673,7 @@ function fmReprendreCacheSucces(){
   const cacheContientNouveaux=[...cache].some(id=>!serveur.has(id));
   state.profile.achClaimed=ids;
   /* Ne restaure le solde mémorisé que si un encaissement local manque au profil serveur. */
-  if(cacheContientNouveaux && Number.isFinite(+c.coins)) state.profile.coins=Math.max(Number(state.profile.coins)||0,+c.coins);
+  /* V2.4 : les primes sont versées par le serveur ; le cache ne rend plus de Fandominus */
   FM_ACH_CACHE_RECONCILED=true;
 }
 function lsKey(k,s){ return s ? ("fm-shared:"+k) : ("fm-local:"+acct()+":"+k); }
@@ -7706,29 +7715,17 @@ async function amisChargerLeger(){
    fois le même échange. */
 async function amisRegler(){
   const moi = moiId(); if(!moi) return;
-  const p = state.profile;
-  let change = false;
-  for(const e of amis.echanges){
-    if(e.de !== moi || e.clos || e.statut === "proposee") continue;
-    if(!dejaRegle("ede:" + e.id)){
-      change = true;
-      if(e.statut === "acceptee"){
-        p.echanges = (p.echanges || 0) + 1;
-        ajouterCopies(e.demande || []);
-        const nom = (amis.profils.get(e.a) || {}).pseudo || "Votre ami";
-        toast("Échange accepté", nom + " vous envoie " + resumeEchange(e.demande), "info");
-        logEvent("Échange conclu avec " + nom, "gold");
-      }else{
-        ajouterCopies(e.donne || []);
-        if(e.statut === "refusee") toast("Échange refusé", "vos cartes vous reviennent", "info");
-      }
-      await sset("fm:col", state.collection); await sset("fm:profile", p); piecesAffichees();
-      /* l'échange n'est clos qu'une fois le crédit enregistré par le serveur */
-      if(!(await regConfirmer())) continue;
-    }
+  const repondus = amis.echanges.filter(e => e.de === moi && !e.clos && e.statut !== "proposee");
+  if(!repondus.length || !REG.pret) return;
+  try{ await actionServeur("echanges_regler", {}); }catch(e){ return; }
+  for(const e of repondus){
+    const nom = (amis.profils.get(e.a) || {}).pseudo || "Votre ami";
+    if(e.statut === "acceptee"){ toast("Échange accepté", nom + " vous envoie " + resumeEchange(e.demande), "info"); logEvent("Échange conclu avec " + nom, "gold"); }
+    else if(e.statut === "refusee") toast("Échange refusé", "vos cartes vous reviennent", "info");
     try{ await nuageRest("rpc/clore_echange", {method:"POST", body:JSON.stringify({eid:e.id})}); e.clos = true; }catch(err){}
   }
-  if(change) checkAch();
+  piecesAffichees();
+  checkAch();
 }
 
 /* Coup d'œil régulier : nouvelles demandes, nouveaux échanges, réponses. */
@@ -7737,6 +7734,7 @@ async function amisVeille(){
   const avant = new Set([...amis.recus.map(x => "r" + x), ...amis.echanges.filter(e => e.statut === "proposee").map(e => "e" + e.id)]);
   if(state.view === "amis") await amisCharger(); else await amisChargerLeger();
   if(amis.erreur) return;
+  try{ await registreVerifier(); }catch(e){}          // un échange accepté a pu nous créditer côté serveur
   const moi = moiId();
   for(const id of amis.recus) if(!avant.has("r" + id) && !amis.vu.has("r" + id)){
     amis.vu.add("r" + id);
@@ -8312,8 +8310,8 @@ function viewAmis(){
   on("[data-refuser]", b => occupe(b, ()=>nuageRest("amities?demandeur=eq." + b.dataset.refuser + "&cible=eq." + moi, {method:"DELETE"})));
   on("[data-annuler]", b => occupe(b, ()=>nuageRest("amities?demandeur=eq." + moi + "&cible=eq." + b.dataset.annuler, {method:"DELETE"})));
   on("[data-eok]", b => occupe(b, ()=>accepterEchange(+b.dataset.eok)));
-  on("[data-eno]", b => occupe(b, ()=>nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid:+b.dataset.eno, decision:"refusee"})})));
-  on("[data-eannule]", b => occupe(b, ()=>nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid:+b.dataset.eannule, decision:"annulee"})})));
+  on("[data-eno]", b => occupe(b, ()=>actionServeur("echange_repondre", {p_echange:+b.dataset.eno, p_decision:"refusee"})));
+  on("[data-eannule]", b => occupe(b, ()=>actionServeur("echange_repondre", {p_echange:+b.dataset.eannule, p_decision:"annulee"})));
 
   const q = view.querySelector("#amiq");
   if(q){
@@ -8341,17 +8339,9 @@ async function accepterEchange(eid){
   const e = amis.echanges.find(x => x.id === eid);
   if(!e) throw new Error("échange introuvable");
   if(!possede(e.demande || [])) throw new Error("il vous manque des cartes, des Fandominus ou du Mana demandés");
-  const r = await nuageRest("rpc/repondre_echange", {method:"POST", body:JSON.stringify({eid, decision:"acceptee"})});
-  if(r !== "acceptee") throw new Error("cet échange n'est plus disponible (" + r + ")");
-  const p = state.profile;
-  if(!dejaRegle("ea:" + eid)){
-    p.echanges = (p.echanges || 0) + 1;
-    retirerCopies(e.demande || []);
-    ajouterCopies(e.donne || []);
-    await sset("fm:col", state.collection);
-    await sset("fm:profile", p);
-    checkAch();
-  }
+  const r = await actionServeur("echange_repondre", {p_echange:eid, p_decision:"acceptee"});
+  if(r.statut !== "acceptee") throw new Error("cet échange n'est plus disponible (" + r.statut + ")");
+  checkAch();
   toast("Échange conclu", "vous recevez " + resumeEchange(e.donne), "info");
   piecesAffichees();
   logEvent("Échange conclu avec " + ((amis.profils.get(e.de) || {}).pseudo || "un ami"), "gold");
@@ -8595,19 +8585,17 @@ async function composerEchange(id){
       const cd = donne.map(i => miennes.find(c => c.id === i)).filter(Boolean).map(carteEchange).concat(res("donne"));
       const cq = demande.map(i => leurs.find(c => c.id === i)).filter(Boolean).map(carteEchange).concat(res("demande"));
       if(!possede(cd)){ toast("Pas assez", "vous n'avez pas tout ce que vous donnez", "lose"); b.disabled = false; return; }
-      /* séquestre avant l'envoi : rendu si le serveur refuse */
-      retirerCopies(cd);
-      await sset("fm:col", state.collection); await sset("fm:profile", state.profile); piecesAffichees();
+      /* V2.4 : le séquestre est tenu par le serveur */
+      const pourServeur = l => l.map(x => x.ressource ? {ressource:x.ressource, montant:x.montant} : {id:x.id});
       try{
-        await nuageRest("echanges", {method:"POST", body:JSON.stringify([{de:moiId(), a:id, donne:cd, demande:cq}])});
+        await actionServeur("echange_proposer", {p_ami:id, p_donne:pourServeur(cd), p_demande:pourServeur(cq)});
+        piecesAffichees();
         toast("Échange proposé", pr.pseudo + " doit l'accepter", "info");
         m.remove();
         amis.onglet = "echanges";
         await amisCharger();
         if(state.view === "amis") viewAmis();
       }catch(e){
-        ajouterCopies(cd);
-        await sset("fm:col", state.collection); await sset("fm:profile", state.profile); piecesAffichees();
         b.disabled = false; toast("Échange impossible", String(e.message || e), "lose");
       }
     };
@@ -8781,58 +8769,23 @@ async function marcheCharger(){
    serveur ne rend son dû qu'une fois, on n'applique que ce qu'il renvoie. */
 async function marcheRegler(){
   const moi = moiId(); if(!moi) return;
-  const p = state.profile;
-  let change = false;
   const fini = e => Date.parse(e.fin) <= Date.now();
-  for(const e of marche.miennes.filter(e => !e.regle_vendeur && fini(e))){
-    try{
-      const r = await nuageRest("rpc/regler_vente", {method:"POST", body:JSON.stringify({eid:e.id})});
-      if(!r){ e.regle_vendeur = true; continue; }
-      if(dejaRegle("mv" + e.id)){ e.regle_vendeur = true; continue; }
-      if(r.offre){
-        p.ventes = (p.ventes || 0) + 1;
-        const net = Math.floor(r.offre * (1 - MARCHE_TAXE));
-        p.coins = (p.coins || 0) + net;
-        toast("Vente conclue", (r.carte && r.carte.title || "Carte") + " · +" + net + " ◆", "info");
-        logEvent("Vendu aux enchères : " + (r.carte && r.carte.title) + " pour " + r.offre + " ◆", "gold");
-      }else if(r.carte){
-        ajouterCopies([r.carte]);
-        toast("Invendu", (r.carte.title || "La carte") + " revient dans votre album", "info");
-      }
-      e.regle_vendeur = true; change = true;
-    }catch(err){}
+  const aRegler = marche.miennes.some(e => !e.regle_vendeur && fini(e))
+    || marche.encheresOffres.some(e => e.meilleur === moi && !e.regle_acheteur && fini(e))
+    || marche.offres.some(o => { if(o.rembourse) return false; const e = marche.encheresOffres.find(x => x.id === o.enchere); return !(e && e.meilleur === moi && e.offre === o.montant); });
+  if(!aRegler || !REG.pret) return;
+  let r;
+  try{ r = await actionServeur("marche_regler", {}); }catch(e){ return; }
+  for(const ev of (r.evenements || [])){
+    if(ev.type === "vente"){ toast("Vente conclue", (ev.carte || "Carte") + " · +" + ev.net + " ◆", "info"); logEvent("Vendu aux enchères : " + ev.carte + " pour " + ev.offre + " ◆", "gold"); }
+    else if(ev.type === "invendu") toast("Invendu", (ev.carte || "La carte") + " revient dans votre album", "info");
+    else if(ev.type === "achat"){ toast("Enchère remportée", (ev.carte || "Carte") + " rejoint votre album", "ach"); logEvent("Enchère remportée : " + ev.carte + " pour " + ev.offre + " ◆", "gold"); }
+    else if(ev.type === "rendu") toast("Offre dépassée", "+" + ev.montant + " ◆ rendus", "info");
   }
-  for(const e of marche.encheresOffres.filter(e => e.meilleur === moi && !e.regle_acheteur && fini(e))){
-    try{
-      const carte = await nuageRest("rpc/regler_achat", {method:"POST", body:JSON.stringify({eid:e.id})});
-      if(!carte){ e.regle_acheteur = true; continue; }
-      if(dejaRegle("ma" + e.id)){ e.regle_acheteur = true; continue; }
-      p.achats = (p.achats || 0) + 1;
-      ajouterCopies([carte]);
-      toast("Enchère remportée", (carte.title || "Carte") + " rejoint votre album", "ach");
-      logEvent("Enchère remportée : " + carte.title + " pour " + e.offre + " ◆", "gold");
-      e.regle_acheteur = true; change = true;
-    }catch(err){}
-  }
-  for(const o of marche.offres.filter(o => !o.rembourse)){
-    const e = marche.encheresOffres.find(x => x.id === o.enchere);
-    if(e && e.meilleur === moi && e.offre === o.montant) continue;   // en tête, ou gagnée
-    try{
-      const m = await nuageRest("rpc/rembourser_offre", {method:"POST", body:JSON.stringify({oid:o.id})});
-      if(m > 0 && !dejaRegle("mo" + o.id)){
-        p.coins = (p.coins || 0) + m;
-        toast("Offre dépassée", "+" + m + " ◆ rendus" + (e && e.carte ? " · " + e.carte.title : ""), "info");
-        change = true;
-      }
-      o.rembourse = true;
-    }catch(err){}
-  }
-  if(change){
-    await sset("fm:col", state.collection);
-    await sset("fm:profile", p);
-    piecesAffichees();
-    checkAch();
-  }
+  marche.miennes.forEach(e => { if(fini(e)) e.regle_vendeur = true; });
+  marche.encheresOffres.forEach(e => { if(fini(e) && e.meilleur === moi) e.regle_acheteur = true; });
+  marche.offres.forEach(o => { const e = marche.encheresOffres.find(x => x.id === o.enchere); if(!(e && e.meilleur === moi && e.offre === o.montant)) o.rembourse = true; });
+  if((r.evenements || []).length){ piecesAffichees(); checkAch(); }
 }
 async function marcheChargerLeger(){
   const moi = moiId(); if(!moi) return;
@@ -8855,6 +8808,7 @@ async function marcheChargerLeger(){
 async function marcheVeille(){
   if(!nuageConfigure() || !nuageConnecte() || document.hidden || !state.profile || !state.profile.pseudo) return;
   if(state.view === "market") await marcheCharger(); else await marcheChargerLeger();
+  try{ await registreVerifier(); }catch(e){}          // une offre dépassée est rendue par le serveur : on se recale
   if(state.view === "market" && !document.body.classList.contains("overlay")) viewMarche();
 }
 setInterval(marcheVeille, 90000);
@@ -8998,16 +8952,8 @@ function viewMarche(){
     b.disabled = true;
     try{
       const eid = +b.dataset.annulerv;
-      const r = await nuageRest("rpc/annuler_vente", {method:"POST", body:JSON.stringify({eid})});
-      if(!r) throw new Error("une offre a déjà été posée");
-      if(r && typeof r === "object"){
-        /* version à jour du serveur : la vente est close et réglée d'un coup */
-        if(!dejaRegle("mv" + eid)){
-          ajouterCopies([r]);
-          await sset("fm:col", state.collection); await sset("fm:profile", state.profile);
-        }
-        toast("Vente retirée", (r.title || "La carte") + " revient dans votre album", "info");
-      }
+      const r = await actionServeur("marche_annuler", {p_enchere:eid});
+      toast("Vente retirée", ((r.carte || {}).title || "La carte") + " revient dans votre album", "info");
       await marcheCharger();
     }catch(e){ toast("Retrait impossible", String(e.message || e), "lose"); }
     viewMarche();
@@ -9031,22 +8977,9 @@ function viewMarche(){
     if(prix < 1){ toast("Prix invalide", "au moins 1 ◆", "lose"); return; }
     ml.disabled = true;
     const carte = carteEchange(c);
-    const debut = new Date(Date.now() - 5000).toISOString();
-    retirerCopies([carte]);
-    await sset("fm:col", state.collection); await sset("fm:profile", state.profile);
     try{
-      try{
-        await nuageRest("encheres", {method:"POST", body:JSON.stringify([{vendeur:moi, carte, prix_depart:prix,
-          fin:new Date(Date.now() + marche.duree * 3600000).toISOString()}])});
-      }catch(err){
-        /* coupure pendant l'envoi : la vente existe peut-être quand même */
-        const deja = await nuageRest("encheres?select=id,carte&vendeur=eq." + moi + "&cree=gt." + encodeURIComponent(debut)).catch(()=>null);
-        if(!(deja || []).some(x => x.carte && x.carte.id === carte.id)){
-          ajouterCopies([carte]);
-          await sset("fm:col", state.collection);
-          throw err;
-        }
-      }
+      /* V2.4 : la carte est retirée de l'album par le serveur, qui écrit la vente lui-même */
+      await actionServeur("marche_vendre", {p_carte:c.id, p_prix:prix, p_heures:marche.duree});
       toast("Mise en vente", carte.title + " · départ " + prix + " ◆", "info");
       marche.carte = null; marche.prix = 0; marche.onglet = "miennes";
       await marcheCharger();
@@ -9092,14 +9025,12 @@ function encherirDialogue(eid){
     if(montant < mini){ toast("Offre trop basse", "minimum " + mini + " ◆", "lose"); return; }
     if((p.coins || 0) < montant){ toast("Bourse insuffisante", "il vous manque " + (montant - (p.coins || 0)) + " ◆", "lose"); return; }
     b.disabled = true;
-    p.coins -= montant; piecesAffichees();
-    await sset("fm:profile", p);
     try{
-      await nuageRest("rpc/encherir", {method:"POST", body:JSON.stringify({eid, montant})});
+      await actionServeur("marche_encherir", {p_enchere:eid, p_montant:montant});
+      piecesAffichees();
       toast("Offre posée", montant + " ◆ sur " + ((e.carte || {}).title || "la carte"), "info");
       m.remove();
     }catch(err){
-      p.coins += montant; piecesAffichees(); await sset("fm:profile", p);
       b.disabled = false;
       toast("Offre refusée", String(err.message || err).replace(/^base \d+ : /, ""), "lose");
       return;
@@ -9124,14 +9055,8 @@ async function poserOffre(e, montant){
   const mini = offreMini(e);
   if(montant < mini) throw new Error("offre minimale : " + mini + " ◆");
   if((p.coins || 0) < montant) throw new Error("il vous manque " + (montant - (p.coins || 0)) + " ◆");
-  p.coins -= montant; piecesAffichees();
-  await sset("fm:profile", p);
-  try{
-    await nuageRest("rpc/encherir", {method:"POST", body:JSON.stringify({eid:e.id, montant})});
-  }catch(err){
-    p.coins += montant; piecesAffichees(); await sset("fm:profile", p);
-    throw new Error(String(err.message || err).replace(/^base \d+ : /, ""));
-  }
+  await actionServeur("marche_encherir", {p_enchere:e.id, p_montant:montant});
+  piecesAffichees();
 }
 
 function fermerSalle(){
@@ -11887,8 +11812,7 @@ function renderStage(){
     const osh = stage.querySelector("#openS");
     if(osh) osh.onclick = ()=>{
       if(!(state.profile.shopPacks||0)) return;
-      state.profile.shopPacks--;
-      state.profile.freeShot = true;
+      state.packServeur = "shop";
       openPack(1, "normal");
     };
     const ofx = stage.querySelector("#openF");
@@ -12081,6 +12005,7 @@ function flipCard(i){
 function devoilerRenard(r){
   if(state.reveal !== r || r.fox.fini) return;
   r.fox.fini = true;
+  foxTerminer(r);
   const gagne = r.fox.pris.includes(r.fox.star);
   r.cards.forEach((c, i)=>{
     if(r.flipped[i]) return;
@@ -12157,7 +12082,24 @@ function noterCarte(c){
 /* une carte révélée : déjà rangée par le serveur (booster V2.3) ou ajoutée ici (renard, anciens tirages) */
 function recevoirCarte(r, c){
   if(r && r.serveur){ noterCarte(c); return Math.max(1, owned(c)); }
+  if(r && r.fox && r.fox.ticket){ noterCarte(c); return owned(c) + 1; }
   return addCard(c);
+}
+/* le renard : les cartes choisies partent au serveur, qui les range */
+async function foxValider(ticket, cartes){
+  if(!ticket) return;
+  const envoi = [(cartes || []).map(cartePourServeur)];
+  boosterAttente(ticket, envoi, {kind:"fox"});
+  try{
+    const v = await actionServeur("booster_valider", {p_ticket:ticket, p_cartes:envoi});
+    boosterAttente(ticket, undefined);
+    if(!(cartes || []).length && v && v.rembourse && Object.keys(v.rembourse).length) toast("Booster renard rendu", "", "info");
+  }catch(e){ setTimeout(()=>boosterReprendre(), 5000); }
+}
+function foxTerminer(r){
+  if(!r || !r.fox || !r.fox.ticket || r.fox.valide) return;
+  r.fox.valide = true;
+  foxValider(r.fox.ticket, r.fox.pris.map(i => r.cards[i]));
 }
 function addCard(c){
   { const r = rareteEffective(c); if(r) c.rarity = r; }
@@ -12204,7 +12146,8 @@ function flushReveal(){
   if(r.fox){
     if(r.fox.fini) return;
     if(!r.fox.pris.length){
-      refundPack(r); sset("fm:profile", state.profile);
+      if(r.fox.ticket){ r.fox.fini = true; r.fox.valide = true; foxValider(r.fox.ticket, []); }
+      else{ refundPack(r); sset("fm:profile", state.profile); }
       toast("Ouverture annulée — booster renard rendu");
       return;
     }
@@ -12212,9 +12155,10 @@ function flushReveal(){
     const restes = r.cards.map((c, i)=>i).filter(i => !r.flipped[i]);
     while(r.fox.pris.length < r.fox.max && restes.length){
       const k = restes.splice(Math.floor(Math.random() * restes.length), 1)[0];
-      r.fox.pris.push(k); r.flipped[k] = true; addCard(r.cards[k]);
+      r.fox.pris.push(k); r.flipped[k] = true; if(!r.fox.ticket) addCard(r.cards[k]);
     }
     r.fox.fini = true;
+    foxTerminer(r);
     sset("fm:col", state.collection); checkAch();
     return;
   }
@@ -13413,7 +13357,16 @@ function repeatOpen(kind, n){
 async function openFox(){
   if(state.busy || renardsDispo() < 1) return;
   state.busy = true;
-  state.profile.foxOuv = (state.profile.foxOuv||0) + 1; majRenards();
+  let ouv = null;
+  try{
+    await boosterReprendre();
+    ouv = await actionServeur("booster_special", {p_kind:"fox"});
+    boosterAttente(ouv.ticket, null, {kind:"fox"});
+  }catch(e){
+    state.busy = false;
+    toast("Booster renard indisponible", String(e.message || e), "lose");
+    return;
+  }
   const intro = playBoosterIntro("fox");
   startShaking();
   state.reveal = {loading:true, kind:"fox", count:1, msg:"le renard bat les cartes…", cards:[], flipped:[]};
@@ -13450,21 +13403,20 @@ async function openFox(){
     }
     if(leurres.length < 4) throw new Error("le renard n'a pas pu compléter son jeu");
     const cards = shuffled([star, ...leurres]);
-    state.profile.packs = (state.profile.packs||0) + 1;
     await saveAll();
     intro.finish();
     await intro.done;
     state.busy = false;
     stopShaking();
     state.reveal = {loading:false, kind:"fox", count:1, cards, flipped:cards.map(()=>false), manque:cards.map(()=>false),
-      fox:{pris:[], max:2, star:cards.indexOf(star), fini:false},
+      fox:{pris:[], max:2, star:cards.indexOf(star), fini:false, ticket:ouv.ticket},
       note:"Deux essais. Les cartes que vous retournez sont à vous."};
     renderStage();
   }catch(e){
     intro.finish();
     await intro.done;
     state.busy = false; stopShaking();
-    state.profile.foxOuv = Math.max(0, (state.profile.foxOuv||0) - 1); majRenards();
+    foxValider(ouv.ticket, []);          // aucune carte : le serveur rend le booster renard
     state.reveal = null; renderStage();
     const m = view.querySelector("#packmsg");
     if(m) m.innerHTML = `<div class="err">${esc(e.message)}</div>`;
@@ -13473,9 +13425,15 @@ async function openFox(){
 
 /* ---- V2.3 : boosters par le serveur ---- */
 function cartePourServeur(c){ const f = regFiche(c); f.id = c.id; return f; }
-/* appel serveur qui change le compte : même méthode que les achats (rien en attente, puis on se recale) */
-async function boosterServeur(nom, args){
-  if(!nuageConnecte() || !REG.pret) throw new Error("connexion au serveur nécessaire pour ouvrir des boosters");
+/* V2.4 : tout ce qui a de la valeur passe par le serveur. Même méthode que les
+   achats : ce qui est en attente part d'abord, l'action est appliquée par le
+   serveur, puis le jeu se recale sur l'état qu'il renvoie. */
+const ACTIONS_SANS_CLE = new Set(["booster_valider"]);
+async function actionServeur(nom, args){
+  if(REG.majRequise){ majDisponible(); throw new Error("rechargez la page pour continuer"); }
+  if(!nuageConnecte() || !REG.pret) throw new Error("connexion au serveur nécessaire");
+  args = Object.assign({}, args || {});
+  if(!ACTIONS_SANS_CLE.has(nom) && !("p_cle" in args)) args.p_cle = regUid();
   await regConfirmer();
   REG.achat = true;
   try{
@@ -13483,23 +13441,57 @@ async function boosterServeur(nom, args){
     let r = null;
     for(let essai = 1; ; essai++){
       try{ r = await regRpc(nom, args); break; }
-      catch(e){ if(regRefus(e) || essai >= 4) throw new Error(regRefus(e) ? regRaison(e) : "réseau indisponible, réessayez"); await new Promise(res => setTimeout(res, 700 * essai)); }
+      catch(e){
+        if(regRefus(e)){ const raison = regRaison(e); if(/^MAJ:/.test(raison)){ majDisponible(); throw new Error("rechargez la page pour continuer"); } throw new Error(raison); }
+        if(essai >= 4) throw new Error("réseau indisponible, réessayez");
+        await new Promise(res => setTimeout(res, 700 * essai));
+      }
     }
-    const ancien = REG.confirme;
-    REG.confirme = {version:r.version, etat:r.etat || {}, cartes:regMap(r.cartes)};
-    await regPersister();
-    regRebaser(ancien, REG.confirme);
-    return r;
+    if(r && r.version != null){
+      const ancien = REG.confirme;
+      REG.confirme = {version:r.version, etat:r.etat || {}, cartes:regMap(r.cartes)};
+      await regPersister();
+      regRebaser(ancien, REG.confirme);
+    }
+    return r || {};
   } finally { REG.achat = false; }
 }
-/* un ticket non validé (réseau coupé, onglet fermé) est gardé et renvoyé plus tard : rien ne se perd */
+const boosterServeur = actionServeur;
+/* Nouvelle version du jeu exigée par le serveur : un bandeau, un bouton. */
+function majDisponible(){
+  REG.majRequise = true;
+  if(document.getElementById("majdispo")) return;
+  const d = document.createElement("div");
+  d.id = "majdispo";
+  d.style.cssText = "position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:100000;background:var(--panel,#221c18);color:var(--ink,#f3e9dc);border:1px solid var(--brass,#e8b44c);border-radius:12px;padding:.7rem .9rem;display:flex;gap:.7rem;align-items:center;box-shadow:0 8px 30px rgba(0,0,0,.45);max-width:calc(100vw - 32px)";
+  d.innerHTML = `<span style="font-size:.9rem">Une nouvelle version du jeu est disponible.</span><button class="btn small" id="majgo">Recharger</button>`;
+  document.body.appendChild(d);
+  d.querySelector("#majgo").onclick = ()=>location.reload();
+}
+/* Un ticket non validé (réseau coupé, onglet fermé) est gardé et renvoyé plus tard :
+   rien ne se perd. Les cartes déjà tirées sont gardées avec lui. */
 function boosterCleAttente(){ return "fm-local:boosters:" + (moiId() || "?"); }
-function boosterAttente(ticket, cartes){
+function boosterAttente(ticket, cartes, info){
   try{
     const l = JSON.parse(localStorage.getItem(boosterCleAttente()) || "{}");
-    if(cartes === undefined) delete l[ticket]; else l[ticket] = {cartes, t:Date.now()};
+    if(cartes === undefined) delete l[ticket];
+    else l[ticket] = Object.assign({t:Date.now()}, l[ticket] || {}, info || {}, {cartes});
     localStorage.setItem(boosterCleAttente(), JSON.stringify(l));
   }catch(e){}
+}
+/* tirage d'une carte pour une case de ticket (campagne, roue) */
+async function carteDeCase(slot){
+  if(!slot) return null;
+  if(slot.rel){ try{ await ensurePool(); return await relicCard(); }catch(e){ return null; } }
+  for(let t = 0; t < 4; t++){
+    try{
+      const pool = await ensurePool(); if(!pool.length) return null;
+      const w = pool[Math.floor(Math.random() * pool.length)];
+      const c = await drawForRarity(w, slot.r);
+      if(c) return c;
+    }catch(e){}
+  }
+  return null;
 }
 let boosterRepriseEnCours = false;
 async function boosterReprendre(){
@@ -13510,8 +13502,19 @@ async function boosterReprendre(){
   boosterRepriseEnCours = true;
   try{
     for(const t of tickets){
-      const cartes = l[t].cartes || [];            // tirage interrompu : paquets vides, donc remboursés
-      try{ await boosterServeur("booster_valider", {p_ticket:t, p_cartes:cartes}); boosterAttente(t, undefined); }
+      const x = l[t] || {};
+      let cartes = Array.isArray(x.cartes) ? x.cartes.map(p => Array.isArray(p) ? p : []) : [];
+      /* campagne, roue : rien à rembourser, les cartes manquantes sont tirées maintenant */
+      if((x.kind === "camp" || x.kind === "roue") && Array.isArray(x.slots)){
+        let manque = false;
+        for(let i = 0; i < x.slots.length; i++){
+          if(cartes[i] && cartes[i].length) continue;
+          const c = await carteDeCase((x.slots[i] || [])[0]);
+          if(c) cartes[i] = [cartePourServeur(c)]; else manque = true;
+        }
+        if(manque && Date.now() - (x.t || 0) < 7 * 86400000){ boosterAttente(t, cartes); continue; }   // on réessaiera
+      }
+      try{ await actionServeur("booster_valider", {p_ticket:t, p_cartes:cartes}); boosterAttente(t, undefined); }
       catch(e){ if(/ticket inconnu/.test(String(e.message))) boosterAttente(t, undefined); }
     }
   } finally { boosterRepriseEnCours = false; }
@@ -13530,12 +13533,16 @@ async function openPack(n, kind){
   }
   if(kind === "fox") return openFox();
   syncFree();
+  const special = state.packServeur || null;      // booster acheté au village
+  state.packServeur = null;
 
   if(kind === "mythic"){
     if((state.profile.mythic||0) < n) return;
   } else if(kind === "demon"){
     if((state.profile.demon||0) < n) return;
-  } else if(!state.profile.freeShot && !canAfford(n)){
+  } else if(special === "shop"){
+    if(!(state.profile.shopPacks||0)) return;
+  } else if(!canAfford(n)){
     state.reveal = null; renderStage(); return;
   }
 
@@ -13558,9 +13565,10 @@ async function openPack(n, kind){
        serveur qui les vérifie et les range dans la collection. */
     await boosterReprendre();
     const paid0 = costFor(n);
-    const ouv = await boosterServeur("booster_ouvrir", {p_kind:kind, p_n:n, p_cle:regUid()});
+    const ouv = special === "shop" ? await actionServeur("booster_special", {p_kind:"shop"})
+                                   : await actionServeur("booster_ouvrir", {p_kind:kind, p_n:n});
     const ticket = ouv.ticket, tirages = ouv.slots || [];
-    boosterAttente(ticket, null);
+    boosterAttente(ticket, null, {kind:special || kind});
     document.getElementById("coins").textContent = short(state.profile.coins);
 
     /* Plusieurs paquets se tirent en même temps (quatre, six au-delà de
@@ -13593,7 +13601,7 @@ async function openPack(n, kind){
     }
     if(!all.length) throw new Error("aucun wiki n'a répondu, le booster vous est rendu");
 
-    const paid = kind === "normal" ? paid0 : {free:0, coins:0};
+    const paid = kind === "normal" && !special ? paid0 : {free:0, coins:0};
     const found = (ouv.objets || []).slice();
     if(found.length){
       const full = found.filter(f=>f==="plein").length;
@@ -13839,14 +13847,12 @@ function showCard(c){
     const fuse = m.querySelector("#fuse");
     if(fuse) fuse.onclick = async ()=>{
       if(c.count < 5 || (c.stars||0) >= 3) return;
-      c.count -= 4;
-      c.stars = (c.stars||0) + 1;
-      c.atk = Math.round(c.atk * 1.06);
-      c.def = Math.round(c.def * 1.06);
-      await sset("fm:col", state.collection);
+      fuse.disabled = true;
+      try{ await actionServeur("carte_fusionner", {p_carte:c.id}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
+      const etoiles = (c.stars||0) + 1;
       sfx.legendary();
-      logEvent(`${c.title} fusionnée en ${"★".repeat(c.stars)}`, "gold");
-      toast(`${c.title} · ${"★".repeat(c.stars)}`);
+      logEvent(`${c.title} fusionnée en ${"★".repeat(etoiles)}`, "gold");
+      toast(`${c.title} · ${"★".repeat(etoiles)}`);
       shut();
       if(state.view === "album") viewAlbum(); else render();
     };
@@ -13857,15 +13863,8 @@ function showCard(c){
     const sell = m.querySelector("#sell");
     if(sell) sell.onclick = async ()=>{
       const n = Math.min(qty, c.count);
-      state.profile.coins += n*unit;
-      state.profile.sold = (state.profile.sold||0) + n;
-      state.profile.duplicatesConverted = (state.profile.duplicatesConverted||0) + Math.min(n,Math.max(0,(c.count||1)-1));
-      c.count -= n;
-      if(c.count <= 0){
-        state.collection = state.collection.filter(x=>x.id !== c.id);
-        state.profile.slots = (state.profile.slots||[]).filter(id=>id !== c.id);
-        if(state.profile.avatar === c.id) state.profile.avatar = null;
-      }
+      sell.disabled = true;
+      try{ await actionServeur("cartes_renvoyer", {p_carte:c.id, p_n:n}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
       await saveAll();
       document.getElementById("coins").textContent = short(state.profile.coins);
       sfx.coin();
@@ -14029,9 +14028,10 @@ function paintDaily(){
     const id = b.dataset.claim;
     const m = MISSIONS.find(x=>x.id===id);
     if(d.claimed.includes(id)) return;
-    regGainUnique("d:" + d.day + ":" + id);
-    d.claimed.push(id);
-    state.profile.coins += m.gold;
+    b.disabled = true;
+    try{ await actionServeur("mission_encaisser", {p_jour:d.day, p_mission:id}); }
+    catch(e){ toast("Mission", String(e && e.message || e), "lose"); paintDaily(); return; }
+    const d2 = dailyState(); if(!d2.claimed.includes(id)) d2.claimed.push(id);
     sfx.coin();
     logEvent(`Mission du jour accomplie · +${m.gold} ◆`, "gold");
     await sset("fm:profile", state.profile);
@@ -14179,17 +14179,12 @@ async function buyFrom(shopKey, itemKey){
   if(p.coins < line.price) return;
 
   if(SHOP_LABEL[itemKey]){
-    p.coins -= line.price;
-    if(itemKey === "pack") p.shopPacks = (p.shopPacks||0) + 1;
-    if(itemKey === "pack5") p.shopPacks = (p.shopPacks||0) + 5;
-    if(itemKey === "mythic") p.mythic = (p.mythic||0) + 1;
-    if(itemKey === "demon") p.demon = (p.demon||0) + 1;
+    try{ await actionServeur("village_acheter", {p_objet:itemKey}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.coin();
     toast(SHOP_LABEL[itemKey].name, "Rangé dans vos ouvertures", "ach");
   } else {
     if(invFreeSpace(itemKey) < 1) return toast("Sacoche pleine", "Videz un emplacement", "lose");
-    p.coins -= line.price;
-    addItem(itemKey, 1);
+    try{ await actionServeur("village_acheter", {p_objet:itemKey}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.coin();
     toast(item(itemKey).name, "Acheté au village", "ach");
   }
@@ -15363,18 +15358,23 @@ async function roueLivrerCartes(prete){
   if(btq.livraison || !btq.roue || !(btq.roue.cartes || []).length) return;
   btq.livraison = true;
   try{
-    for(const rarete of btq.roue.cartes.slice()){
+    const t = await actionServeur("roue_livrer", {});
+    if(!t.ticket) return;
+    boosterAttente(t.ticket, null, {kind:"roue", slots:t.slots});
+    const cartes = [];
+    for(const paquet of t.slots){
+      const rarete = paquet[0].r;
       const c = prete && prete.rarity === rarete ? prete : await roueTirerCarte(rarete);
       prete = null;
-      if(!c) break;                                // réseau : on réessaiera à la prochaine visite
-      addCard(c);
-      await sset("fm:col", state.collection);
-      registrePlanifier("col");
-      try{ await regConfirmer(); }catch(e){}
-      btq.roue = await regRpc("roue_carte_recue", {p_rarete:rarete});
-      if(!btq.tourne) toast(c.title, "carte " + rarete.toLowerCase() + " de la roue · ajoutée à votre album", "ach");
+      cartes.push(c ? [cartePourServeur(c)] : []);
+      if(c && !btq.tourne) toast(c.title, "carte " + rarete.toLowerCase() + " de la roue · ajoutée à votre album", "ach");
     }
-  }finally{ btq.livraison = false; }
+    boosterAttente(t.ticket, cartes);
+    if(cartes.every(p => p.length)){ await actionServeur("booster_valider", {p_ticket:t.ticket, p_cartes:cartes}); boosterAttente(t.ticket, undefined); }
+    else setTimeout(()=>boosterReprendre(), 5000);      // réseau : les cartes manquantes seront tirées plus tard
+    btq.roue = Object.assign({}, btq.roue, {cartes:[]});
+  }catch(e){}
+  finally{ btq.livraison = false; }
 }
 /* le lot, en plein écran pendant trois secondes */
 function roueAfficherLot(lot, carte){
@@ -16548,8 +16548,8 @@ function viewInv(){
   const bs = view.querySelector("#buyslots");
   if(bs) bs.onclick = async ()=>{
     if(price == null || p.coins < price) return;
-    p.coins -= price;
-    p.invUp = (p.invUp||0) + 1;
+    bs.disabled = true;
+    try{ await actionServeur("sacoche_agrandir", {}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.coin();
     await sset("fm:profile", p);
     document.getElementById("coins").textContent = short(p.coins);
@@ -17184,8 +17184,7 @@ function enterArena(){
 /* Fin d'un combat : on verse la mise, on note le résultat, on revient au menu. */
 async function endArena(won){
   const d = state.dj;
-  const gain = won ? exitGold() : 0;
-  state.profile.coins += gain;
+  let gain = won ? exitGold() : 0;
   state.profile.duels = (state.profile.duels||0) + 1;
   if(won){
     state.profile.wins = (state.profile.wins||0) + 1;
@@ -17195,6 +17194,8 @@ async function endArena(won){
   } else { state.profile.streak = 0; sfx.hurt(); }
   const foe = d.fight ? d.fight.foe : {title:"l'adversaire"};
   const tours = d.fight ? d.fight.turn : 0;
+  try{ const r = await actionServeur("combat_solo_fin", {p_mode:"arene", p_victoire:!!won, p_gain:gain}); gain = r.gain || 0; }
+  catch(e){ gain = 0; toast("Prime non versée", String(e && e.message || e), "lose"); }
   logEvent(won ? `Combat gagné · +${gain} ◆` : "Combat perdu", won?"win":"lose");
   await saveAll();
   await checkAch();
@@ -18355,9 +18356,8 @@ async function endDungeon(won, why, abandon){
   const deep = (d.deepest || d.floor) > 2;
   const keep = won || (!abandon && deep);
   const bonus = won ? exitGold() : 0;
-  const total = keep ? d.gold + bonus : 0;
+  let total = keep ? d.gold + bonus : 0;
   const lost = keep ? 0 : d.gold;
-  state.profile.coins += total;
   state.profile.duels = (state.profile.duels||0) + 1;
   if(won){
     state.profile.wins = (state.profile.wins||0) + 1;
@@ -18368,6 +18368,8 @@ async function endDungeon(won, why, abandon){
     state.profile.streak = 0;
     sfx.hurt();
   }
+  try{ const r = await actionServeur("combat_solo_fin", {p_mode:"donjon", p_victoire:!!won, p_gain:total}); total = r.gain || 0; }
+  catch(e){ total = 0; toast("Butin non versé", String(e && e.message || e), "lose"); }
   logEvent(won ? `Donjon achevé · +${total} ◆` : `Donjon abandonné · +${total} ◆`, won?"win":"lose");
   await saveAll();
   await checkAch();
@@ -18566,16 +18568,22 @@ async function claimAch(ids){
   const paid = achClaimed();
   let total = 0, n = 0;
   const demand = new Set(ids || []);
+  const aPayer = [];
   ACHIEVEMENTS.forEach(a=>{
     if(!demand.has(a.id) || paid.has(a.id) || !(state.profile.ach||[]).includes(a.id)) return;
-    regGainUnique("a:" + a.id);
-    paid.add(a.id); total += a.reward; n++;
+    aPayer.push(a.id); paid.add(a.id); total += a.reward; n++;
   });
   if(!n){ achClaimEnCours = false; return; }
-  // Mise à jour immédiate de l'interface, puis sauvegarde durable.
-  state.profile.achClaimed = [...paid];
-  state.profile.coins = (Number(state.profile.coins)||0) + total;
-  /* Écriture immédiate du journal local avant tout aller-retour réseau. */
+  /* V2.4 : la prime est versée par le serveur, selon son propre barème */
+  try{
+    const r = await actionServeur("succes_encaisser", {p_ids:aPayer});
+    total = r.paye || 0;
+  }catch(e){
+    achClaimEnCours = false;
+    toast("Succès", String(e && e.message || e), "lose");
+    if(state.view === "ach") viewAch();
+    return;
+  }
   FM_ACH_CACHE_RECONCILED = true;
   fmEcrireCacheSucces();
   await sset("fm:profile", state.profile);
@@ -19304,14 +19312,12 @@ function pickCard({title, filter, onPick, multi=0, pre=[]}){
     const fuse = m.querySelector("#fuse");
     if(fuse) fuse.onclick = async ()=>{
       if(c.count < 5 || (c.stars||0) >= 3) return;
-      c.count -= 4;
-      c.stars = (c.stars||0) + 1;
-      c.atk = Math.round(c.atk * 1.06);
-      c.def = Math.round(c.def * 1.06);
-      await sset("fm:col", state.collection);
+      fuse.disabled = true;
+      try{ await actionServeur("carte_fusionner", {p_carte:c.id}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
+      const etoiles = (c.stars||0) + 1;
       sfx.legendary();
-      logEvent(`${c.title} fusionnée en ${"★".repeat(c.stars)}`, "gold");
-      toast(`${c.title} · ${"★".repeat(c.stars)}`);
+      logEvent(`${c.title} fusionnée en ${"★".repeat(etoiles)}`, "gold");
+      toast(`${c.title} · ${"★".repeat(etoiles)}`);
       m.remove();
       if(state.view === "album") viewAlbum(); else render();
     };
@@ -19348,7 +19354,6 @@ const UPGRADES = [
 function maxed(u){ return lv(u.id) >= u.max; }
 function forgeLeft(){
   const t = (state.profile.forgeAt||[]).filter(x=>Date.now()-x < FORGE_WINDOW);
-  state.profile.forgeAt = t;
   return FORGE_MAX - t.length;
 }
 function forgeIn(){
@@ -19549,9 +19554,7 @@ function viewFarm(){
     const max = Math.floor(p.mana/MANA_RATE);
     const k = Math.min(n, max);
     if(k < 1) return;
-    p.mana -= k*MANA_RATE;
-    p.coins += k;
-    p.cast = (p.cast||0) + k;
+    try{ await actionServeur("atelier", {p_action:"couler", p_arg:null, p_n:k}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.coin();
     document.getElementById("coins").textContent = short(p.coins);
     paintMana();
@@ -19564,8 +19567,7 @@ function viewFarm(){
     const c = CRAFT.find(x=>x.key === b.dataset.craft);
     if(p.mana < c.cost) return;
     if(invFreeSpace(c.key) < 1) return toast("Sacoche pleine");
-    p.mana -= c.cost;
-    addItem(c.key, 1);
+    try{ await actionServeur("atelier", {p_action:"forger", p_arg:c.key, p_n:1}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.ach();
     paintMana();
     await sset("fm:profile", p);
@@ -19574,9 +19576,7 @@ function viewFarm(){
   });
   view.querySelector("#buydemon").onclick = async ()=>{
     if(p.mana < DEMON_MANA || p.coins < DEMON_COINS) return;
-    p.mana -= DEMON_MANA;
-    p.coins -= DEMON_COINS;
-    p.demon = (p.demon||0) + 1;
+    try{ await actionServeur("atelier", {p_action:"demon", p_arg:null, p_n:1}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.legendary();
     paintMana();
     document.getElementById("coins").textContent = short(p.coins);
@@ -19586,10 +19586,7 @@ function viewFarm(){
   };
   view.querySelector("#buymyth").onclick = async ()=>{
     if(p.mana < MYTHIC_COST || forgeLeft() < 1) return;
-    p.forgeAt = (p.forgeAt||[]).concat(Date.now());
-    p.mana -= MYTHIC_COST;
-    p.mythic = (p.mythic||0) + 1;
-    p.forged = (p.forged||0) + 1;
+    try{ await actionServeur("atelier", {p_action:"mythique", p_arg:null, p_n:1}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.epic();
     paintMana();
     await sset("fm:profile", p);
@@ -19604,9 +19601,7 @@ function viewFarm(){
     const u = UPGRADES.find(x=>x.id===b.dataset.u);
     const c = upCost(u);
     if(p.mana < c || maxed(u)) return;
-    p.mana -= c;
-    p.up = p.up || {};
-    p.up[u.id] = lv(u.id) + 1;
+    try{ await actionServeur("atelier", {p_action:"ameliorer", p_arg:u.id, p_n:1}); }catch(e){ toast("Action impossible", String(e && e.message || e), "lose"); return; }
     sfx.ach();
     await sset("fm:profile", p);
     viewFarm();
@@ -19854,10 +19849,10 @@ function viewCamp(){
   list.forEach((c,i)=>paintCampArt(c, view.querySelector(`[data-camp="${i}"]`)));
 
   view.querySelectorAll("[data-recall]").forEach(b=>b.onclick = async ()=>{
-    const c = camps().find(x=>x.id === b.dataset.recall);
     let back = 0;
-    if(c && c.arms) Object.values(c.arms).forEach(k=>{ back += addItem(k, 1); });
-    state.profile.camps = camps().filter(x=>x.id !== b.dataset.recall);
+    b.disabled = true;
+    try{ const r = await actionServeur("campagne_rappeler", {p_id:b.dataset.recall}); back = r.armes || 0; }
+    catch(e){ toast("Rappel impossible", String(e && e.message || e), "lose"); viewCamp(); return; }
     await sset("fm:profile", state.profile);
     toast(back? `Escouade rappelée · ${back} armement(s) récupéré(s)` : "Escouade rappelée au camp");
     viewCamp();
@@ -19960,13 +19955,13 @@ function launchCamp(camp, cards){
 }
 
 async function commitCamp(camp, cards, arms){
-  Object.values(arms).forEach(k=>useItem(k, 1));
-  const chance = Math.min(95, campChance(camp, cards) + armBonus(arms));
-  camps().push({
-    id:camp.id, lieu:camp.lieu, univ:camp.univ, vilain:camp.vilain, mins:camp.mins,
-    chance, cardIds:cards.map(c=>c.id), arms, endsAt: Date.now() + camp.mins*60000,
-    win: Math.random()*100 < chance
-  });
+  /* V2.4 : le serveur vérifie l'escouade, retire les armements et tire l'issue */
+  let chance = Math.min(95, campChance(camp, cards) + armBonus(arms));
+  try{
+    await actionServeur("campagne_lancer", {p_id:camp.id, p_mins:camp.mins, p_lieu:camp.lieu, p_univ:camp.univ, p_vilain:camp.vilain,
+      p_cartes:cards.map(c=>c.id), p_armes:arms});
+    const c = camps().find(x=>x.id === camp.id); if(c) chance = c.chance;
+  }catch(e){ toast("L'escouade ne part pas", String(e && e.message || e), "lose"); viewCamp(); return; }
   await sset("fm:profile", state.profile);
   toast(`Escouade partie pour ${camp.lieu} — ${chance} % de réussite`);
   sfx.epic();
@@ -20054,23 +20049,24 @@ async function paintCampArt(c, el){
 }
 
 /* ---------- rapport de campagne ---------- */
+let campRecolte = null;
 async function collectCamp(id){
   const c = camps().find(x=>x.id === id);
-  if(!c) return;
-  const loot = CAMP_LOOT[c.mins];
-  const won = !!c.win;
-
-  const gains = [];
-  let cardWanted = null, card2Wanted = null, bossWanted = false, relicWanted = false;
-  if(won){
-    if(Math.random() < 0.7) gains.push({type:"coins", n:loot.coins, label:`${loot.coins} Fandominus`});
-    if(Math.random() < 0.6) gains.push({type:"mana",  n:loot.mana,  label:`${loot.mana.toLocaleString("fr-FR")} Mana`});
-    if(loot.card) cardWanted = loot.card;        // 2 h, 4 h et Abîme : carte garantie
-    if(loot.card2) card2Wanted = loot.card2;
-    if(loot.relic && Math.random() < loot.relic) relicWanted = true;
-    if(Math.random() < 0.08) bossWanted = true;          // la tête du vilain, rarement
-    if(!gains.length && !cardWanted) gains.push({type:"coins", n:loot.coins, label:`${loot.coins} Fandominus`});
-  }
+  if(!c || campRecolte === id) return;
+  /* V2.4 : le serveur décide des gains et des raretés ; le jeu va chercher les cartes sur Fandom */
+  campRecolte = id;
+  let rec;
+  try{ rec = await actionServeur("campagne_recolter", {p_id:id}); }
+  catch(e){ toast("Rapport indisponible", String(e && e.message || e), "lose"); return; }
+  finally{ campRecolte = null; }
+  const won = !!rec.win;
+  const quoi = rec.quoi || [], slots = rec.slots || [];
+  c.ticket = rec.ticket || null; c.quoi = quoi;
+  if(c.ticket) boosterAttente(c.ticket, slots.map(()=>[]), {kind:"camp", slots});
+  const gains = (rec.gains || []).map(g=>({type:g.type, n:g.n, label: g.type === "coins" ? `${g.n} Fandominus` : `${Number(g.n).toLocaleString("fr-FR")} Mana`}));
+  const caseDe = q => quoi.indexOf(q) >= 0 ? slots[quoi.indexOf(q)][0] : null;
+  const cardWanted = caseDe("card") ? caseDe("card").r : null, card2Wanted = caseDe("card2") ? caseDe("card2").r : null;
+  const bossWanted = quoi.includes("boss"), relicWanted = quoi.includes("relic");
 
   /* Toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, chaque carte remplaçait la précédente). */
   const ORDRE = ["Relique","Légendaire","Ultra rare","Super rare","Rare","Peu commun","Commun"];
@@ -20145,24 +20141,21 @@ async function collectCamp(id){
 }
 
 async function finishCollect(c, gains, m){
-  const p = state.profile;
-  gains.forEach(g=>{
-    if(g.type==="coins") p.coins += g.n;
-    if(g.type==="mana")  p.mana = Math.min(MANA_CAP, p.mana + g.n);
-  });
-  if(c.loot) addCard(c.loot);
-  if(c.loot2) addCard(c.loot2);
-  if(c.boss) addCard(c.boss);
-  if(c.relicLoot) addCard(c.relicLoot);
-  if(c.win){
-    p.campWins = (p.campWins||0) + 1;
-    p.campDone = (p.campDone||[]).concat(c.id);
-  } else p.campLost = (p.campLost||0) + 1;
+  const take = m.querySelector("#take"); if(take) take.disabled = true;
+  /* gains déjà versés par le serveur ; les cartes trouvées lui sont envoyées pour vérification */
+  if(c.ticket){
+    const parQuoi = {card:c.loot, card2:c.loot2, boss:c.boss, relic:c.relicLoot};
+    const envoi = (c.quoi || []).map(q => parQuoi[q] ? [cartePourServeur(parQuoi[q])] : []);
+    boosterAttente(c.ticket, envoi);
+    if(envoi.every(x => x.length)){
+      try{ await actionServeur("booster_valider", {p_ticket:c.ticket, p_cartes:envoi}); boosterAttente(c.ticket, undefined); }
+      catch(e){ setTimeout(()=>boosterReprendre(), 5000); }
+    } else setTimeout(()=>boosterReprendre(), 3000);     // une carte n'a pas répondu : elle sera tirée plus tard
+  }
   logEvent(c.win? `Campagne réussie à ${c.lieu} — ${c.vilain} vaincu`
                 : `Campagne perdue à ${c.lieu} face à ${c.vilain}`, c.win?"win":"lose");
-  p.camps = camps().filter(x=>x.id !== c.id);
   await saveAll();
-  document.getElementById("coins").textContent = short(p.coins);
+  document.getElementById("coins").textContent = short(state.profile.coins);
   paintMana();
   checkAch();
   m.remove();
@@ -20548,6 +20541,12 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.0", titre:"Tout passe par le serveur", points:[
+    "Atelier, village, sacoche, missions du jour, succès, combats, campagnes, boosters renard, renvoi et fusion de cartes : chaque gain est désormais calculé et versé par le serveur.",
+    "Marché aux enchères : votre offre est retenue par le serveur et vous revient dès que quelqu'un surenchérit. Les cartes mises en vente sont gardées par lui jusqu'au règlement.",
+    "Échanges entre amis : le serveur garde les cartes et les Fandominus proposés jusqu'à la réponse, puis remet à chacun sa part.",
+    "Si une ancienne version du jeu reste ouverte dans un onglet, un bandeau vous invite à recharger la page.",
+  ]},
   {v:"V2.3.0", titre:"Boosters sécurisés", points:[
     "Les boosters sont maintenant ouverts par le serveur : il débite le paquet, tire les raretés et range tes cartes avant même l'animation.",
     "Si tu fermes la fenêtre ou perds la connexion pendant l'ouverture, tes cartes sont gardées. Un paquet qui n'a pas pu être tiré est remboursé automatiquement.",
