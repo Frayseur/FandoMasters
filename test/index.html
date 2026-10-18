@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="robots" content="noindex">
+<meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
 <link rel="icon" type="image/png" href="../assets/f62e76609ade.png">
@@ -4198,7 +4198,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.2.2";
+const BUILD = "V2.3.0";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -12049,7 +12049,7 @@ function flipCard(i){
   }
   r.flipped[i] = true;
   const c = r.cards[i];
-  const n = addCard(c);
+  const n = recevoirCarte(r, c);
   sset("fm:col", state.collection);
   const el = view.querySelector(`.flip[data-i="${i}"]`);
   const fete = ()=>{
@@ -12143,6 +12143,22 @@ function recompenserNiveaux(){
               rattrapage ? `ceux de vos ${lv} niveaux` : "à ouvrir dans les boosters spéciaux", "ach");
 }
 
+/* Les effets d'une carte reçue (succès, défi du jour, annonces), sans toucher à la collection :
+   pour les boosters, c'est le serveur qui range la carte (V2.3). */
+function noterCarte(c){
+  { const r = rareteEffective(c); if(r) c.rarity = r; }
+  const i = RARITIES.indexOf(c.rarity);
+  if(i >= 2) state.profile.rarePulls = (state.profile.rarePulls||0) + 1;
+  const d = state.profile.daily;
+  if(d && !d.chDone && d.chUniv && c.univ === d.chUniv){ d.chDone = true; }
+  if(i >= 6){ logEvent(`Artefact obtenu — ${c.title}`, "relic"); toast(c.title, "Artefact obtenu", "relic"); }
+  else if(i >= 5){ logEvent(`Légendaire obtenue — ${c.title} (${c.univ})`, "gold"); toast(c.title, "Carte légendaire", "ach"); }
+}
+/* une carte révélée : déjà rangée par le serveur (booster V2.3) ou ajoutée ici (renard, anciens tirages) */
+function recevoirCarte(r, c){
+  if(r && r.serveur){ noterCarte(c); return Math.max(1, owned(c)); }
+  return addCard(c);
+}
 function addCard(c){
   { const r = rareteEffective(c); if(r) c.rarity = r; }
   const i = RARITIES.indexOf(c.rarity);
@@ -12203,7 +12219,7 @@ function flushReveal(){
     return;
   }
   const started = r.flipped.some(Boolean);
-  if(!started){
+  if(!started && !r.serveur){
     refundPack(r);
     sset("fm:profile", state.profile);
     document.getElementById("coins").textContent = short(state.profile.coins);
@@ -12212,7 +12228,7 @@ function flushReveal(){
     return;
   }
   let dirty = false;
-  r.cards.forEach((c,i)=>{ if(!r.flipped[i]){ addCard(c); r.flipped[i] = true; dirty = true; } });
+  r.cards.forEach((c,i)=>{ if(!r.flipped[i]){ recevoirCarte(r, c); r.flipped[i] = true; dirty = true; } });
   if(dirty){ sset("fm:col", state.collection); checkAch(); }
 }
 
@@ -12344,9 +12360,10 @@ async function drawSpecial(w){
 }
 
 /* tire les cinq cartes d'un paquet */
-async function drawPack(pool, kind){
-  const rolls = [0,1,2,3,4].map(()=>rollRarity(kind));
-  if(kind === "normal"){
+async function drawPack(pool, kind, tirage){
+  /* V2.3 : les raretés viennent du serveur (tirage = 5 cases {r, sp, rel}) ; le jeu ne fait que trouver les cartes */
+  const rolls = tirage ? tirage.map(x => x.r) : [0,1,2,3,4].map(()=>rollRarity(kind));
+  if(kind === "normal" && !tirage){
     const p = state.profile;
     if(!p.dryGoal) p.dryGoal = 20 + Math.floor(Math.random()*11);
     p.dry = (p.dry||0) + 1;
@@ -12378,7 +12395,7 @@ async function drawPack(pool, kind){
       vus.add(w);
       try{
         // une carte spéciale peut surgir partout, au rythme des Légendaires (une chance par carte)
-        if(t === 0 && Math.random() < legOdds){
+        if(t === 0 && (tirage ? !!(tirage[i] && tirage[i].sp) : Math.random() < legOdds)){
           const sp = await drawSpecial(w);
           if(sp) return sp;
         }
@@ -12391,11 +12408,11 @@ async function drawPack(pool, kind){
     return null;
   };
   let cards = (await Promise.all(rolls.map(draw))).filter(Boolean);
-  if(kind === "demon" && Math.random() < RELIC_CHANCE){
+  if(kind === "demon" && (tirage ? tirage.some(x => x.rel) : Math.random() < RELIC_CHANCE)){
     const relic = await relicCard();
     if(relic) cards[0] = relic;
   }
-  if(kind === "normal" && cards.some(c=>RARITIES.indexOf(c.rarity) >= 4)) state.profile.dry = 0;
+  if(kind === "normal" && !tirage && cards.some(c=>RARITIES.indexOf(c.rarity) >= 4)) state.profile.dry = 0;
   return cards;
 }
 
@@ -13039,7 +13056,7 @@ function holoOuverture(kind){
   function recevoir(i){             // la carte i entre dans la collection
     if(!r || r.flipped[i]) return 0;
     r.flipped[i] = true;
-    const n = addCard(r.cards[i]);
+    const n = recevoirCarte(r, r.cards[i]);
     sset("fm:col", state.collection);
     try{ checkAch(); }catch(e){}
     return n;
@@ -13047,7 +13064,7 @@ function holoOuverture(kind){
   function toutRecevoir(){
     if(!r) return;
     let fait = false;
-    r.cards.forEach((c, i)=>{ if(!r.flipped[i]){ r.flipped[i] = true; addCard(c); fait = true; } });
+    r.cards.forEach((c, i)=>{ if(!r.flipped[i]){ r.flipped[i] = true; recevoirCarte(r, c); fait = true; } });
     if(fait){ sset("fm:col", state.collection); try{ checkAch(); }catch(e){} }
   }
   function sonCarte(c){
@@ -13454,6 +13471,56 @@ async function openFox(){
   }
 }
 
+/* ---- V2.3 : boosters par le serveur ---- */
+function cartePourServeur(c){ const f = regFiche(c); f.id = c.id; return f; }
+/* appel serveur qui change le compte : même méthode que les achats (rien en attente, puis on se recale) */
+async function boosterServeur(nom, args){
+  if(!nuageConnecte() || !REG.pret) throw new Error("connexion au serveur nécessaire pour ouvrir des boosters");
+  await regConfirmer();
+  REG.achat = true;
+  try{
+    for(let i = 0; i < 50 && REG.enCours; i++) await new Promise(r => setTimeout(r, 100));
+    let r = null;
+    for(let essai = 1; ; essai++){
+      try{ r = await regRpc(nom, args); break; }
+      catch(e){ if(regRefus(e) || essai >= 4) throw new Error(regRefus(e) ? regRaison(e) : "réseau indisponible, réessayez"); await new Promise(res => setTimeout(res, 700 * essai)); }
+    }
+    const ancien = REG.confirme;
+    REG.confirme = {version:r.version, etat:r.etat || {}, cartes:regMap(r.cartes)};
+    await regPersister();
+    regRebaser(ancien, REG.confirme);
+    return r;
+  } finally { REG.achat = false; }
+}
+/* un ticket non validé (réseau coupé, onglet fermé) est gardé et renvoyé plus tard : rien ne se perd */
+function boosterCleAttente(){ return "fm-local:boosters:" + (moiId() || "?"); }
+function boosterAttente(ticket, cartes){
+  try{
+    const l = JSON.parse(localStorage.getItem(boosterCleAttente()) || "{}");
+    if(cartes === undefined) delete l[ticket]; else l[ticket] = {cartes, t:Date.now()};
+    localStorage.setItem(boosterCleAttente(), JSON.stringify(l));
+  }catch(e){}
+}
+let boosterRepriseEnCours = false;
+async function boosterReprendre(){
+  if(boosterRepriseEnCours || !nuageConnecte() || !REG.pret) return;
+  let l = {}; try{ l = JSON.parse(localStorage.getItem(boosterCleAttente()) || "{}"); }catch(e){}
+  const tickets = Object.keys(l);
+  if(!tickets.length) return;
+  boosterRepriseEnCours = true;
+  try{
+    for(const t of tickets){
+      const cartes = l[t].cartes || [];            // tirage interrompu : paquets vides, donc remboursés
+      try{ await boosterServeur("booster_valider", {p_ticket:t, p_cartes:cartes}); boosterAttente(t, undefined); }
+      catch(e){ if(/ticket inconnu/.test(String(e.message))) boosterAttente(t, undefined); }
+    }
+  } finally { boosterRepriseEnCours = false; }
+}
+setTimeout(async function attendreReprise(){
+  for(let i = 0; i < 400 && !(typeof fmPret !== "undefined" && fmPret && REG.pret); i++) await new Promise(r => setTimeout(r, 500));
+  try{ await boosterReprendre(); }catch(e){}
+}, 0);
+
 async function openPack(n, kind){
   if(state.busy) return;
   n = n || 1; kind = kind || "normal";
@@ -13486,52 +13553,48 @@ async function openPack(n, kind){
     const pool = await ensurePool();
     if(!pool.length) throw new Error("aucun univers joignable");
 
+    /* V2.3 : le serveur vérifie le prix, débite et tire les raretés de chaque carte.
+       Le jeu cherche ensuite des cartes de ces raretés sur Fandom, puis les renvoie au
+       serveur qui les vérifie et les range dans la collection. */
+    await boosterReprendre();
+    const paid0 = costFor(n);
+    const ouv = await boosterServeur("booster_ouvrir", {p_kind:kind, p_n:n, p_cle:regUid()});
+    const ticket = ouv.ticket, tirages = ouv.slots || [];
+    boosterAttente(ticket, null);
+    document.getElementById("coins").textContent = short(state.profile.coins);
+
     /* Plusieurs paquets se tirent en même temps (quatre, six au-delà de
-       cinquante) : le temps d'attente est celui du réseau, pas d'une file. */
+       cinquante) : le temps d'attente est celui du réseau, pas d'une file.
+       Le tirage va au bout même si le joueur quitte l'écran : les boosters sont payés. */
     const resultats = new Array(n);
     let prochain = 0, faits = 0;
     const ouvrier = async ()=>{
-      while(prochain < n && state.openToken === token){
+      while(prochain < n){
         const k = prochain++;
-        resultats[k] = await drawPack(pool, kind).catch(()=>[]);
+        resultats[k] = await drawPack(pool, kind, tirages[k]).catch(()=>[]);
         faits++;
-        if(intro.tick) intro.tick(faits);
+        if(intro.tick && state.openToken === token) intro.tick(faits);
       }
     };
     if(n > 1){ state.reveal.msg = `${n} paquets…`; renderStage(); }
     await Promise.all(Array.from({length:Math.min(n, n >= 50 ? 6 : 4)}, ouvrier));
-    if(state.openToken !== token){ intro.finish(); state.busy = false; return; }   // le joueur a quitté
+    const envoi = resultats.map(p => (p || []).map(cartePourServeur));
+    boosterAttente(ticket, envoi);
+    let valide = null;
+    try{ valide = await boosterServeur("booster_valider", {p_ticket:ticket, p_cartes:envoi}); boosterAttente(ticket, undefined); }
+    catch(e){ setTimeout(()=>boosterReprendre(), 5000); }
+    if(valide && valide.rembourse && Object.keys(valide.rembourse).length)
+      toast("Paquet remboursé", "Un wiki n'a pas répondu : le booster vide vous est rendu.", "info");
     let all = [].concat(...resultats.filter(Boolean));
-    if(!all.length) throw new Error("aucun wiki n'a répondu");
-    if(state.openToken !== token){ intro.finish(); state.busy = false; return; }
-
-    // paiement une fois les cartes en main
-    let paid = {free:0, coins:0};
-    if(kind === "mythic"){
-      state.profile.mythic -= n;
-    } else if(kind === "demon"){
-      state.profile.demon -= n;
-    } else if(state.profile.freeShot){
-      state.profile.freeShot = false;          // booster déjà payé au comptoir
-    } else {
-      paid = costFor(n);
-      if(paid.free){
-        if(state.profile.free >= FREE_MAX) state.profile.freeAt = Date.now();
-        state.profile.free -= paid.free;
-      }
-      state.profile.coins -= paid.coins;
+    if(state.openToken !== token){                 // le joueur a quitté : tout est déjà rangé
+      all.forEach(noterCarte); await saveAll(); intro.finish(); state.busy = false;
+      if(all.length) toast(n > 1 ? n + " boosters ouverts" : "Booster ouvert", all.length + " carte(s) rangée(s) dans votre album", "info");
+      return;
     }
-    state.profile.packs = (state.profile.packs||0) + n;
+    if(!all.length) throw new Error("aucun wiki n'a répondu, le booster vous est rendu");
 
-    const found = [];
-    for(let k=0;k<n;k++){
-      const key = rollItem(kind);
-      if(!key) continue;
-      if(invFreeSpace(key) < 1){ found.push("plein"); continue; }
-      addItem(key, 1);
-      found.push(key);
-      state.profile.items = (state.profile.items||0) + 1;
-    }
+    const paid = kind === "normal" ? paid0 : {free:0, coins:0};
+    const found = (ouv.objets || []).slice();
     if(found.length){
       const full = found.filter(f=>f==="plein").length;
       const real = found.filter(f=>f!=="plein");
@@ -13560,12 +13623,12 @@ async function openPack(n, kind){
     state.forcedUniv = null;
     const missing = n*5 - all.length;
     if(n === 1){
-      state.reveal = {loading:false, kind, count:1, cost:paid, cards:all, flipped:all.map(()=>false),
+      state.reveal = {loading:false, serveur:true, kind, count:1, cost:paid, cards:all, flipped:all.map(()=>false),
         note: missing ? `${missing} tirage(s) sans réponse du wiki — paquet livré à ${all.length} cartes.` : ""};
     } else {
-      all.forEach(addCard);
+      all.forEach(noterCarte);
       all.sort((a,b)=>RARITIES.indexOf(b.rarity)-RARITIES.indexOf(a.rarity));
-      state.reveal = {loading:false, bulk:true, kind, count:n, cost:paid, cards:all, anime:true};
+      state.reveal = {loading:false, serveur:true, bulk:true, kind, count:n, cost:paid, cards:all, anime:true};
       if(all[0] && intro.meilleure){ const cpt = {}; all.forEach(c=>cpt[c.rarity] = (cpt[c.rarity]||0) + 1); intro.meilleure(all[0].rarity, cpt); }
     }
     await saveAll();
@@ -20485,6 +20548,11 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.3.0", titre:"Boosters sécurisés", points:[
+    "Les boosters sont maintenant ouverts par le serveur : il débite le paquet, tire les raretés et range tes cartes avant même l'animation.",
+    "Si tu fermes la fenêtre ou perds la connexion pendant l'ouverture, tes cartes sont gardées. Un paquet qui n'a pas pu être tiré est remboursé automatiquement.",
+    "Les armements gagnés dans les boosters sont aussi attribués par le serveur.",
+  ]},
   {v:"V2.2.2", titre:"Nouveaux armements", points:[
     "Les quatre armements ont de vraies illustrations : épée en bois, pistolet de fortune, fusil à plasma, bombe nucléaire.",
     "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond.",
@@ -21288,6 +21356,6 @@ body.holo-ouvert{overflow:hidden}
 .cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
 @media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
-<div style="position:fixed;left:50%;transform:translateX(-50%);top:4px;z-index:2147483647;pointer-events:none;background:#e11d48;color:#fff;font:800 11px/1 system-ui,sans-serif;letter-spacing:.12em;padding:5px 10px;border-radius:999px;box-shadow:0 2px 10px rgba(0,0,0,.4)">VERSION TEST</div>
+<div style="position:fixed;bottom:6px;left:6px;z-index:99999;background:#c0392b;color:#fff;font:700 11px sans-serif;padding:3px 8px;border-radius:6px;pointer-events:none">VERSION TEST</div>
 </body>
 </html>
