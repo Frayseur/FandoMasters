@@ -16043,7 +16043,7 @@ function ouvrirAdmin(){ adm.onglet = "apercu"; adm.tab = null; adm.tentatives.ap
    Le joueur paie sur la page sécurisée de Stripe ; Stripe prévient le serveur
    (fonction « stripe-webhook »), qui crédite les Cristaux. Le jeu ne voit jamais
    la carte bancaire et ne peut pas créditer lui-même. */
-const PAIEMENT_OUVERT = false;          // false : visible des administrateurs seulement (phase de test)
+const PAIEMENT_OUVERT = true;           // false : visible des administrateurs seulement (phase de test)
 const PACKS_CRISTAUX = [
   {n:500,  prix:"4,99 €",  url:"https://buy.stripe.com/dRmfZa7GBagIbFU2z4eZ200"},
   {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},

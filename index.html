@@ -6,9 +6,6 @@
 <meta name="theme-color" content="#201B18">
 <link rel="icon" type="image/png" href="assets/f62e76609ade.png">
 <title>FandoMasters — tous les univers dans un seul jeu de cartes</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 /* Les fontes de l'habillage sont embarquées : le jeu doit pouvoir
    tourner sans réseau, et une fonte qui arrive en retard fait sauter
@@ -21,6 +18,15 @@
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:400;font-display:block;src:url(assets/df0ee4f9fdbf.woff2) format("woff2")}
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:600;font-display:block;src:url(assets/eb128c93678b.woff2) format("woff2")}
 @font-face{font-family:"Chakra Petch";font-style:normal;font-weight:700;font-display:block;src:url(assets/3b237255d05e.woff2) format("woff2")}
+/* Bricolage Grotesque et Cinzel : servies par le site lui-même (plus d'appel à Google Fonts, qui transmettait l'adresse IP des joueurs à Google). */
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;src:url(assets/a79fdb52d4a5.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Bricolage Grotesque";font-style:normal;font-weight:200 800;font-display:swap;src:url(assets/776f6dcaf036.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:500;font-display:swap;src:url(assets/2864b2c9db37.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:500;font-display:swap;src:url(assets/08eac55c1178.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:600;font-display:swap;src:url(assets/61efc27ceb7d.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:600;font-display:swap;src:url(assets/a5779eb98b50.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:700;font-display:swap;src:url(assets/8efa224fe70f.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:"Cinzel";font-style:normal;font-weight:700;font-display:swap;src:url(assets/55b110958b9b.woff2) format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 
 :root{
   /* Teintes relevées sur la maquette : crème, encre, violet, vert, corail,
@@ -1530,6 +1536,7 @@ body.cardopen .wrap,body.cardopen .nav{visibility:hidden}
              repeating-linear-gradient(90deg,#ffffff0d 0 1px,transparent 1px 7px)}
 .item .pic{position:relative;z-index:2;width:64%;height:64%;display:grid;place-items:center}
 .isvg{width:100%;height:100%;filter:drop-shadow(0 2px 5px #000b)}
+.iimg{display:block;object-fit:contain;pointer-events:none;-webkit-user-drag:none}
 .item .n{position:absolute;right:4px;bottom:3px;z-index:3;font-family:var(--f-data);
   font-weight:400;font-size:.72rem;letter-spacing:.02em;color:var(--text);
   background:var(--panel);border:1px solid var(--line);border-radius:5px;
@@ -1687,6 +1694,22 @@ body.cardopen .wrap,body.cardopen .nav{visibility:hidden}
 .arcade.lose .verdict{color:var(--red)}
 @keyframes slam{0%{transform:scale(1.7);opacity:0}60%{transform:scale(.94)}100%{transform:scale(1);opacity:1}}
 .lootlist{display:grid;gap:.4rem;margin:.2rem 0 .2rem}
+
+.cg-res{display:flex;flex-wrap:wrap;justify-content:center;gap:.5rem;margin:.2rem 0 .9rem}
+.cg-chip{display:inline-flex;align-items:baseline;gap:.35rem;padding:.45rem .85rem;border-radius:999px;background:var(--ink-2);border:1px solid var(--line)}
+.cg-chip i{font-style:normal;color:#ffd36a}.cg-chip.mana i{color:#c9a7ff}
+.cg-chip b{font-size:1.15rem}.cg-chip small{color:var(--muted,#aaa);font-size:.75rem}
+.cg-titre{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:.4rem .7rem;font-weight:700;margin:.2rem 0 .7rem}
+.cg-titre span{display:flex;gap:.35rem;flex-wrap:wrap;justify-content:center}
+.cg-titre em{font-style:normal;font-size:.75rem;font-weight:700;padding:.15rem .55rem;border-radius:999px;color:var(--rc);border:1px solid color-mix(in srgb,var(--rc) 60%,transparent);background:color-mix(in srgb,var(--rc) 14%,transparent)}
+.cg-cartes{display:grid;gap:.7rem;justify-content:center;grid-template-columns:repeat(auto-fit,minmax(118px,170px))}
+.cg-cartes.n1{grid-template-columns:minmax(0,190px)}
+.cg-carte{display:flex;flex-direction:column;align-items:center;gap:.3rem;animation:cgIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.cg-carte>:first-child{width:100%}
+.cg-carte small{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted,#aaa)}
+@keyframes cgIn{from{opacity:0;transform:translateY(14px) scale(.92)}}
+@media (prefers-reduced-motion:reduce){.cg-carte{animation:none}}
+@media (max-width:520px){.cg-cartes{grid-template-columns:repeat(2,minmax(0,1fr))}.cg-cartes.n1{grid-template-columns:minmax(0,190px)}}
 .lootrow{display:flex;align-items:center;gap:.6rem;background:var(--ink-2);border:1px solid var(--line);
   border-radius:10px;padding:.55rem .7rem;font-weight:600;text-align:left}
 .lootrow .i{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;flex:none;
@@ -2323,6 +2346,7 @@ details.fold .in{padding-top:.6rem}
 body.overlay{overflow:hidden}
 body.overlay .wrap,body.overlay .nav,body.overlay .scrim{visibility:hidden}
 .modal .inner:not(.card .inner){background:var(--panel);border:1px solid var(--line);border-radius:16px;max-width:420px;width:100%;padding:1.1rem;max-height:88vh;overflow:auto}
+.modal .inner.camp-gains:not(.card .inner){max-width:min(720px,94vw)}
 .spinner{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--brass);animation:spin .8s linear infinite;display:inline-block;vertical-align:-5px}
 @keyframes spin{to{transform:rotate(360deg)}}
 .chip{background:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:.35rem .75rem;font-size:.85rem;color:var(--text)}
@@ -4173,7 +4197,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.2.1";
+const BUILD = "V2.2.2";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -6932,7 +6956,7 @@ function render(){
      ach:viewAch, farm:viewFarm, profil:viewProfil, camp:viewCamp, decks:viewDecks, inv:viewInv,
      aventure:viewAventure, collection:viewCollection,
      village:viewHub, theme:viewTheme, compte:viewCompte, amis:viewAmis, joueur:viewJoueur, communaute:viewCommu, menu:viewMenu,
-     shop:viewBoutique, market:viewMarche, nouveautes:viewNouveautes}[state.view]||viewHub)();
+     shop:viewBoutique, market:viewMarche, nouveautes:viewNouveautes, legal:viewLegal, admin:viewAdmin}[state.view]||viewHub)();
   poserSurtitre();
   poserRetour();
   majJauges();
@@ -6955,6 +6979,8 @@ function poserRetour(){
    recopié dans quinze fonctions d'affichage. */
 const SURTITRES = {
   nouveautes: "Le jeu · journal des versions",
+  legal: "Le jeu · informations légales",
+  admin: "Administration",
   pack:   "Boutique · ouvertures",
   album:  "Collection",
   cat:    "Collection · catalogue",
@@ -7264,8 +7290,9 @@ function viewAccueil(){
           </div>
           <p class="sub" style="margin:.9rem 0 0"><button class="lien" id="c-oubli">Mot de passe oublié ?</button></p>`}
       </div>
-      <p class="sub" style="font-size:.78rem;text-align:center;margin-top:.8rem">Contenu issu des wikis Fandom · licence CC BY-SA</p>
+      <p class="sub" style="font-size:.78rem;text-align:center;margin-top:.8rem">En créant un compte, vous acceptez les <button class="lien" data-lg-modal="cgu">Conditions d'utilisation</button> et la <button class="lien" data-lg-modal="confidentialite">Politique de confidentialité</button>. Moins de 15 ans : avec l'accord d'un parent.<br>Contenu issu des wikis Fandom · licence CC BY-SA</p>
     </div>`;
+  view.querySelectorAll("[data-lg-modal]").forEach(b => b.onclick = ()=>legalModal(b.dataset.lgModal));
 
   const err = view.querySelector("#c-err"), okm = view.querySelector("#c-ok");
   const dire = m => { err.textContent = m; err.hidden = !m; okm.hidden = true; };
@@ -10985,7 +11012,7 @@ function viewHub(){
           <button class="btn small ghost" id="dbg-skipc">Nouveaux théâtres</button>
           ${moiId() === ADMINS[0] ? CARTES_PERSO.map(c => `<button class="btn small" data-dbggive="${esc(c.id)}">Me donner « ${esc(c.title)} »</button>`).join("") : ""}
         </div>
-        <div class="row" style="margin-top:.7rem"><button class="btn small" id="adm-ouvrir">Surveillance · Cristaux · suspensions</button></div>
+        <div class="row" style="margin-top:.7rem"><button class="btn small" id="adm-ouvrir">Tableau de bord admin</button></div>
         <div class="sub" id="dbgmsg" style="margin-top:.4rem"></div>
         <p class="sub" style="margin:.5rem 0 0;font-size:.82rem">Vider l'album efface toutes les cartes et remet à zéro la mention « obtenue » dans Toutes les cartes.</p>
       </div>
@@ -12295,6 +12322,7 @@ function rollItem(kind){
 }
 function pickRank(kind){
   const fam = ["heal","dmg","arm"][Math.floor(Math.random()*3)];
+  if(fam !== "arm") return null;   // les potions ne servent plus : plus distribuées
   const x = Math.random();
   const rank = kind === "normal" ? (x < 0.70 ? 1 : x < 0.95 ? 2 : 3)
                                  : (x < 0.40 ? 1 : x < 0.80 ? 2 : 3);
@@ -13667,6 +13695,13 @@ function viewAlbum(){
   renderAlbumGrid();
 }
 
+/* adresse de l'article d'origine (attribution exigée par la licence CC BY-SA des wikis) */
+function sourceCarte(c){
+  if(!c) return "";
+  if(c.url) return c.url;
+  const m = /^([a-z0-9.-]+\.fandom\.com):(\d+)$/i.exec(c.id || "");
+  return m ? "https://" + m[1] + "/?curid=" + m[2] : "";
+}
 function showCard(c){
   if(!c) return;
   const busy = engagedIds().has(c.id);
@@ -13726,13 +13761,16 @@ function showCard(c){
           <button class="btn" id="sell" style="width:100%;margin-top:.6rem">Renvoyer ${c.count>1?`${qty} carte${qty>1?"s":""}`:"la carte"} · ${qty*unit} ◆</button>`}
       </div>
 
+      ${/\.fandom\.com\b/.test(sourceCarte(c) || "") ? `<p class="sub cv-licence">Texte et image publiés par les contributeurs du wiki ${esc(c.univ || "")} sur Fandom, sous leur responsabilité. L'image est affichée directement depuis Fandom, sans être copiée. Texte sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a> ; personnages et images : droits réservés à leurs ayants droit. FandoMasters n'est affilié ni à Fandom ni aux ayants droit.</p>` : ""}
       <div class="row" style="margin-top:.7rem">
-        ${c.url ? `<a class="btn small ghost" href="${esc(c.url)}" target="_blank" rel="noopener">${/\.fandom\.com\//.test(c.url) ? "Lire l'article sur Fandom" : "Visiter le site"}</a>` : ""}
+        ${sourceCarte(c) ? `<a class="btn small ghost" href="${esc(sourceCarte(c))}" target="_blank" rel="noopener">${/\.fandom\.com\b/.test(sourceCarte(c)) ? "Lire l'article sur Fandom" : "Visiter le site"}</a>` : ""}
+        <button class="btn small ghost" id="signaler" title="Image, nom ou texte qui pose problème (droits d'auteur, contenu choquant…)">⚑ Signaler l'image</button>
         <button class="btn small ghost" id="close">Fermer</button>
       </div>
       </div>`;
 
     m.querySelector("#close").onclick = shut;
+    m.querySelector("#signaler").onclick = ()=>{ shut(); signalerCarte(c); };
     m.querySelector("#back").onclick = shut;
     const fuse = m.querySelector("#fuse");
     if(fuse) fuse.onclick = async ()=>{
@@ -15360,13 +15398,9 @@ async function roueTourner(){
   if(state.view === "shop") viewBoutique();
 }
 /* onglets de la boutique : les articles, et la roue à part */
-function shopOnglets(){
-  const r = btq.roue, pret = r && r.dispo;
-  return `<div class="shoptabs" role="tablist">
-    <button type="button" class="shoptab ${btq.onglet !== "roue" ? "on" : ""}" data-shoptab="articles" role="tab" aria-selected="${btq.onglet !== "roue"}">Articles</button>
-    <button type="button" class="shoptab ${btq.onglet === "roue" ? "on" : ""}" data-shoptab="roue" role="tab" aria-selected="${btq.onglet === "roue"}">Roue de la fortune${pret ? `<span class="shoptab-pastille" title="Un tour disponible">1</span>` : ""}</button>
-  </div>`;
-}
+/* La roue de la fortune a été retirée (V2.2.2) : la boutique n'a plus qu'une page.
+   Le serveur garde les cartes déjà gagnées et le jeu les livre toujours (roueLivrerCartes). */
+function shopOnglets(){ return ""; }
 function roueMiniHTML(){
   const r = btq.roue; if(!r) return "";
   return `<button type="button" class="shoproue-mini" data-shoptab="roue">
@@ -15448,34 +15482,31 @@ function viewBoutique(){
   const vipBouton = vip
     ? (estAdmin() && !fin ? `<span class="vit-etat">✓ Accès développeur</span>` : `<button class="btn vit-btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>Prolonger d'un an</button>`)
     : `<button class="btn vit-btn" id="vip-achat" ${!enLigne || btq.achat || solde < vipArt.prix ? "disabled" : ""}>${btq.achat ? "Activation…" : solde < vipArt.prix ? "Cristaux insuffisants" : "Devenir VIP"}</button>`;
-  const roueDeco = `<span class="vit-roue" aria-hidden="true"></span>`;
+  btq.onglet = "articles";
+  /* le VIP montre ce qu'il offre : la vitrine de vos plus belles cartes, en éventail */
+  const belles = vitImages(3);
+  const vipDeco = belles.length >= 2 ? `<span class="vit-eventail" aria-hidden="true">${belles.map((u, k) => `<i style="--k:${k - (belles.length - 1) / 2};background-image:url('${cssUrl(u)}')"></i>`).join("")}</span>` : `<span class="vit-grande-couronne" aria-hidden="true">♛</span>`;
   const slides = [
-    {titre:"FandoMasters VIP", court:"VIP", art:"fmart-cyber", g1:"#d64fa0", g2:"#7a3cff",
+    {titre:"FandoMasters VIP", court:"VIP", art:"fmart-vip", deco:vipDeco, g1:"#d64fa0", g2:"#7a3cff",
      titreHTML:`<span class="vit-couronne">♛</span>FandoMasters <em>VIP</em>`,
      tags:["Combats classés", "Top 100", "Profil", "Guilde"],
      bas:`<span class="vit-pilule">${vip ? "✓ VIP actif" + (fin ? " jusqu'au " + fin : "") : "Valable 12 mois"}</span>`,
-     texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres, une vitrine de 10 cartes, jusqu'à 100 paquets d'un coup et la roue chaque jour.",
-     prix:prix(vipArt.prix), bouton:vipBouton},
-    {titre:"Roue de la fortune", court:"Roue", art:"fmart-taverne", g1:"#e2ae3c", g2:"#d64fa0", deco:roueDeco,
-     tags:["Gratuit", vip ? "Chaque jour" : "Chaque semaine", "34 cases"],
-     bas:`<span class="vit-pilule">${r ? (r.dispo ? "Un tour vous attend" : "Prochain tour " + roueQuand(r.prochaine)) : "Chargement…"}</span>`,
-     texte:"Mana, Fandominus, armements, booster Renard, cartes rares, super rares… et une Légendaire à gagner. Les VIP tournent la roue tous les jours.",
-     prix:"Gratuit", bouton:`<button class="btn vit-btn" data-shoptab="roue">${r && r.dispo ? "Tourner la roue" : "Voir la roue"}</button>`}
+     texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres, une vitrine de 10 cartes et jusqu'à 100 paquets d'un coup.",
+     prix:prix(vipArt.prix), bouton:vipBouton}
   ];
   for(const a of lots){ const L = lotInfo(a);
-    slides.push({titre:a.nom, court:"Armements", art:"fmart-plateau", g1:"#ff8a3c", g2:"#c3261c",
+    slides.push({titre:a.nom, court:"Armements", art:"fmart-arsenal", g1:"#ff8a3c", g2:"#c3261c",
       deco:L.it ? `<span class="vit-objet">${itemSVG(L.cle)}</span>` : "",
       titreHTML:`${esc(a.nom.replace(/^Lot de \d+ /, ""))} <em>×${L.n}</em>`,
       tags:["Campagnes", "Inventaire"],
       bas:`<span class="vit-pilule">${L.it ? "+" + L.it.val + " dégâts chacun en campagne" : esc(a.description || "")}</span>`,
       texte:esc(a.description || "") + " Rangés directement dans votre inventaire.", prix:prix(a.prix), bouton:lotBouton(a)}); }
   const covers = [
-    {titre:"FandoMasters VIP", sous:vip ? "actif" : "12 mois", art:"fmart-cyber", large:true, badge:"♛", prix:prix(vipArt.prix), attrs:`data-vitsel="0"`,
+    {titre:"FandoMasters VIP", sous:vip ? "actif" : "12 mois", art:"fmart-vip", large:true, badge:"♛", prix:prix(vipArt.prix), attrs:`data-vitsel="0"`,
      deco:`<span class="cover-grand">VIP</span>`},
-    {titre:"Roue de la fortune", sous:r && r.dispo ? "un tour disponible" : "gratuite", art:"fmart-taverne", badge:r && r.dispo ? "1" : "", prix:"Gratuit", attrs:`data-shoptab="roue"`, deco:roueDeco},
-    ...lots.map(a => { const L = lotInfo(a); return {titre:a.nom.replace(/^Lot de /, ""), sous:"pour vos campagnes", art:"fmart-plateau", prix:prix(a.prix),
-      attrs:`data-vitsel="${2 + lots.indexOf(a)}"`, deco:L.it ? `<span class="cover-objet">${itemSVG(L.cle)}</span>` : ""}; }),
-    {titre:"Gratuit ou VIP", sous:"le comparatif", large:true, art:vitImages(1)[0] || "fmart-cyber", attrs:`data-ouvrir="comparatif"`}
+    ...lots.map(a => { const L = lotInfo(a); return {titre:a.nom.replace(/^Lot de /, ""), sous:"pour vos campagnes", art:"fmart-arsenal", prix:prix(a.prix),
+      attrs:`data-vitsel="${1 + lots.indexOf(a)}"`, deco:L.it ? `<span class="cover-objet">${itemSVG(L.cle)}</span>` : ""}; }),
+    {titre:"Gratuit ou VIP", sous:"le comparatif", large:true, art:"fmart-vip", deco:`<span class="cover-grand cover-vs">Gratuit<i>ou</i>VIP</span>`, attrs:`data-ouvrir="comparatif"`}
   ];
   view.innerHTML = `
     <h2 class="vuetitre" data-ghost="BOUTIQUE">Boutique</h2>
@@ -15487,15 +15518,17 @@ function viewBoutique(){
     ${!enLigne ? `<p class="sub">La boutique demande une connexion au serveur.</p>` : ""}
     ${btq.onglet === "roue" ? roueHTML() || `<p class="sub">Chargement de la roue…</p>` : `
     ${vitrineHTML("shop", slides)}
+    ${rechargeHTML()}
     <div class="sectionhead vit-sect"><div><h3>À la une</h3></div><span class="sub">Aucune carte n'est vendue : elles se gagnent en ouvrant des paquets.</span></div>
     <div class="covers">${covers.map(coverHTML).join("")}</div>
     <details class="fold shopcomp" id="comparatif"><summary>Gratuit ou VIP : le détail</summary><div class="shopcomp-in">
       <table class="shoptable"><thead><tr><th></th><th>Gratuit</th><th>VIP</th></tr></thead><tbody>
-        ${[["Roue de la fortune", "1 tour / semaine", "1 tour / jour"], ["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], ["Ouvertures groupées", "1 ou 10", "jusqu'à 100"],
+        ${[["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], ["Ouvertures groupées", "1 ou 10", "jusqu'à 100"],
            ["Titres affichés", "1", "3"], ["Cartes en vitrine", "3", "10"], ["Police du pseudo", "—", "gothique, médiévale"], ["Album public", "—", "✓"],
            ["Combats classés et Top 100", "—", "✓"], ["Historique des ouvertures", "—", "✓"], ["Création de guilde", "—", "✓"], ["Vote du plateau de combat", "—", "✓"]]
           .map(([t, g, v]) => `<tr><td>${t}</td><td>${g}</td><td>${v}</td></tr>`).join("")}
       </tbody></table><p class="sub" style="margin:.6rem 0 0">Confort et personnalisation : le VIP ne donne aucun avantage de puissance en combat.</p></div></details>
+    <p class="sub shop-legal"><a href="#" data-legal="cgu">Conditions d'utilisation</a> · <a href="#" data-legal="regles">Règles de la communauté</a> · <a href="#" data-legal="confidentialite">Confidentialité</a> · <a href="#" data-legal="contact">Contact & rétractation</a></p>
     ${btq.historique.length ? `<details class="fold shopcomp"><summary>Vos derniers achats</summary><ul class="btqhist">${btq.historique.map(h => `
       <li><span>${esc(h.motif || h.article || h.type)} <span class="sub">· ${new Date(h.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})}</span></span>
         <span class="${h.cristaux > 0 ? "plus" : "moins"}">${h.cristaux > 0 ? "+" : "−"}${Math.abs(h.cristaux).toLocaleString("fr-FR")} ${CRISTAL}</span></li>`).join("")}</ul></details>` : ""}`}`;
@@ -15504,11 +15537,575 @@ function viewBoutique(){
   view.querySelectorAll("[data-ouvrir]").forEach(b => b.onclick = ()=>{ const d = view.querySelector("#" + b.dataset.ouvrir); if(d){ d.open = true; d.scrollIntoView({behavior:"smooth", block:"start"}); } });
   if(btq.onglet !== "roue") vitrineBrancher("shop", slides.length, ()=>{ if(state.view === "shop" && btq.onglet !== "roue" && !btq.tourne) viewBoutique(); });
   const vb = view.querySelector("#vip-achat"); if(vb) vb.onclick = ()=>acheterVipAnnuel(vip);
+  view.querySelectorAll("[data-recharge]").forEach(b => b.onclick = ()=>rechargerCristaux(+b.dataset.recharge));
+  view.querySelectorAll("[data-legal]").forEach(a => a.onclick = e => { e.preventDefault(); ouvrirLegal(a.dataset.legal); });
   const rg = view.querySelector("#roue-go"); if(rg) rg.onclick = roueTourner;
   if(!btq.roue && enLigne) regRpc("roue_etat").then(r => { btq.roue = r; if(state.view === "shop" && !btq.tourne) viewBoutique(); roueLivrerCartes(); }).catch(()=>{});
   view.querySelectorAll("[data-acheter]").forEach(b => b.onclick = ()=>{ const a = (btq.articles || []).find(x => x.id === b.dataset.acheter); if(a) acheterArticle(a); });
   if(btq.articles === null && enLigne) boutiqueCharger().then(()=>{ if(state.view === "shop") viewBoutique(); });
 }
+/* =====================================================================
+   Informations légales : conditions d'utilisation (avec les achats),
+   règles de la communauté, confidentialité, et contact / rétractation.
+   Aucune coordonnée personnelle publiée : le joueur écrit au support
+   depuis le jeu (table « support », lue par les admins seulement).
+   ===================================================================== */
+const LEGAL_MAJ = "18 octobre 2026";
+const LEGAL_ONGLETS = [["cgu", "Conditions d'utilisation"], ["regles", "Règles de la communauté"], ["confidentialite", "Confidentialité"], ["contact", "Contact & rétractation"]];
+const SUPPORT_SUJETS = [["achat", "Un achat (Cristaux non reçus, problème de paiement)"], ["retractation", "Rétractation ou remboursement"], ["donnees", "Mes données personnelles (accès, suppression…)"], ["droits", "Signaler un contenu (droits d'auteur, image, texte)"], ["autre", "Autre question"]];
+const legal = {onglet:"cgu", demandes:null, toutes:null, envoi:false, msg:""};
+function ouvrirLegal(onglet){ legal.onglet = onglet || "cgu"; go("legal"); window.scrollTo({top:0}); }
+const LIEN_CONTACT = `<a href="#" data-lg-go="contact">formulaire de contact du jeu</a>`;
+
+function legalTexte(o){
+  if(o === "cgu") return `
+    <p class="sub">Dernière mise à jour : ${LEGAL_MAJ}</p>
+    <h3>1. Acceptation</h3>
+    <p>En créant un compte ou en utilisant FandoMasters (« le Service »), vous acceptez les présentes conditions, les <a href="#" data-lg-go="regles">Règles de la communauté</a> et la <a href="#" data-lg-go="confidentialite">Politique de confidentialité</a>. Si vous ne les acceptez pas, n'utilisez pas le Service.</p>
+    <h3>2. Compte</h3>
+    <p>Un compte est personnel. Vous êtes responsable de vos identifiants et de l'activité de votre compte ; prévenez-nous en cas d'utilisation non autorisée.
+    Les joueurs de moins de 15 ans doivent avoir l'accord d'un parent pour créer un compte. Les achats sont réservés aux majeurs ou aux mineurs autorisés par leur représentant légal.</p>
+    <h3>3. Utilisation acceptable</h3>
+    <p>Vous vous engagez à respecter les Règles de la communauté et les lois applicables. Les règles font partie des présentes conditions.</p>
+    <h3>4. Contenus et propriété intellectuelle</h3>
+    <p>Chaque carte est générée à partir d'un article d'un wiki Fandom. FandoMasters n'écrit pas ces articles et ne choisit pas leurs images : le texte et l'image principale d'une carte sont ceux que les contributeurs du wiki ont publiés sur Fandom, sous leur responsabilité et selon les règles de Fandom.</p>
+    <p><b>Les images ne sont ni copiées ni hébergées par FandoMasters</b> : elles sont affichées directement depuis les serveurs de Fandom, comme un lien, et disparaissent du jeu si elles sont retirées de Fandom. Les textes sont publiés sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a> et chaque carte renvoie vers son article d'origine.</p>
+    <p>Les noms, personnages, images et marques appartiennent à leurs propriétaires respectifs. FandoMasters est un projet indépendant, ni affilié, ni approuvé, ni sponsorisé par Fandom ou par ces ayants droit, et ne vend aucun de ces contenus.
+    Un ayant droit peut demander le retrait d'un contenu avec le bouton « Signaler l'image » de chaque carte ou via le ${LIEN_CONTACT} ; il est retiré du jeu au plus tard sous 7 jours. Pour un retrait à la source, il peut aussi s'adresser à Fandom.</p>
+    <p>Les éléments propres au Service (nom, interface, graphismes, mécaniques de jeu) appartiennent à l'éditeur. Vous restez responsable de ce que vous publiez (pseudonyme, propositions de noms ou de textes, messages) et nous accordez le droit de l'afficher dans le Service ; les textes proposés pour les cartes sont publiés sous la même licence CC BY-SA.</p>
+    <h3>5. Achats et monnaie virtuelle</h3>
+    <p>Le Service propose l'achat de <b>Cristaux</b>, une monnaie virtuelle utilisable uniquement dans FandoMasters, pour obtenir à prix fixe et affiché à l'avance le <b>VIP</b> (12 mois, sans renouvellement automatique) et des fournitures de campagne.
+    <b>Rien n'est obtenu au hasard contre des Cristaux ou de l'argent</b> : aucune carte, aucun booster et aucun tirage n'est vendu ; les cartes se gagnent uniquement en jouant.</p>
+    <p>Les Cristaux et tous les objets du jeu n'ont aucune valeur monétaire : ils ne sont ni échangeables contre de l'argent, ni revendables, ni transférables à un autre joueur.</p>
+    <p>Les prix sont indiqués en euros, toutes taxes comprises. Les paiements sont traités par Stripe ; nous n'avons jamais accès à vos données bancaires. Les Cristaux sont crédités immédiatement après le paiement et l'achat apparaît dans « Vos derniers achats » ; un reçu est envoyé par e-mail.</p>
+    <p><b>Rétractation</b> : les Cristaux sont un contenu numérique fourni immédiatement. Avant de payer, vous demandez cette fourniture immédiate et reconnaissez perdre votre droit de rétractation de 14 jours (article L221-28, 13° du Code de la consommation). Sauf disposition légale impérative contraire, les achats sont donc fermes une fois crédités. Restent toujours possibles, via le ${LIEN_CONTACT} : le remboursement d'un achat non crédité, d'un achat fait par un mineur sans l'accord de son représentant légal (Cristaux non dépensés), et la garantie légale de conformité des contenus numériques.</p>
+    <h3>6. Suspension et bannissement</h3>
+    <p>Nous pouvons avertir, restreindre, suspendre ou supprimer un compte, retirer un contenu, ou annuler des progrès, objets ou récompenses obtenus en violation des règles, notamment en cas de triche, d'automatisation, d'exploitation de failles, de multi-comptes, de fraude ou de comportement nuisible envers d'autres joueurs. En cas de bannissement définitif, l'accès au compte et à ses objets peut être perdu, dans les limites prévues par la loi.</p>
+    <h3>7. Suppression du compte</h3>
+    <p>Vous pouvez arrêter de jouer à tout moment et demander la suppression de votre compte via le ${LIEN_CONTACT}. Certaines données sont conservées le temps nécessaire à nos obligations légales (par exemple la comptabilité des achats).</p>
+    <h3>8. Disponibilité et arrêt du Service</h3>
+    <p>Le Service est en développement et fourni « en l'état ». Nous pouvons le faire évoluer. En cas d'arrêt définitif, les joueurs sont prévenus au moins 30 jours avant, et les Cristaux achetés au cours des 12 derniers mois et non dépensés sont remboursés.</p>
+    <h3>9. Responsabilité</h3>
+    <p>Dans les limites permises par la loi, nous ne sommes pas responsables des dommages indirects liés à l'utilisation ou à l'impossibilité d'utiliser le Service. Aucune disposition n'exclut une responsabilité qui ne peut légalement l'être, ni vos droits de consommateur.</p>
+    <h3>10. Modifications</h3>
+    <p>Ces conditions peuvent évoluer avec le Service ou la loi ; la date de mise à jour ci-dessus change alors. Les conditions applicables à un achat sont celles en vigueur au moment de cet achat.</p>
+    <h3>11. Contact et litiges</h3>
+    <p>Pour toute question ou réclamation : ${LIEN_CONTACT}. Ces conditions sont soumises au droit français ; vous conservez la protection des règles impératives du pays où vous résidez.</p>`;
+  if(o === "regles") return `
+    <p class="sub">Dernière mise à jour : ${LEGAL_MAJ}</p>
+    <p>Ces règles gardent FandoMasters amusant, sûr et équitable. Elles s'appliquent partout : profils, pseudonymes, guildes, combats, marché, échanges et propositions de la communauté. Les enfreindre peut entraîner un avertissement, une restriction, une suspension ou un bannissement.</p>
+    <h3>1. Respect</h3>
+    <p>Aucun propos haineux, discriminatoire, insultant ou dégradant. Les cartes, pseudonymes et propositions ne doivent pas servir à promouvoir la haine, la violence ou l'extrémisme, ni à viser quelqu'un. Restez courtois, même en compétition.</p>
+    <h3>2. Pas de harcèlement</h3>
+    <p>Pas de menaces, d'intimidation, de messages répétés non désirés, ni de divulgation d'informations personnelles sur autrui.</p>
+    <h3>3. Pas de triche ni d'automatisation</h3>
+    <p>Pas de bots, scripts, macros ou outils qui jouent, ouvrent des paquets, combattent ou échangent à votre place. Pas d'exploitation de bugs : signalez-les. Pas de modification ni d'interception du jeu ou de ses échanges avec le serveur.</p>
+    <h3>4. Un compte par personne</h3>
+    <p>Pas de multi-comptes pour contourner des limites, cumuler des récompenses, fausser un classement ou échapper à une sanction. Ne partagez, ne vendez et n'achetez pas de comptes.</p>
+    <h3>5. Pseudonymes et contributions</h3>
+    <p>Pseudonymes, titres de guilde et propositions (noms, textes, recadrages, ajouts de cartes) doivent rester respectueux, honnêtes et sans usurpation d'identité. Ne proposez pas de contenu dont vous savez qu'il viole les droits d'autrui.</p>
+    <h3>6. Jeu équitable</h3>
+    <p>Pas d'arnaque ni de tromperie au marché, dans les échanges ou les combats. Pas de collusion pour fausser un classement. <b>Aucune vente de cartes, d'objets ou de comptes contre de l'argent réel</b>, dans le jeu ou en dehors.</p>
+    <h3>7. Pas de spam ni d'escroquerie</h3>
+    <p>Pas de publicité non sollicitée, de liens malveillants, ni de tentative d'obtenir les identifiants d'autres joueurs.</p>
+    <h3>8. Sécurité</h3>
+    <p>N'essayez pas d'accéder à des comptes ou des données sans autorisation, ni de perturber le Service.</p>
+    <h3>9. Signalement</h3>
+    <p>Signalez un comportement contraire aux règles via le ${LIEN_CONTACT}. Chaque signalement est examiné ; la sanction dépend de la gravité et de la récidive.</p>`;
+  if(o === "confidentialite") return `
+    <p class="sub">Dernière mise à jour : ${LEGAL_MAJ}</p>
+    <h3>1. Responsable du traitement</h3>
+    <p>L'éditeur de FandoMasters, joignable via le ${LIEN_CONTACT}.</p>
+    <h3>2. Données traitées</h3>
+    <p><b>Compte</b> : adresse e-mail, identifiant et données de connexion (mot de passe stocké chiffré, jamais lisible), via notre prestataire d'authentification Supabase.<br>
+    <b>Jeu</b> : pseudonyme, progression, collection, decks, statistiques, guilde, amis, propositions et votes, historique des achats.<br>
+    <b>Paiements</b> : traités par Stripe. Nous recevons les informations nécessaires pour créditer l'achat (identifiants de paiement, montant, e-mail, nom et pays de l'acheteur), jamais le numéro de carte.<br>
+    <b>Support</b> : les messages que vous nous envoyez depuis le jeu.<br>
+    <b>Technique</b> : journaux de sécurité et de synchronisation, adresse IP lors des requêtes.</p>
+    <h3>3. Finalités et bases légales</h3>
+    <p>Fournir le Service et gérer votre compte (exécution du contrat) ; traiter les achats et tenir la comptabilité (obligation légale) ; sécuriser le Service et lutter contre la triche (intérêt légitime) ; répondre à vos demandes.</p>
+    <h3>4. Prestataires</h3>
+    <p>Supabase (base de données et authentification, serveurs en Irlande, UE) · Stripe (paiements) · GitHub (hébergement du site). Les images des cartes sont chargées depuis les serveurs de Fandom, qui reçoivent alors votre adresse IP. Certains prestataires peuvent traiter des données hors de l'UE, notamment aux États-Unis, avec les garanties prévues par le RGPD (clauses contractuelles types, Data Privacy Framework). Aucune donnée n'est vendue ni utilisée pour de la publicité.</p>
+    <h3>5. Cookies et stockage local</h3>
+    <p>Aucun cookie publicitaire ni outil de mesure d'audience. Le jeu enregistre dans votre navigateur uniquement ce qui est nécessaire à son fonctionnement (session, sauvegarde hors ligne, réglages).</p>
+    <h3>6. Conservation</h3>
+    <p>Données de jeu : tant que le compte existe. Journal technique : 120 jours. Pièces liées aux achats : 10 ans (obligation comptable). Un compte supprimé est effacé sous 30 jours, hors pièces comptables.</p>
+    <h3>7. Vos droits</h3>
+    <p>Accès, rectification, effacement, limitation, portabilité et opposition : faites votre demande via le ${LIEN_CONTACT} (sujet « Mes données personnelles »), réponse sous un mois. Vous pouvez aussi saisir la <a href="https://www.cnil.fr/fr/plaintes" target="_blank" rel="noopener">CNIL</a>.</p>
+    <h3>8. Mineurs</h3>
+    <p>Les joueurs de moins de 15 ans doivent avoir l'accord d'un parent pour créer un compte. Un parent peut demander la suppression du compte de son enfant via le formulaire de contact.</p>
+    <h3>9. Modifications</h3>
+    <p>Cette politique peut évoluer ; la date de mise à jour ci-dessus change alors.</p>`;
+  return "";
+}
+function legalContactHTML(){
+  if(!nuageConnecte()) return `<p>Connectez-vous à votre compte pour écrire au support.</p>`;
+  const d = legal.demandes;
+  const sujetNom = k => (SUPPORT_SUJETS.find(x => x[0] === k) || [k, k])[1];
+  const ligne = (x, admin) => `<li class="lg-dem ${x.traite ? "ok" : ""}">
+      <div class="lg-dem-t"><b>${esc(sujetNom(x.sujet))}</b><span class="sub">${new Date(x.cree).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"})} · ${x.traite ? "traitée" : "en attente"}</span></div>
+      ${admin ? `<div class="sub">${esc((amis.profils.get(x.joueur) || {}).pseudo || x.joueur)}${x.courriel ? " · " + esc(x.courriel) : ""}</div>` : ""}
+      <p>${esc(x.texte)}</p>
+      ${x.reponse ? `<p class="lg-rep"><b>Réponse :</b> ${esc(x.reponse)}</p>` : ""}
+      ${admin && !x.traite ? `<div class="row" style="gap:.4rem"><input class="lg-rep-in" data-rep="${x.id}" placeholder="Réponse au joueur (facultatif)"><button class="btn small" data-traiter="${x.id}">Marquer traitée</button></div>` : ""}
+    </li>`;
+  return `
+    <p>Écrivez-nous ici pour un achat, une rétractation ou un remboursement, vos données personnelles, un signalement de contenu ou toute autre question. Nous répondons dans cet onglet et, si besoin, à l'adresse e-mail de votre compte.</p>
+    <label class="lg-label" for="lg-sujet">Sujet</label>
+    <select id="lg-sujet" class="lg-select">${SUPPORT_SUJETS.map(([k, t]) => `<option value="${k}" ${legal.sujet === k ? "selected" : ""}>${t}</option>`).join("")}</select>
+    <label class="lg-label" for="lg-texte">Message</label>
+    <textarea id="lg-texte" class="lg-area" maxlength="4000" placeholder="Décrivez votre demande. Pour un achat, indiquez la date et le montant.">${esc(legal.brouillon || "")}</textarea>
+    <div class="row" style="gap:.6rem;align-items:center;margin-top:.5rem">
+      <button class="btn" id="lg-envoyer" ${legal.envoi ? "disabled" : ""}>${legal.envoi ? "Envoi…" : "Envoyer"}</button>
+      ${legal.msg ? `<span class="sub">${esc(legal.msg)}</span>` : ""}
+    </div>
+    <p class="sub" style="margin-top:.8rem"><b>Rétractation</b> : pour vous rétracter d'un contrat lorsque ce droit s'applique (voir l'article 5 des conditions d'utilisation), choisissez le sujet « Rétractation ou remboursement » et indiquez l'achat concerné. Un accusé de réception s'affiche ci-dessous.</p>
+    ${d && d.length ? `<h3>Vos demandes</h3><ul class="lg-dems">${d.map(x => ligne(x, false)).join("")}</ul>` : ""}
+    ${estAdmin() && legal.toutes ? `<h3>Support · toutes les demandes (admin)</h3>${legal.toutes.length ? `<ul class="lg-dems">${legal.toutes.map(x => ligne(x, true)).join("")}</ul>` : `<p class="sub">Aucune demande.</p>`}` : ""}`;
+}
+async function legalChargerDemandes(){
+  const moi = moiId(); if(!moi) return;
+  try{
+    legal.demandes = await nuageRest("support?select=*&joueur=eq." + moi + "&order=cree.desc&limit=30") || [];
+    if(estAdmin()){
+      legal.toutes = await nuageRest("support?select=*&order=traite.nullsfirst,cree.desc&limit=100") || [];
+      const ids = [...new Set(legal.toutes.map(x => x.joueur))].filter(id => !amis.profils.has(id));
+      if(ids.length){ const pr = await nuageRest("profils?select=joueur,pseudo&joueur=in.(" + ids.join(",") + ")").catch(()=>[]); for(const x of (pr || [])) amis.profils.set(x.joueur, x); }
+    }
+  }catch(e){ legal.demandes = legal.demandes || []; }
+  if(state.view === "legal" && legal.onglet === "contact") viewLegal();
+}
+/* « Signaler l'image » depuis une carte : le formulaire de support s'ouvre, carte déjà indiquée */
+function signalerCarte(c){
+  legal.sujet = "droits";
+  legal.brouillon = `Carte : ${c.title || "?"} (${c.univ || "?"}) · ${c.id || ""}${/^https?:/.test(c.img || "") ? "\nImage : " + String(c.img).slice(0, 300) : ""}\n\nCe qui pose problème (droits d'auteur, image choquante, erreur…) :\n`;
+  legal.msg = "";
+  ouvrirLegal("contact");
+  setTimeout(()=>{ const t = document.getElementById("lg-texte"); if(t){ t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 50);
+}
+/* lecture des conditions sans être connecté (écran d'inscription) */
+function legalModal(o){
+  const m = document.createElement("div");
+  m.className = "modal fmconfirm"; m.style.zIndex = "100000";
+  m.innerHTML = `<div class="inner lg-modal"><div class="lg-texte">${legalTexte(o).replace(/<a href="#" data-lg-go="[a-z]+">([^<]*)<\/a>/g, "$1")}</div>
+    <button class="btn" style="width:100%;margin-top:1rem" id="lg-fermer">Fermer</button></div>`;
+  document.body.appendChild(m);
+  m.querySelector("#lg-fermer").onclick = ()=>m.remove();
+  m.onclick = e => { if(e.target === m) m.remove(); };
+}
+function viewLegal(){
+  if(!LEGAL_ONGLETS.some(([k]) => k === legal.onglet)) legal.onglet = "cgu";
+  view.innerHTML = `
+    <h2 class="vuetitre" data-ghost="LÉGAL">Informations légales</h2>
+    <div class="lg-onglets" role="tablist">${LEGAL_ONGLETS.map(([k, t]) => `<button type="button" class="shoptab ${legal.onglet === k ? "on" : ""}" data-lg="${k}" role="tab" aria-selected="${legal.onglet === k}">${t}</button>`).join("")}</div>
+    <article class="panel lg-texte">${legal.onglet === "contact" ? legalContactHTML() : legalTexte(legal.onglet)}</article>`;
+  view.querySelectorAll("[data-lg]").forEach(b => b.onclick = ()=>{ legal.onglet = b.dataset.lg; viewLegal(); });
+  view.querySelectorAll("[data-lg-go]").forEach(a => a.onclick = e => { e.preventDefault(); legal.onglet = a.dataset.lgGo; viewLegal(); window.scrollTo({top:0}); });
+  if(legal.onglet !== "contact") return;
+  if(legal.demandes === null && nuageConnecte()){ legal.demandes = []; legalChargerDemandes(); }
+  const tx = view.querySelector("#lg-texte"), su = view.querySelector("#lg-sujet");
+  if(tx) tx.oninput = ()=>{ legal.brouillon = tx.value; };
+  if(su) su.onchange = ()=>{ legal.sujet = su.value; };
+  const env = view.querySelector("#lg-envoyer");
+  if(env) env.onclick = async ()=>{
+    const texte = (tx.value || "").trim();
+    if(texte.length < 5){ legal.msg = "Écrivez au moins quelques mots."; return viewLegal(); }
+    legal.envoi = true; legal.msg = ""; viewLegal();
+    try{
+      await nuageRest("support", {method:"POST", headers:{"Prefer":"return=minimal"}, body:JSON.stringify({sujet:su.value, texte, courriel:nuageCourriel() || null})});
+      legal.brouillon = ""; legal.msg = "Message envoyé. Accusé de réception : il apparaît dans « Vos demandes ».";
+      try{ sfx.tick(); }catch(e){}
+      await legalChargerDemandes();
+    }catch(e){ legal.msg = /5 messages/.test(String(e && (e.message || e))) ? "Limite atteinte : 5 messages par jour." : "Envoi impossible pour l'instant. Réessayez dans un moment."; }
+    legal.envoi = false; viewLegal();
+  };
+  view.querySelectorAll("[data-traiter]").forEach(b => b.onclick = async ()=>{
+    const id = b.dataset.traiter, rep = (view.querySelector(`[data-rep="${id}"]`) || {}).value || null;
+    try{ await nuageRest("support?id=eq." + id, {method:"PATCH", headers:{"Prefer":"return=minimal"}, body:JSON.stringify({traite:new Date().toISOString(), reponse:rep})}); }catch(e){ toast("Impossible", "réessayez", "lose"); }
+    await legalChargerDemandes();
+  });
+}
+
+/* =====================================================================
+   Tableau de bord administrateur (V2.2.2)
+   Sécurité : cette page n'est qu'une vue. Chaque donnée et chaque action
+   passe par une fonction serveur qui vérifie est_admin() ; toutes les
+   actions sont inscrites dans le journal admin (qui, quoi, quand).
+   ===================================================================== */
+const ADM_ONGLETS = [
+  ["apercu", "◎", "Vue d'ensemble"], ["joueurs", "☺", "Joueurs"], ["alertes", "⚠", "Alertes"],
+  ["paiements", "€", "Paiements"], ["support", "✉", "Support"], ["contributions", "✎", "Contributions"],
+  ["journal", "≡", "Journal admin"], ["serveur", "⛁", "Serveur"]
+];
+const adm = {onglet:"apercu", tab:null, alertes:null, toutes:false, joueurs:null, q:"", fiche:null, paiements:null, journal:null, support:null, msg:"", err:"", charge:false, ecart:null, moment:"", essaye:new Set(), tentatives:{}};
+const ADM_ACTIONS = {cristaux:"Cristaux", vip_accorde:"VIP accordé", vip_retire:"VIP retiré", suspension:"Compte suspendu", reactivation:"Compte réactivé",
+  gains_retires:"Gains retirés", alerte_classee:"Alerte classée", collection_restauree:"Collection restaurée"};
+const admDate = d => d ? new Date(d).toLocaleString("fr-FR", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"}) : "";
+const admEuros = c => ((+c || 0) / 100).toLocaleString("fr-FR", {style:"currency", currency:"EUR"});
+const admNb = n => (+n || 0).toLocaleString("fr-FR");
+function admPseudo(id){ const p = amis.profils.get(id); return p && p.pseudo ? p.pseudo : (id ? String(id).slice(0, 8) + "…" : "?"); }
+async function admProfils(ids){
+  ids = [...new Set(ids)].filter(id => id && !amis.profils.has(id));
+  if(!ids.length) return;
+  try{ const pr = await nuageRest("profils?select=joueur,pseudo&joueur=in.(" + ids.join(",") + ")"); for(const x of (pr || [])) amis.profils.set(x.joueur, x); }catch(e){}
+}
+function admErreur(e){ const r = regRaison(e); return /réservé/.test(r) ? "Accès refusé par le serveur." : r; }
+
+async function admCharger(force){
+  const o = adm.onglet;
+  adm.err = "";
+  try{
+    if(o === "apercu"){
+      if(force || !adm.tab) adm.tab = lignesRpc(await regRpc("admin_tableau", {}), "admin_tableau")[0] || null;
+    } else if(o === "alertes"){
+      adm.alertes = lignesRpc(await regRpc("admin_alertes", {p_toutes:adm.toutes}), "admin_alertes");
+    } else if(o === "joueurs"){
+      adm.joueurs = lignesRpc(await regRpc("admin_chercher", {p_texte:adm.q}), "admin_chercher");
+      if(adm.fiche){ const f = adm.joueurs.find(j => j.joueur === adm.fiche.joueur); if(f) adm.fiche = f; }
+    } else if(o === "paiements"){
+      adm.paiements = lignesRpc(await regRpc("admin_paiements", {p_limite:200}), "admin_paiements");
+    } else if(o === "journal"){
+      adm.journal = await nuageRest("admin_journal?select=*&order=cree.desc&limit=200") || [];
+      await admProfils(adm.journal.flatMap(x => [x.admin, x.cible]));
+    } else if(o === "support"){
+      adm.support = await nuageRest("support?select=*&order=traite.nullsfirst,cree.desc&limit=150") || [];
+      await admProfils(adm.support.map(x => x.joueur));
+    } else if(o === "contributions"){
+      adm.tab = lignesRpc(await regRpc("admin_tableau", {}), "admin_tableau")[0] || null;
+    } else if(o === "serveur"){
+      await capaMesurer(!!force);
+    }
+  }catch(e){ adm.err = admErreur(e); }
+  if(state.view === "admin") viewAdmin();
+}
+
+function admKpi(titre, valeur, sous, ton){ return `<div class="adm-kpi ${ton || ""}"><small>${titre}</small><b>${valeur}</b>${sous ? `<span>${sous}</span>` : ""}</div>`; }
+function admBarres(jours, cle, format, ton){
+  const max = Math.max(1, ...jours.map(j => +j[cle] || 0));
+  return `<div class="adm-barres ${ton || ""}">${jours.map(j => { const v = +j[cle] || 0;
+    return `<div class="adm-barre" title="${new Date(j.jour).toLocaleDateString("fr-FR", {weekday:"short", day:"numeric", month:"short"})} : ${format(v)}"><i style="height:${Math.max(2, Math.round(v / max * 100))}%"></i><em>${new Date(j.jour).getDate()}</em></div>`; }).join("")}</div>`;
+}
+
+function admApercuHTML(){
+  const t = adm.tab;
+  if(!t) return `<p class="sub">Chargement des statistiques…</p>`;
+  const jours = t.jours || [];
+  const somme = k => jours.reduce((n, j) => n + (+j[k] || 0), 0);
+  const aTraiter = [["alertes", t.alertes, "alerte" + (t.alertes > 1 ? "s" : "") + " de triche", "alertes"], ["support", t.support, "message" + (t.support > 1 ? "s" : "") + " au support", "support"],
+    ["propositions", t.propositions, "proposition" + (t.propositions > 1 ? "s" : "") + " de cartes", "contributions"], ["votes", t.votes, "vote" + (t.votes > 1 ? "s" : "") + " en cours", "contributions"]];
+  return `
+    <div class="adm-traiter">${aTraiter.map(([k, n, l, go]) => `<button class="adm-chip ${n ? "on" : ""}" data-adm-go="${go}"><b>${admNb(n)}</b> ${l}</button>`).join("")}</div>
+    <div class="adm-kpis">
+      ${admKpi("Joueurs", admNb(t.joueurs), "+" + admNb(t.nouveaux_7j) + " cette semaine")}
+      ${admKpi("Actifs 24 h", admNb(t.actifs_24h), admNb(t.actifs_7j) + " sur 7 jours")}
+      ${admKpi("VIP actifs", admNb(t.vip), t.joueurs ? Math.round(t.vip / t.joueurs * 100) + " % des joueurs" : "")}
+      ${admKpi("Revenus 30 jours", admEuros(t.paiements_30j_cts), admEuros(t.paiements_cts) + " au total · " + admNb(t.paiements_nb) + " paiement" + (t.paiements_nb > 1 ? "s" : ""), "or")}
+      ${admKpi("Cristaux en circulation", CRISTAL + " " + admNb(t.cristaux_circulation), "soldes de tous les joueurs")}
+      ${admKpi("Comptes suspendus", admNb(t.suspendus), "", t.suspendus ? "rouge" : "")}
+    </div>
+    <div class="adm-graphes">
+      <section class="panel"><h4>Joueurs actifs par jour <span class="sub">${admNb(Math.max(...jours.map(j => +j.actifs || 0), 0))} au plus haut</span></h4>${admBarres(jours, "actifs", admNb)}</section>
+      <section class="panel"><h4>Inscriptions <span class="sub">${admNb(somme("inscrits"))} en 14 jours</span></h4>${admBarres(jours, "inscrits", admNb, "vert")}</section>
+      <section class="panel"><h4>Revenus <span class="sub">${admEuros(somme("euros_cts"))} en 14 jours</span></h4>${admBarres(jours, "euros_cts", admEuros, "or")}</section>
+    </div>
+    <p class="sub" style="margin-top:.6rem">Mesuré ${admDate(t.mesure)} · <button class="lien" data-adm-refresh>actualiser</button></p>`;
+}
+
+function admJoueursHTML(){
+  const j = adm.joueurs, f = adm.fiche;
+  const liste = `<div class="row" style="gap:.4rem;margin-bottom:.7rem"><input id="admq" placeholder="Pseudo ou identifiant (vide : derniers actifs)" value="${esc(adm.q)}" style="flex:1"><button class="btn small" id="admgo">Chercher</button></div>
+    <div class="adm-joueurs">${j === null ? `<p class="sub">Chargement…</p>` : j.length ? j.map(x => `
+      <button class="adm-ligne ${f && f.joueur === x.joueur ? "on" : ""}" data-fiche="${esc(x.joueur)}">
+        <b>${esc(x.pseudo || "Sans pseudo")}</b>${x.bloque ? `<span class="adm-tag rouge">suspendu</span>` : ""}${x.vip_jusqua && new Date(x.vip_jusqua) > new Date() ? `<span class="adm-tag or">VIP</span>` : ""}
+        <span class="sub">${CRISTAL} ${admNb(x.cristaux)} · ${admNb(x.cartes)} cartes · vu ${admDate(x.maj)}</span>
+      </button>`).join("") : `<p class="sub">Aucun joueur trouvé.</p>`}</div>`;
+  if(!f) return `<div class="adm-split"><div>${liste}</div><div class="panel adm-fiche vide"><p class="sub">Choisissez un joueur pour voir sa fiche.</p></div></div>`;
+  const vip = f.vip_jusqua && new Date(f.vip_jusqua) > new Date();
+  const ec = adm.ecart && adm.ecart.joueur === f.joueur ? adm.ecart : null;
+  const fiche = `<div class="panel adm-fiche">
+    <div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">${esc(f.pseudo || "Sans pseudo")}</h3><button class="lien" data-copier="${esc(f.joueur)}">copier l'identifiant</button></div>
+    <p class="sub" style="margin:.2rem 0 .8rem">${f.bloque ? `<span class="adm-tag rouge">suspendu${f.motif ? " : " + esc(f.motif) : ""}</span> ` : ""}${vip ? `VIP jusqu'au ${new Date(f.vip_jusqua).toLocaleDateString("fr-FR")}` : "Pas VIP"} · dernière activité ${admDate(f.maj)}</p>
+    <div class="adm-mini">${admKpi("Cristaux", CRISTAL + " " + admNb(f.cristaux))}${admKpi("Fandominus", "◆ " + short(f.coins))}${admKpi("Mana", "★ " + short(f.mana))}${admKpi("Exemplaires", admNb(f.cartes))}</div>
+    <h4>Cristaux</h4>
+    <div class="row" style="gap:.4rem"><input type="number" step="1" inputmode="numeric" placeholder="± Cristaux" id="adm-n" style="width:120px"><input placeholder="Motif (gardé dans le registre)" id="adm-motif" style="flex:1"><button class="btn small" id="adm-crediter">Valider</button></div>
+    <h4>VIP et compte</h4>
+    <div class="row" style="gap:.4rem;flex-wrap:wrap">
+      <button class="btn small ghost" data-vip="30">+30 jours VIP</button><button class="btn small ghost" data-vip="365">+1 an VIP</button>
+      ${vip ? `<button class="btn small ghost" data-vip="0">Retirer le VIP</button>` : ""}
+      <button class="btn small ${f.bloque ? "" : "danger"}" id="adm-bloquer">${f.bloque ? "Réactiver le compte" : "Suspendre le compte"}</button>
+    </div>
+    <h4>Collection : retour en arrière <span class="sub">(8 derniers jours)</span></h4>
+    <div class="row" style="gap:.4rem;flex-wrap:wrap"><input type="datetime-local" id="adm-moment" value="${esc(adm.moment)}" style="width:auto"><button class="btn small ghost" id="adm-comparer">Comparer avec maintenant</button></div>
+    ${ec ? `<div class="adm-ecart">
+      <p>Le ${admDate(ec.moment)} : <b>${admNb(ec.cartes_alors)}</b> cartes (${admNb(ec.exemplaires_alors)} exemplaires) · maintenant : <b>${admNb(ec.cartes_maintenant)}</b> cartes (${admNb(ec.exemplaires_maintenant)} exemplaires)<br>
+      ${admNb(ec.disparues)} carte(s) disparue(s) depuis · ${admNb(ec.nouvelles)} nouvelle(s), qui seraient retirées.</p>
+      <button class="btn small danger" id="adm-restaurer">Restaurer la collection à ce moment</button></div>` : ""}
+    <h4>Derniers achats</h4>
+    ${(f.achats || []).length ? `<ul class="adm-achats">${f.achats.map(x => `<li><span>${esc(x.motif || x.type)}</span><span class="sub">${admDate(x.cree)}</span><b class="${x.cristaux > 0 ? "plus" : "moins"}">${x.cristaux > 0 ? "+" : "−"}${admNb(Math.abs(x.cristaux))} ${CRISTAL}</b></li>`).join("")}</ul>` : `<p class="sub">Aucun achat.</p>`}
+  </div>`;
+  return `<div class="adm-split"><div>${liste}</div>${fiche}</div>`;
+}
+
+function admAlertesHTML(){
+  const a = adm.alertes;
+  const NOMS = {coins:"◆ Fandominus", mana:"★ Mana", free:"boosters gratuits", mythic:"mythiques", demon:"démoniaques", foxBonus:"renards offerts", foxNiv:"niveaux", cartes:"exemplaires"};
+  const gains = g => Object.entries(g || {}).map(([k, v]) => (NOMS[k] || k) + " +" + Math.round(v).toLocaleString("fr-FR")).join(" · ");
+  return `<label class="sub" style="display:flex;gap:.4rem;align-items:center;margin-bottom:.7rem"><input type="checkbox" id="adm-toutes" ${adm.toutes ? "checked" : ""} style="width:auto"> afficher aussi les alertes classées</label>
+    ${a === null ? `<p class="sub">Chargement…</p>` : a.length ? `<div class="adm-cartes">${a.map(x => `
+      <div class="panel adm-alerte ${x.traitee ? "classee" : ""}">
+        <div class="row" style="justify-content:space-between"><b>${esc(x.pseudo || "Sans pseudo")}${x.bloque ? ` <span class="adm-tag rouge">suspendu</span>` : ""}</b><span class="sub">${admDate(x.cree)}${x.traitee ? " · classée" : ""}</span></div>
+        <ul>${(x.raisons || []).map(t => `<li>${esc(t)}</li>`).join("")}</ul>
+        ${x.gains && Object.keys(x.gains).length ? `<p class="sub">Gains de cet envoi : ${esc(gains(x.gains))}</p>` : ""}
+        <div class="row" style="gap:.4rem;flex-wrap:wrap">
+          ${x.journal ? `<button class="btn small" data-retirer="${x.journal}">Retirer les gains</button>` : ""}
+          <button class="btn small ghost" data-bloquer="${esc(x.joueur)}" data-etat="${x.bloque ? 0 : 1}">${x.bloque ? "Réactiver" : "Suspendre"}</button>
+          ${x.traitee ? "" : `<button class="btn small ghost" data-classer="${x.id}">Classer</button>`}
+        </div>
+      </div>`).join("")}</div>` : `<p class="sub">Aucune alerte à traiter. ✓</p>`}`;
+}
+
+function admPaiementsHTML(){
+  const p = adm.paiements;
+  if(p === null) return `<p class="sub">Chargement…</p>`;
+  const payes = p.filter(x => x.type === "paiement");
+  const total = payes.reduce((n, x) => n + (+x.montant_cts || 0), 0);
+  return `<div class="adm-kpis">${admKpi("Paiements listés", admNb(payes.length))}${admKpi("Montant", admEuros(total), "", "or")}${admKpi("Gestes et retraits admin", admNb(p.length - payes.length))}</div>
+    <p class="sub">Les remboursements d'argent se font dans Stripe (bouton « Stripe » de chaque ligne), puis retirez les Cristaux dans la fiche du joueur.</p>
+    ${p.length ? `<div class="adm-table"><table><thead><tr><th>Date</th><th>Joueur</th><th>Opération</th><th>Cristaux</th><th>Montant</th><th></th></tr></thead><tbody>${p.map(x => `
+      <tr><td>${admDate(x.cree)}</td><td><button class="lien" data-voir-joueur="${esc(x.joueur)}">${esc(x.pseudo || String(x.joueur).slice(0, 8))}</button></td>
+      <td>${esc(x.motif || x.type)}</td><td class="${x.cristaux > 0 ? "plus" : "moins"}">${x.cristaux > 0 ? "+" : "−"}${admNb(Math.abs(x.cristaux))}</td>
+      <td>${x.montant_cts ? admEuros(x.montant_cts) : "—"}</td>
+      <td>${/^pi_/.test(x.ref || "") ? `<a href="https://dashboard.stripe.com/payments/${encodeURIComponent(x.ref)}" target="_blank" rel="noopener">Stripe ↗</a>` : ""}</td></tr>`).join("")}</tbody></table></div>` : `<p class="sub">Aucun paiement pour l'instant.</p>`}`;
+}
+
+function admSupportHTML(){
+  const s = adm.support;
+  if(s === null) return `<p class="sub">Chargement…</p>`;
+  const nom = k => (SUPPORT_SUJETS.find(x => x[0] === k) || [k, k])[1];
+  const ouverts = s.filter(x => !x.traite);
+  return `<p class="sub">${admNb(ouverts.length)} demande(s) en attente. Rétractations et données personnelles : réponse sous un mois au plus tard.</p>
+    ${s.length ? `<ul class="lg-dems">${s.map(x => `<li class="lg-dem ${x.traite ? "ok" : ""}">
+      <div class="lg-dem-t"><b>${esc(nom(x.sujet))}</b><span class="sub">${admDate(x.cree)} · ${x.traite ? "traitée" : "en attente"}</span></div>
+      <div class="sub"><button class="lien" data-voir-joueur="${esc(x.joueur)}">${esc(admPseudo(x.joueur))}</button>${x.courriel ? " · " + esc(x.courriel) : ""}</div>
+      <p>${esc(x.texte)}</p>
+      ${x.reponse ? `<p class="lg-rep"><b>Réponse :</b> ${esc(x.reponse)}</p>` : ""}
+      ${x.traite ? "" : `<div class="row" style="gap:.4rem"><input class="lg-rep-in" data-rep="${x.id}" placeholder="Réponse au joueur (facultatif)"><button class="btn small" data-traiter="${x.id}">Marquer traitée</button></div>`}
+    </li>`).join("")}</ul>` : `<p class="sub">Aucune demande. ✓</p>`}`;
+}
+
+function admContributionsHTML(){
+  const t = adm.tab || {};
+  return `<div class="adm-kpis">${admKpi("Propositions en attente", admNb(t.propositions))}${admKpi("Votes en cours", admNb(t.votes))}</div>
+    <p class="sub">La modération des recadrages, raretés, ajouts, emblèmes, noms et textes se fait dans la Communauté. Une contribution acceptée s'applique tout de suite chez tous les joueurs.</p>
+    <button class="btn" data-adm-commu>Ouvrir la modération des contributions</button>`;
+}
+
+function admJournalHTML(){
+  const j = adm.journal;
+  if(j === null) return `<p class="sub">Chargement…</p>`;
+  return `<p class="sub">Chaque action d'un administrateur est inscrite ici par le serveur. Personne ne peut modifier ni effacer ce journal depuis le jeu.</p>
+    ${j.length ? `<div class="adm-table"><table><thead><tr><th>Date</th><th>Admin</th><th>Action</th><th>Joueur</th><th>Détails</th></tr></thead><tbody>${j.map(x => `
+      <tr><td>${admDate(x.cree)}</td><td>${esc(admPseudo(x.admin))}</td><td><b>${esc(ADM_ACTIONS[x.action] || x.action)}</b></td>
+      <td>${x.cible ? `<button class="lien" data-voir-joueur="${esc(x.cible)}">${esc(admPseudo(x.cible))}</button>` : ""}</td>
+      <td class="sub">${esc(Object.entries(x.details || {}).filter(([, v]) => v !== null && v !== "").map(([k, v]) => k + " : " + (typeof v === "object" ? JSON.stringify(v) : v)).join(" · ")).slice(0, 220)}</td></tr>`).join("")}</tbody></table></div>` : `<p class="sub">Aucune action enregistrée pour l'instant.</p>`}`;
+}
+
+function admServeurHTML(){
+  return `<div class="panel capa" id="capa">${capaHTML()}</div>
+    <div class="panel" style="margin-top:1rem"><h4>Outils</h4>
+      <div class="row" style="gap:.5rem;flex-wrap:wrap">
+        <button class="btn small ghost" id="adm-csv">Rapport des cartes (CSV)</button>
+        <button class="btn small ghost" id="adm-dev">${state.dev ? "Masquer" : "Afficher"} la console de débogage (accueil)</button>
+      </div>
+      <p class="sub" style="margin:.6rem 0 0">Version ${esc(BUILD)} · paiements ${PAIEMENT_OUVERT ? "ouverts à tous" : "visibles des admins seulement"}.</p>
+    </div>
+    <details class="fold info" style="margin-top:1rem"><summary>Diagnostic de la connexion</summary><div class="in"><pre class="sql" style="white-space:pre-wrap;margin:0">${esc(diagnosticNuage())}</pre></div></details>`;
+}
+
+function viewAdmin(){
+  if(!estAdmin()){ go("hub"); return; }
+  if(!ADM_ONGLETS.some(([k]) => k === adm.onglet)) adm.onglet = "apercu";
+  const t = adm.tab || {};
+  const badge = {alertes:t.alertes, support:t.support, contributions:(+t.propositions || 0) + (+t.votes || 0)};
+  const corps = {apercu:admApercuHTML, joueurs:admJoueursHTML, alertes:admAlertesHTML, paiements:admPaiementsHTML, support:admSupportHTML,
+    contributions:admContributionsHTML, journal:admJournalHTML, serveur:admServeurHTML}[adm.onglet]();
+  view.innerHTML = `<div class="adm">
+    <h2 class="vuetitre" data-ghost="ADMIN">Administration</h2>
+    <nav class="adm-nav" role="tablist">${ADM_ONGLETS.map(([k, ic, n]) => `<button type="button" class="adm-onglet ${adm.onglet === k ? "on" : ""}" data-adm="${k}" role="tab" aria-selected="${adm.onglet === k}">
+      <i>${ic}</i><span>${n}</span>${badge[k] ? `<em>${badge[k]}</em>` : ""}</button>`).join("")}</nav>
+    ${adm.err ? `<div class="adm-msg err">${esc(adm.err)}</div>` : ""}${adm.msg ? `<div class="adm-msg">${esc(adm.msg)}</div>` : ""}
+    <div class="adm-corps">${corps}</div></div>`;
+  const $ = s => view.querySelector(s), $$ = s => view.querySelectorAll(s);
+  const agir = async (f, ok, onglet)=>{
+    adm.msg = ""; adm.err = "";
+    try{ await f(); adm.msg = ok || ""; }catch(e){ adm.err = admErreur(e); }
+    try{ registreVerifier(); }catch(e){}
+    adm.tab = null;
+    if(onglet === "joueurs" || adm.onglet === "joueurs") await admCharger(true); else { await admCharger(true); }
+  };
+  const changer = o => { adm.onglet = o; adm.msg = ""; adm.err = ""; adm.tentatives[o] = (adm.tentatives[o] || 0) + 1; viewAdmin(); };
+  $$("[data-adm]").forEach(b => b.onclick = ()=>changer(b.dataset.adm));
+  $$("[data-adm-go]").forEach(b => b.onclick = ()=>changer(b.dataset.admGo));
+  $$("[data-adm-refresh]").forEach(b => b.onclick = ()=>admCharger(true));
+  $$("[data-voir-joueur]").forEach(b => b.onclick = async ()=>{ adm.onglet = "joueurs"; adm.q = b.dataset.voirJoueur; adm.fiche = {joueur:b.dataset.voirJoueur}; adm.msg = ""; viewAdmin(); await admCharger(); });
+  const cm = $("[data-adm-commu]"); if(cm) cm.onclick = ()=>{ try{ commu.onglet = "accueil"; }catch(e){} go("communaute"); };
+  if(adm.onglet === "serveur"){
+    const csv = $("#adm-csv"); if(csv) csv.onclick = async ()=>{
+      try{
+        const l = lignesRpc(await regRpc("admin_rapport_cartes", {}), "admin_rapport_cartes");
+        const col = ["carte", "nom", "univers", "rarete", "atk", "def", "type", "cout", "atq", "pv", "role", "texte"];
+        const val = x => { const c = x.combat || {}; return [x.carte, x.nom, x.univers, x.rarete, x.atk, x.def, c.type, c.cout, c.atq, c.pv != null ? c.pv : c.dur, c.role, c.texte]; };
+        const txt = [col.join(";"), ...l.map(x => val(x).map(v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"').join(";"))].join("\n");
+        const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + txt], {type:"text/csv"})); a.download = "fandomasters-cartes-combat.csv"; a.click();
+        adm.msg = l.length + " cartes exportées.";
+      }catch(e){ adm.err = admErreur(e); }
+      viewAdmin();
+    };
+    const dv = $("#adm-dev"); if(dv) dv.onclick = ()=>{ state.dev = !state.dev; adm.msg = state.dev ? "Console de débogage affichée sur l'accueil." : "Console masquée."; viewAdmin(); };
+  }
+  if(adm.onglet === "alertes"){
+    const tt = $("#adm-toutes"); if(tt) tt.onchange = ()=>{ adm.toutes = tt.checked; adm.alertes = null; viewAdmin(); admCharger(); };
+  }
+  if(adm.onglet === "joueurs"){
+    const go_ = $("#admgo"), q = $("#admq");
+    if(go_){ go_.onclick = ()=>{ adm.q = q.value.trim(); adm.joueurs = null; viewAdmin(); admCharger(); }; q.onkeydown = e => { if(e.key === "Enter") go_.click(); }; }
+    $$("[data-fiche]").forEach(b => b.onclick = ()=>{ adm.fiche = (adm.joueurs || []).find(x => x.joueur === b.dataset.fiche) || null; adm.ecart = null; adm.msg = ""; viewAdmin(); });
+    const f = adm.fiche;
+    if(f && f.pseudo !== undefined){
+      const cp = $("[data-copier]"); if(cp) cp.onclick = ()=>{ try{ navigator.clipboard.writeText(f.joueur); adm.msg = "Identifiant copié."; }catch(e){} viewAdmin(); };
+      $("#adm-crediter").onclick = async ()=>{
+        const n = Math.trunc(+$("#adm-n").value || 0), motif = $("#adm-motif").value.trim();
+        if(!n){ adm.err = "Indiquez un nombre de Cristaux (négatif pour retirer)."; return viewAdmin(); }
+        if(!motif){ adm.err = "Indiquez un motif : il reste dans le registre."; return viewAdmin(); }
+        if(!(await demanderConfirmation("Cristaux", (n > 0 ? "Ajouter " : "Retirer ") + admNb(Math.abs(n)) + " Cristaux à " + (f.pseudo || "ce joueur") + " ?", "Confirmer"))) return;
+        agir(()=>regRpc("admin_crediter", {p_joueur:f.joueur, p_cristaux:n, p_motif:motif, p_cle:regUid()}), (n > 0 ? "+" : "") + admNb(n) + " Cristaux enregistrés.");
+      };
+      $$("[data-vip]").forEach(b => b.onclick = async ()=>{
+        const j = +b.dataset.vip;
+        if(!(await demanderConfirmation("VIP", j ? "Ajouter " + j + " jours de VIP à " + (f.pseudo || "ce joueur") + " ?" : "Retirer le VIP de " + (f.pseudo || "ce joueur") + " ?", "Confirmer"))) return;
+        agir(()=>regRpc("admin_vip", {p_joueur:f.joueur, p_jours:j}), j ? "VIP accordé." : "VIP retiré.");
+      });
+      $("#adm-bloquer").onclick = async ()=>{
+        const bloquer = !f.bloque;
+        let motif = null;
+        if(bloquer){ motif = prompt("Motif de la suspension (montré au joueur) :", "triche"); if(motif === null) return; }
+        else if(!(await demanderConfirmation("Réactiver", "Réactiver le compte de " + (f.pseudo || "ce joueur") + " ?", "Réactiver"))) return;
+        agir(()=>regRpc("admin_bloquer", {p_joueur:f.joueur, p_bloque:bloquer, p_motif:motif}), bloquer ? "Compte suspendu." : "Compte réactivé.");
+      };
+      const mo = $("#adm-moment"); if(mo) mo.onchange = ()=>{ adm.moment = mo.value; };
+      $("#adm-comparer").onclick = async ()=>{
+        adm.moment = mo.value;
+        if(!adm.moment){ adm.err = "Choisissez une date et une heure."; return viewAdmin(); }
+        try{ adm.ecart = Object.assign({joueur:f.joueur}, lignesRpc(await regRpc("admin_collection_ecart", {p_joueur:f.joueur, p_moment:new Date(adm.moment).toISOString()}), "admin_collection_ecart")[0] || {}); adm.err = ""; }
+        catch(e){ adm.ecart = null; adm.err = admErreur(e); }
+        viewAdmin();
+      };
+      const rs = $("#adm-restaurer"); if(rs) rs.onclick = async ()=>{
+        const nom = f.pseudo || "";
+        const tape = prompt("Restaurer la collection de « " + nom + " » telle qu'elle était le " + admDate(adm.ecart.moment) + ".\nLes cartes obtenues depuis seront retirées.\n\nPour confirmer, tapez le pseudo du joueur :");
+        if(tape === null) return;
+        if(tape.trim() !== nom.trim()){ adm.err = "Pseudo différent : restauration annulée."; return viewAdmin(); }
+        agir(async ()=>{ const r = lignesRpc(await regRpc("admin_restaurer_collection", {p_joueur:f.joueur, p_moment:new Date(adm.moment).toISOString(), p_cle:regUid()}), "admin_restaurer_collection")[0] || {};
+          adm.ecart = null; adm.msg = ""; if(r.deja) throw new Error("déjà restaurée");
+          adm.restaure = r; }, "Collection restaurée.");
+      };
+    }
+  }
+  $$("[data-retirer]").forEach(b => b.onclick = async ()=>{
+    if(!(await demanderConfirmation("Retirer les gains", "Les monnaies, boosters et exemplaires gagnés dans cet envoi seront retirés du compte (sans descendre sous zéro).", "Retirer"))) return;
+    agir(()=>regRpc("admin_retirer_gains", {p_journal:+b.dataset.retirer}), "Gains retirés.");
+  });
+  $$("[data-classer]").forEach(b => b.onclick = ()=>agir(()=>regRpc("admin_classer_alerte", {p_id:+b.dataset.classer}), "Alerte classée."));
+  $$("[data-bloquer]").forEach(b => b.onclick = async ()=>{
+    const bloquer = b.dataset.etat === "1";
+    let motif = null;
+    if(bloquer){ motif = prompt("Motif de la suspension (montré au joueur) :", "triche"); if(motif === null) return; }
+    agir(()=>regRpc("admin_bloquer", {p_joueur:b.dataset.bloquer, p_bloque:bloquer, p_motif:motif}), bloquer ? "Compte suspendu." : "Compte réactivé.");
+  });
+  $$("[data-traiter]").forEach(b => b.onclick = async ()=>{
+    const id = b.dataset.traiter, rep = (view.querySelector(`[data-rep="${id}"]`) || {}).value || null;
+    agir(()=>nuageRest("support?id=eq." + id, {method:"PATCH", headers:{"Prefer":"return=minimal"}, body:JSON.stringify({traite:new Date().toISOString(), reponse:rep})}), "Demande traitée.");
+  });
+  if(adm.onglet === "serveur") setTimeout(()=>capaPeindre(), 0);
+  /* premier affichage d'un onglet : on charge ses données une fois */
+  const besoin = {apercu:!adm.tab, contributions:!adm.tab, alertes:adm.alertes === null, joueurs:adm.joueurs === null, paiements:adm.paiements === null,
+    support:adm.support === null, journal:adm.journal === null, serveur:!CAPA.le}[adm.onglet];
+  const cle = adm.onglet + ":" + (adm.tentatives[adm.onglet] || 0);
+  if(besoin && !adm.charge && !adm.essaye.has(cle)){
+    adm.essaye.add(cle); adm.charge = true;
+    admCharger(adm.onglet === "contributions").finally(()=>{ adm.charge = false; });
+  }
+}
+function ouvrirAdmin(){ adm.onglet = "apercu"; adm.tab = null; adm.tentatives.apercu = (adm.tentatives.apercu || 0) + 1; go("admin"); }
+
+/* ---- Recharge de Cristaux par paiement (Stripe) ----
+   Le joueur paie sur la page sécurisée de Stripe ; Stripe prévient le serveur
+   (fonction « stripe-webhook »), qui crédite les Cristaux. Le jeu ne voit jamais
+   la carte bancaire et ne peut pas créditer lui-même. */
+const PAIEMENT_OUVERT = true;           // false : visible des administrateurs seulement (phase de test)
+const PACKS_CRISTAUX = [
+  {n:500,  prix:"4,99 €",  url:"https://buy.stripe.com/dRmfZa7GBagIbFU2z4eZ200"},
+  {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},
+  {n:2400, prix:"19,99 €", url:"https://buy.stripe.com/8x23co6CxgF6eS6a1weZ202", bonus:"+20 %", top:true}
+];
+function rechargeVisible(){ return (PAIEMENT_OUVERT || estAdmin()) && nuageConnecte() && PACKS_CRISTAUX.some(p => p.url); }
+function rechargeHTML(){
+  if(!rechargeVisible()) return "";
+  return `<div class="sectionhead vit-sect"><div><h3>Recharger des Cristaux</h3></div><span class="sub">${PAIEMENT_OUVERT ? "Paiement sécurisé par Stripe." : "Visible des administrateurs seulement · phase de test"}</span></div>
+    <div class="recharge">${PACKS_CRISTAUX.filter(p => p.url).map(p => `<button type="button" class="recharge-pack ${p.top ? "top" : ""}" data-recharge="${p.n}">
+      ${p.bonus ? `<span class="rp-bonus">${p.bonus}</span>` : ""}<span class="rp-ic">${CRISTAL}</span>
+      <b>${p.n.toLocaleString("fr-FR")}</b><small>Cristaux</small><span class="rp-prix">${p.prix}</span></button>`).join("")}</div>
+    <p class="sub rp-legal">Prix TTC · aucune carte ni aucun tirage au hasard n'est vendu · <a href="#" data-legal="cgu">Conditions</a> · <a href="#" data-legal="contact">Rétractation & support</a></p>`;
+}
+function rechargerCristaux(n){
+  const p = PACKS_CRISTAUX.find(x => x.n === n), id = moiId();
+  if(!p || !p.url || !id) return;
+  const m = document.createElement("div");
+  m.className = "modal fmconfirm"; m.style.zIndex = "100000"; m.style.placeItems = "center";
+  m.innerHTML = `<div class="inner" style="max-width:420px">
+    <h3 style="font-size:1.15rem;margin-bottom:.4rem">${n.toLocaleString("fr-FR")} Cristaux · ${esc(p.prix)}</h3>
+    <p class="sub" style="margin:0 0 .8rem">Vous allez payer sur la page sécurisée de Stripe. Les Cristaux arrivent sur votre compte dès le paiement validé, sur tous vos appareils.</p>
+    <label class="rp-accord"><input type="checkbox" id="rp-ok"> <span>J'ai lu et j'accepte les <a href="#" data-cgv>conditions d'utilisation et de vente</a>. Je demande la livraison immédiate des Cristaux et je reconnais perdre mon droit de rétractation de 14 jours.</span></label>
+    <div class="row" style="justify-content:flex-end;gap:.5rem;margin-top:1rem">
+      <button class="btn small ghost" id="non">Annuler</button>
+      <button class="btn small" id="oui" disabled>Payer ${esc(p.prix)}</button>
+    </div></div>`;
+  document.body.appendChild(m);
+  const ok = m.querySelector("#rp-ok"), oui = m.querySelector("#oui");
+  ok.onchange = ()=>{ oui.disabled = !ok.checked; };
+  m.querySelector("[data-cgv]").onclick = e => { e.preventDefault(); m.remove(); ouvrirLegal("cgu"); };
+  m.querySelector("#non").onclick = ()=>m.remove();
+  m.onclick = e => { if(e.target === m) m.remove(); };
+  oui.onclick = ()=>{
+    if(!ok.checked) return;
+    try{ localStorage.setItem("fm-local:paiement", JSON.stringify({n, avant:soldeCristaux(), t:Date.now()})); }catch(e){}
+    const mail = nuageCourriel();
+    location.href = p.url + "?client_reference_id=" + encodeURIComponent(id) + (mail ? "&prefilled_email=" + encodeURIComponent(mail) : "") + "&locale=fr";
+  };
+}
+/* Retour de Stripe (?paiement=ok) : on relit le solde jusqu'à l'arrivée des Cristaux. */
+async function retourPaiement(){
+  if(!/[?&]paiement=ok\b/.test(location.search)) return;
+  try{ history.replaceState(null, "", location.pathname + location.hash); }catch(e){}
+  let attendu = null; try{ attendu = JSON.parse(localStorage.getItem("fm-local:paiement") || "null"); }catch(e){}
+  for(let i = 0; i < 200 && !(fmPret && REG.pret); i++) await new Promise(r => setTimeout(r, 300));
+  toast("Paiement reçu", "Vos Cristaux arrivent…", "info");
+  const avant = attendu ? attendu.avant : soldeCristaux();
+  for(const d of [1500, 3000, 5000, 10000, 20000, 40000]){
+    await new Promise(r => setTimeout(r, d));
+    try{ await regRecharger(); }catch(e){}
+    if(soldeCristaux() > avant){
+      try{ localStorage.removeItem("fm-local:paiement"); }catch(e){}
+      toast("Cristaux reçus", "+" + (soldeCristaux() - avant).toLocaleString("fr-FR") + " · solde : " + soldeCristaux().toLocaleString("fr-FR"), "ach");
+      try{ sfx.coin(); }catch(e){}
+      if(state.view === "shop"){ btq.historique = []; viewBoutique(); }
+      return;
+    }
+  }
+  toast("Paiement en cours de traitement", "Les Cristaux apparaîtront d'ici quelques minutes. Rien n'est perdu : chaque paiement est enregistré.", "info");
+}
+setTimeout(retourPaiement, 0);
+
 function demanderConfirmation(titre, texte, bouton){
   return new Promise(res => {
     const m = document.createElement("div");
@@ -15589,7 +16186,7 @@ async function acheterArticle(a){
 
 /* ---- administration : alertes de triche, Cristaux, suspensions ----
    Tout est vérifié par le serveur (est_admin) : ce panneau n'est qu'une vue. */
-async function ouvrirAdmin(){
+async function ouvrirAdminAncien(){   /* ancien panneau, remplacé par le tableau de bord (viewAdmin) */
   const m = document.createElement("div");
   m.className = "modal";
   const st = {onglet:"alertes", alertes:null, joueurs:null, q:"", msg:"", toutes:false};
@@ -15779,18 +16376,22 @@ function itemSVGMini(key){ return `<span class="isvgmini">${itemSVG(key)}</span>
 function itemShort(key){ return item(key).name.replace(/^Potion de (vie|dégât) /,"").replace(/^Armement /,""); }
 
 function inv(){ return state.profile.inv || (state.profile.inv = []); }
+/* Potions : plus utilisées. Celles déjà possédées restent dans la sauvegarde (rien n'est effacé),
+   mais ne s'affichent plus et n'occupent plus d'emplacement. */
+function estPotion(key){ const d = item(key); return !!d && d.fam !== "arm"; }
+function invVisible(){ return inv().filter(s=>!estPotion(s.key)); }
 function invSlots(){ return INV_BASE + INV_STEP*(state.profile.invUp||0); }
 function countItem(key){ return inv().filter(s=>s.key===key).reduce((n,s)=>n+s.n, 0); }
 function invFreeSpace(key){
   const open = inv().filter(s=>s.key===key).reduce((n,s)=>n+(STACK-s.n), 0);
-  return open + (invSlots() - inv().length)*STACK;
+  return open + Math.max(0, invSlots() - invVisible().length)*STACK;
 }
 function addItem(key, n=1){
   let left = n;
   inv().filter(s=>s.key===key && s.n<STACK).forEach(s=>{
     const take = Math.min(STACK-s.n, left); s.n += take; left -= take;
   });
-  while(left > 0 && inv().length < invSlots()){
+  while(left > 0 && invVisible().length < invSlots()){
     const take = Math.min(STACK, left);
     inv().push({key, n:take}); left -= take;
   }
@@ -15808,7 +16409,10 @@ function useItem(key, n=1){
   return n - left;
 }
 
+/* Illustrations des armements (dessinées, détourées, 256 px) */
+const ITEM_IMG = {arm1:"assets/a4a7a4f1d3b7.webp", arm2:"assets/0cba0ebc6dc4.webp", arm3:"assets/6714a9544882.webp", arm4:"assets/239664422c54.webp"};
 function itemSVG(key){
+  if(ITEM_IMG[key]) return `<img class="isvg iimg" src="${ITEM_IMG[key]}" alt="" loading="lazy" decoding="async" draggable="false">`;
   const d = item(key);
   return `<svg viewBox="0 0 64 64" class="isvg" aria-hidden="true">
     <defs><linearGradient id="g${key}" x1="0" y1="0" x2="0" y2="1">
@@ -15831,36 +16435,27 @@ function itemTile(key, n, opts={}){
 
 function viewInv(){
   const p = state.profile;
-  p.hotbar = p.hotbar || [null,null,null,null,null,null,null,null];
   const up = p.invUp||0;
   const price = up < INV_MAX_UP ? INV_PRICES[up] : null;
 
-  const stacks = inv();
-  const parFam = f => stacks.filter(st => item(st.key).fam === f).reduce((n,st)=>n+st.n, 0);
+  const stacks = invVisible();
+  const total = stacks.reduce((n,st)=>n+st.n, 0);
   const libres = Math.max(0, invSlots() - stacks.length);
 
   view.innerHTML = `
     <h2 class="vuetitre">Inventaire</h2>
 
     <div class="invstats">
-      <div><span class="is">${itemSVGMini("heal1")}</span><b>${parFam("heal")}</b><small>Fioles de soin</small></div>
-      <div><span class="is">${itemSVGMini("dmg1")}</span><b>${parFam("dmg")}</b><small>Fioles de dégâts</small></div>
-      <div><span class="is">${itemSVGMini("arm1")}</span><b>${parFam("arm")}</b><small>Armements</small></div>
+      <div><span class="is">${itemSVGMini("arm1")}</span><b>${total}</b><small>Armements</small></div>
       <div><span class="is sq"></span><b>${libres}</b><small>Emplacements libres</small></div>
     </div>
 
-    <h3>Barre rapide <span class="sub" style="font-weight:300;font-size:.78rem;text-transform:none;letter-spacing:0">· reprise en bataille</span></h3>
-    <div class="hotbar">${p.hotbar.map((k,i)=>`<div class="hslot ${k?"full":""}" data-h="${i}">
-      ${k && countItem(k) ? itemTile(k, countItem(k)) : `<span class="num">${i+1}</span>`}
-    </div>`).join("")}</div>
-
     <h3>Sacoche <span class="sub" style="font-weight:300;font-size:.78rem;text-transform:none;letter-spacing:0">· ${stacks.length} / ${invSlots()} emplacements, piles de ${STACK}</span></h3>
     <div class="invgrid">
-      ${stacks.map((st,i)=>`<div class="istack" data-st="${i}" title="${esc(item(st.key).name)}">
-        ${itemTile(st.key, st.n, {click:true, sel:(p.hotbar||[]).includes(st.key)})}</div>`).join("")}
+      ${stacks.map(st=>`<div class="istack" title="${esc(item(st.key).name)}">${itemTile(st.key, st.n)}</div>`).join("")}
       ${Array.from({length:libres},()=>`<div class="istack empty"><span class="vide"></span></div>`).join("")}
     </div>
-    ${stacks.length ? "" : `<p class="sub" style="margin:.7rem 0 0">Sacoche vide. Les potions et armements se trouvent dans les boosters, se forgent à l'atelier, ou tombent des campagnes.</p>`}
+    ${stacks.length ? "" : `<p class="sub" style="margin:.7rem 0 0">Sacoche vide. Les armements se trouvent dans les boosters, se forgent à l'Atelier ou s'achètent en Boutique.</p>`}
 
     <div class="panel" style="margin-top:1.4rem">
       <h3 style="margin-top:0">Agrandir la sacoche</h3>
@@ -15871,39 +16466,14 @@ function viewInv(){
     </div>
 
     <details class="fold" style="margin-top:1.2rem">
-      <summary>Que font ces objets ?</summary>
+      <summary>À quoi servent les armements ?</summary>
       <div class="in">
-        ${["heal","dmg","arm"].map(f=>`<p class="sub" style="margin:.3rem 0"><b>${FAM[f].label}</b> — ${
-          f==="heal"?"utilisable en bataille, rend des points de vie."
-          :f==="dmg"?"utilisable en bataille, blesse l'adversaire sur-le-champ."
-          :"s'attache à une carte partant en campagne et gonfle ses dégâts. Consommé au retour, rendu si vous rappelez l'escouade."}</p>
-          <div class="row" style="gap:.4rem;margin-bottom:.6rem">${ITEMS.filter(i=>i.fam===f).map(i=>
-            `<span class="itemline">${itemSVGMini(i.key)}<b>${esc(itemShort(i.key))}</b><small>${i.fam==="arm"?"+"+i.val+" dégâts":i.val+(i.fam==="heal"?" PV":" dégâts")}</small></span>`).join("")}</div>`).join("")}
+        <p class="sub" style="margin:.3rem 0">Un armement s'attache à une carte qui part en campagne et augmente ses dégâts. Il est consommé au retour, et rendu si vous rappelez l'escouade.</p>
+        <div class="row" style="gap:.4rem;margin-bottom:.6rem">${ITEMS.filter(i=>i.fam==="arm").map(i=>
+          `<span class="itemline">${itemSVGMini(i.key)}<b>${esc(itemShort(i.key))}</b><small>+${i.val} dégâts</small></span>`).join("")}</div>
       </div>
     </details>`;
 
-
-  view.querySelectorAll("[data-st]").forEach(el=>el.onclick = async ()=>{
-    const st = inv()[+el.dataset.st];
-    if(!st) return;
-    const hb = p.hotbar;
-    const at = hb.indexOf(st.key);
-    if(at >= 0){ hb[at] = null; }
-    else {
-      const free = hb.indexOf(null);
-      if(free < 0) return toast("Barre rapide pleine");
-      hb[free] = st.key;
-    }
-    await sset("fm:profile", p);
-    viewInv();
-  });
-  view.querySelectorAll("[data-h]").forEach(el=>el.onclick = async ()=>{
-    const i = +el.dataset.h;
-    if(!p.hotbar[i]) return;
-    p.hotbar[i] = null;
-    await sset("fm:profile", p);
-    viewInv();
-  });
   const bs = view.querySelector("#buyslots");
   if(bs) bs.onclick = async ()=>{
     if(price == null || p.coins < price) return;
@@ -17177,7 +17747,10 @@ function reduireImage(src, S, q){
     im.src = src;
   });
 }
-function cacheAvatar(url){
+/* V2.2.2 : plus aucune copie des images Fandom (elles restent affichées depuis Fandom).
+   cacheAvatar renvoie l'adresse telle quelle ; l'ancienne version (copie en data:) est gardée ci-dessous, inutilisée. */
+function cacheAvatar(url){ return Promise.resolve(url || ""); }
+function cacheAvatarAncien(url){
   return new Promise(res=>{
     if(!url || url.startsWith("data:")) return res(url || "");
     const im = new Image();
@@ -19428,30 +20001,46 @@ async function collectCamp(id){
     if(!gains.length && !cardWanted) gains.push({type:"coins", n:loot.coins, label:`${loot.coins} Fandominus`});
   }
 
+  /* Toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, chaque carte remplaçait la précédente). */
+  const ORDRE = ["Relique","Légendaire","Ultra rare","Super rare","Rare","Peu commun","Commun"];
+  const cartes = [];                 // {carte, quoi}
+  let attente = [cardWanted, card2Wanted, bossWanted, relicWanted].filter(Boolean).length;
   const m = document.createElement("div");
   m.className = "modal";
-  const paint = (cardHtml, pending)=>{
-    m.innerHTML = `<div class="inner arcade ${won?"win":"lose"}">
+  const paint = ()=>{
+    const tri = cartes.slice().sort((x,y)=>ORDRE.indexOf(x.carte.rarity) - ORDRE.indexOf(y.carte.rarity));
+    const parRar = {};
+    tri.forEach(x=>parRar[x.carte.rarity] = (parRar[x.carte.rarity]||0) + 1);
+    const ressources = gains.filter(g=>g.type==="coins"||g.type==="mana");
+    m.innerHTML = `<div class="inner arcade camp-gains ${won?"win":"lose"}">
       <div class="verdict">${won?"VICTOIRE !":"DÉFAITE."}</div>
       <p class="sub" style="text-align:center;margin:.2rem 0 .9rem">
         ${won ? `${esc(c.vilain)} est tombé à ${esc(c.lieu)}.` : `${esc(c.vilain)} a repoussé votre escouade à ${esc(c.lieu)}.`}
       </p>
-      ${won? `<div class="lootlist">
-        ${gains.map(g=>`<div class="lootrow"><span class="i">${g.type==="coins"?"◆":g.type==="mana"?"★":"▣"}</span><span>${esc(g.label)}</span></div>`).join("")}
-      </div>
-      ${cardHtml || (pending? `<p class="sub" style="text-align:center;margin:.6rem 0 0"><span class="spinner"></span> une carte ${esc(cardWanted)} vous est rapportée…</p>` : "")}`
+      ${won ? `
+        ${ressources.length ? `<div class="cg-res">${ressources.map(g=>`<span class="cg-chip ${g.type}"><i>${g.type==="coins"?"◆":"★"}</i><b>${g.n.toLocaleString("fr-FR")}</b><small>${g.type==="coins"?"Fandominus":"Mana"}</small></span>`).join("")}</div>` : ""}
+        ${tri.length ? `<div class="cg-titre">${tri.length} carte${tri.length>1?"s":""} rapportée${tri.length>1?"s":""}
+            <span>${Object.entries(parRar).map(([r,n])=>`<em style="--rc:${RAR_HEX[r]||(r==="Relique"?"#C9A7FF":"#E8B44C")}">${n} ${esc(r)}</em>`).join("")}</span></div>
+          <div class="cg-cartes n${Math.min(tri.length,4)}">${tri.map(x=>`<div class="cg-carte">
+            ${cardHTML(x.carte,{count:(owned(x.carte)||0)+1})}<small>${esc(x.quoi)}</small></div>`).join("")}</div>` : ""}
+        ${attente > 0 ? `<p class="sub" style="text-align:center;margin:.7rem 0 0"><span class="spinner"></span> ${attente>1?`${attente} récompenses sont en route…`:"une récompense est en route…"}</p>` : ""}`
       : `<p class="sub" style="text-align:center;margin:0 0 .9rem">Vos cartes rentrent intactes, mais les mains vides.</p>`}
-      <button class="btn" id="take" style="width:100%;margin-top:.9rem" ${pending?"disabled":""}>Récupérer</button>
+      <button class="btn" id="take" style="width:100%;margin-top:1rem" ${attente>0?"disabled":""}>Tout récupérer</button>
     </div>`;
     const take = m.querySelector("#take");
-    if(take && !pending) take.onclick = ()=>finishCollect(c, gains, m);
+    if(take && attente <= 0) take.onclick = ()=>finishCollect(c, gains, m);
   };
+  const obtenue = (carte, quoi, type, label)=>{
+    cartes.push({carte, quoi}); gains.push({type, label}); attente--; paint(); sfxForRarity(carte.rarity);
+  };
+  const perdue = ()=>{ attente--; paint(); };
 
-  paint(null, !!cardWanted || bossWanted);
+  paint();
   document.body.appendChild(m);
   if(won) sfx.fanfare(); else sfx.hurt();
 
-  if(bossWanted){
+  const taches = [];
+  if(bossWanted) taches.push((async()=>{
     let boss = null;
     try{
       await ensurePool();
@@ -19464,55 +20053,24 @@ async function collectCamp(id){
         }
       }
     }catch(e){}
-    if(boss){
-      c.boss = boss;
-      gains.push({type:"boss", label:`${boss.title} — carte ${boss.rarity}`});
-      paint(`<div style="max-width:175px;margin:.7rem auto 0">${cardHTML(boss,{count:(owned(boss)||0)+1})}</div>`, !!cardWanted);
-      sfxForRarity(boss.rarity);
-    }
-  }
-
-  if(relicWanted){
-    try{
-      await ensurePool();
-      const relic = await relicCard();
-      if(relic){
-        c.relicLoot = relic;
-        gains.push({type:"relic", label:`Artefact — ${relic.title}`});
-        paint(`<div style="max-width:175px;margin:.7rem auto 0">${cardHTML(relic)}</div>`, true);
-        sfx.legendary();
-      }
-    }catch(e){}
-  }
-
-  if(card2Wanted){
-    try{
-      const pool = await ensurePool();
-      const w = pool[Math.floor(Math.random()*pool.length)];
-      const extra = await drawForRarity(w, card2Wanted);
-      if(extra){
-        c.loot2 = extra;
-        gains.push({type:"card", label:`${extra.title} — ${extra.rarity}`});
-      }
-    }catch(e){}
-  }
-
-  if(cardWanted){
+    if(boss){ c.boss = boss; obtenue(boss, "Le vilain", "boss", `${boss.title} — carte ${boss.rarity}`); } else perdue();
+  })());
+  if(relicWanted) taches.push((async()=>{
+    let relic = null;
+    try{ await ensurePool(); relic = await relicCard(); }catch(e){}
+    if(relic){ c.relicLoot = relic; obtenue(relic, "Artefact", "relic", `Artefact — ${relic.title}`); } else perdue();
+  })());
+  if(card2Wanted) taches.push((async()=>{
+    let extra = null;
+    try{ const pool = await ensurePool(); const w = pool[Math.floor(Math.random()*pool.length)]; extra = await drawForRarity(w, card2Wanted); }catch(e){}
+    if(extra){ c.loot2 = extra; obtenue(extra, "Butin", "card", `${extra.title} — ${extra.rarity}`); } else perdue();
+  })());
+  if(cardWanted) taches.push((async()=>{
     let card = null;
-    try{
-      const pool = await ensurePool();
-      const w = pool[Math.floor(Math.random()*pool.length)];
-      card = await drawForRarity(w, cardWanted);
-    }catch(e){}
-    if(card){
-      c.loot = card;                                   // remise effective au clic
-      gains.push({type:"card", label:`Carte ${card.rarity} — ${card.title}`});
-      paint(`<div style="max-width:175px;margin:.7rem auto 0">${cardHTML(card,{count:(owned(card)||0)+1})}</div>`, false);
-      sfxForRarity(card.rarity);
-    } else {
-      paint(`<p class="sub" style="text-align:center;margin:.6rem 0 0">La carte promise s'est perdue en route.</p>`, false);
-    }
-  }
+    try{ const pool = await ensurePool(); const w = pool[Math.floor(Math.random()*pool.length)]; card = await drawForRarity(w, cardWanted); }catch(e){}
+    if(card){ c.loot = card; obtenue(card, "Butin", "card", `Carte ${card.rarity} — ${card.title}`); } else perdue();
+  })());
+  await Promise.all(taches);
 }
 
 async function finishCollect(c, gains, m){
@@ -19867,7 +20425,7 @@ document.addEventListener("keydown", e=>{
 /* ---------- amorçage ---------- */
 const SCRIM = document.getElementById("scrim");
 const MENU = document.getElementById("menupanel");
-const SECONDARY = ["menu","nouveautes","decks","inv","ach","shop","camp","duel","theme","compte","aventure","collection","farm"];
+const SECONDARY = ["menu","nouveautes","legal","admin","decks","inv","ach","shop","camp","duel","theme","compte","aventure","collection","farm"];
 function setMenu(open){
   MENU.classList.toggle("open", open);
   SCRIM.classList.toggle("open", open);
@@ -19887,40 +20445,19 @@ function viewAventure(){
   const pr = CB.profil || {}, bilan = pr.bilan || {};
   const parties = Object.values(bilan).reduce((n, b) => n + (+(b && b.parties) || 0), 0), victoires = Object.values(bilan).reduce((n, b) => n + (+(b && b.victoires) || 0), 0);
   const imgs = vitImages(6);
-  const deckPilule = dk ? `<span class="vit-pilule">${esc(dk.glyph || "⚔")} ${esc(dk.name)} · ${dkOk ? "prêt" : dk.cards.length + " / 30"}</span>` : `<span class="vit-pilule">Aucun deck de combat</span>`;
-  const slides = [
-    {titre:"Combat de cartes", court:"Combat", art:"fmart-plateau", g1:"#d64fa0", g2:"#ff8a3c",
-     titreHTML:`Combat <em>de cartes</em>`, tags:["30 cartes", "Serviteurs", "Sorts", "Contre le bot ou des joueurs"], bas:deckPilule,
-     texte:"Votre héros à 30 PV, votre deck de 30 cartes, et un adversaire en face. Entraînement contre le bot, partie en ligne ou salon entre amis.",
-     prix:parties ? `${victoires} victoire${victoires > 1 ? "s" : ""} · ${parties} partie${parties > 1 ? "s" : ""}` : "",
-     bouton:`<button class="btn vit-btn" data-avgo="duel">Jouer</button>`},
-    {titre:"Combat classé", court:"Classé", art:"fmart-cyber", g1:"#7a3cff", g2:"#d64fa0",
-     titreHTML:`Combat <em>classé</em>`, tags:["VIP", "Cote Elo", "Top 100 mondial"],
-     bas:`<span class="vit-pilule">${pr.cote ? "Votre cote : " + pr.cote + (pr.rang ? " · rang " + pr.rang : "") : "Cote de départ : 1 000"}</span>`,
-     texte:"Affrontez les meilleurs joueurs : chaque victoire fait monter votre cote, et le Top 100 est affiché dans le classement mondial.",
-     prix:vip ? "" : "Réservé aux VIP",
-     bouton:vip ? `<button class="btn vit-btn" data-avgo="duel">Entrer dans le classé</button>` : `<button class="btn vit-btn" data-avgo="shop">Découvrir le VIP</button>`},
-    {titre:"Campagnes", court:"Campagnes", art:imgs[0] || "fmart-taverne", g1:"#e2ae3c", g2:"#c3261c",
-     titreHTML:`Campagnes <em>& expéditions</em>`, tags:["Escouades de 5", "Boss d'univers", "Armements"],
-     bas:`<span class="vit-pilule">${actifs ? actifs + " expédition" + (actifs > 1 ? "s" : "") + " en cours" : termines ? termines + " rapport" + (termines > 1 ? "s" : "") + " à lire" : debloquee ? "Aucune expédition en cours" : "À débloquer"}</span>`,
-     texte:debloquee ? "Envoyez vos meilleures cartes en expédition dans les théâtres d'opérations et affrontez les boss d'univers." : "Améliorez votre atelier et réunissez des Légendaires, Ultra rares ou Reliques pour ouvrir les campagnes.",
-     bouton:`<button class="btn vit-btn" data-avgo="camp">${debloquee ? "Voir les campagnes" : "Voir les conditions"}</button>`}
-  ];
   const covers = [
-    {titre:"Entraînement", sous:"contre le bot · facile, normal, difficile", art:"fmart-plateau", large:true, badge:"⚔", attrs:`data-avgo="duel"`},
+    {titre:"Entraînement", sous:parties ? `${victoires} victoire${victoires > 1 ? "s" : ""} · ${parties} partie${parties > 1 ? "s" : ""}` : "contre le bot · facile, normal, difficile", art:"fmart-plateau", large:true, badge:"⚔", attrs:`data-avgo="duel"`},
     {titre:"En ligne", sous:"un adversaire au hasard", art:imgs[1] || "fmart-cyber", attrs:`data-avgo="duel"`},
     {titre:"Entre amis", sous:"salon avec un code", art:"fmart-taverne", attrs:`data-avgo="duel"`},
-    {titre:"Classé", sous:vip ? "cote et Top 100" : "réservé aux VIP", art:"fmart-cyber", large:true, badge:"♛", attrs:`data-avgo="${vip ? "duel" : "shop"}"`},
-    {titre:"Campagnes", sous:actifs ? actifs + " en cours" : "expéditions et boss", s3:true, art:imgs[2] || "fmart-taverne", attrs:`data-avgo="camp"`},
+    {titre:"Classé", sous:vip ? (pr.cote ? "votre cote : " + pr.cote : "cote et Top 100") : "réservé aux VIP", art:"fmart-cyber", large:true, badge:"♛", attrs:`data-avgo="${vip ? "duel" : "shop"}"`},
+    {titre:"Campagnes", sous:termines ? termines + " rapport" + (termines > 1 ? "s" : "") + " à lire" : actifs ? actifs + " en cours" : debloquee ? "expéditions et boss" : "à débloquer", s3:true, art:imgs[2] || "fmart-taverne", attrs:`data-avgo="camp"`},
     {titre:"Mes decks", sous:dk ? esc(dk.name) + (dkOk ? " · prêt" : "") : "créer un deck", s3:true, art:imgs[3] || "fmart-plateau", attrs:`data-avgo="decks"`}
   ];
   view.innerHTML = `
     <h2 class="vuetitre" data-ghost="COMBATS">Combats & campagnes</h2>
-    ${vitrineHTML("aventure", slides)}
     <div class="sectionhead vit-sect"><div><h3>Modes de jeu</h3></div><button type="button" class="btn small ghost" data-avgo="duel">Règles et classement</button></div>
     <div class="covers">${covers.map(coverHTML).join("")}</div>`;
   view.querySelectorAll("[data-avgo]").forEach(b => b.onclick = ()=>{ if(b.dataset.avgo === "duel") CB.onglet = "jouer"; go(b.dataset.avgo); });
-  vitrineBrancher("aventure", slides.length, ()=>{ if(state.view === "aventure") viewAventure(); });
   if(!CB.profil) try{ cbProfilCharger().then(()=>{ if(state.view === "aventure") viewAventure(); }); }catch(e){}
 }
 function viewCollection(){
@@ -19940,6 +20477,17 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.2.2", titre:"Nouveaux armements", points:[
+    "Les quatre armements ont de vraies illustrations : épée en bois, pistolet de fortune, fusil à plasma, bombe nucléaire.",
+    "La Boutique a ses propres décors : tes plus belles cartes en vitrine pour le VIP, plus de plateaux de combat en fond.",
+    "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche.",
+    "Combats & campagnes : la grande bannière en double a disparu, les modes de jeu sont affichés directement.",
+    "La roue de la fortune est retirée. Les cartes déjà gagnées à la roue restent livrées dans votre album.",
+    "Nouvelle page « Conditions & confidentialité » (menu Plus) : conditions d'utilisation, règles de la communauté, confidentialité, et un formulaire de contact pour le support. Chaque carte cite son article et sa licence, et un bouton « Signaler l'image » permet de signaler un contenu.",
+    "Les polices sont désormais servies par le jeu lui-même : plus aucun appel à Google Fonts. Les images des cartes, y compris la photo de profil, sont toujours affichées depuis Fandom, jamais copiées.",
+    "Administrateurs : nouveau tableau de bord (statistiques, joueurs, alertes, paiements, support, contributions, journal des actions, serveur). Chaque action admin est tracée par le serveur.",
+    "Fin de campagne : toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, la dernière cachait les autres)."
+  ]},
   {v:"V2.2.1", titre:"Ouvertures ×10 en grand", points:[
     "Les ouvertures de 10 boosters s'ouvrent maintenant paquet par paquet, cartes une par une, comme un booster seul.",
     "Entre deux paquets, l'emballage vide est jeté et le booster suivant arrive. « Tout voir » montre tout d'un coup.",
@@ -20011,9 +20559,11 @@ function viewMenu(){
       ["shop","♛","Boutique VIP"]
     ]},
     {titre:"Le jeu", items:[
-      ["nouveautes","✧","Nouveautés"]
+      ["nouveautes","✧","Nouveautés"],
+      ["legal","§","Conditions & confidentialité"]
     ]}
   ];
+  if(estAdmin()) groupes.unshift({titre:"Administration", items:[["admin","⚙","Tableau de bord admin"]]});
   view.innerHTML = `<div class="pagehub menuplus">
     <h2 class="vuetitre">Plus</h2>
     ${groupes.map(g=>`<section class="mgroupe"><div class="sectionhead"><div><h3>${g.titre}</h3></div></div><div class="mgrille">${g.items.map(([v,ic,t])=>`<button type="button" data-menu-go="${v}"><span class="ic" aria-hidden="true">${ic}</span><b>${t}</b>${v === "nouveautes" && nouvNonVue() ? `<span class="nouv-pastille">Nouveau</span>` : ""}<span class="menuarrow" aria-hidden="true">→</span></button>`).join("")}</div></section>`).join("")}
@@ -20172,8 +20722,13 @@ function openSettings(){
       }
     });
   }
-  /* profils d'avant la copie locale : on fige la photo une bonne fois */
-  if(state.profile.avatarImg && !state.profile.avatarImg.startsWith("data:")){
+  /* V2.2.2 : une photo de profil copiée depuis une carte redevient un simple lien vers Fandom */
+  if(state.profile.avatarImg && state.profile.avatarImg.startsWith("data:") && state.profile.avatar){
+    const ca = (state.collection || []).find(x => x.id === state.profile.avatar) || ((await sget("fm:col")) || []).find(x => x.id === state.profile.avatar);
+    if(ca && /^https?:/.test(ca.img || "")){ state.profile.avatarImg = ca.img; await sset("fm:profile", state.profile); }
+  }
+  /* (ancien) profils d'avant la copie locale : désactivé, on ne copie plus les images */
+  if(false && state.profile.avatarImg && !state.profile.avatarImg.startsWith("data:")){
     cacheAvatar(state.profile.avatarImg).then(async copie=>{
       if(copie && copie.startsWith("data:")){
         state.profile.avatarImg = copie;
@@ -20285,6 +20840,70 @@ function openSettings(){
 .cbchoixdeck .cbbilan > div{display:flex;flex-direction:column}
 
 /* ---- boutique : sobre, dans la charte du site ---- */
+/* ---- tableau de bord admin ---- */
+.adm-nav{display:flex;gap:.35rem;overflow-x:auto;padding:.3rem;margin:0 0 1rem;border-radius:16px;background:var(--creux);scrollbar-width:thin}
+.adm-onglet{display:inline-flex;align-items:center;gap:.45rem;flex:none;padding:.55rem .9rem;border-radius:12px;border:none;background:transparent;color:var(--muted);font:inherit;font-weight:700;font-size:.86rem;cursor:pointer;white-space:nowrap}
+.adm-onglet i{font-style:normal;opacity:.8}.adm-onglet.on{background:var(--p4);color:var(--sur-a2,#1a0f16)}
+.adm-onglet em{font-style:normal;font-size:.7rem;min-width:1.2rem;padding:.05rem .35rem;border-radius:999px;background:#e5484d;color:#fff;text-align:center}
+.adm-msg{padding:.6rem .9rem;border-radius:12px;background:color-mix(in srgb,#2fbf71 18%,transparent);border:1px solid color-mix(in srgb,#2fbf71 45%,transparent);margin:0 0 .9rem;font-weight:600}
+.adm-msg.err{background:color-mix(in srgb,#e5484d 16%,transparent);border-color:color-mix(in srgb,#e5484d 50%,transparent)}
+.adm-traiter{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1rem}
+.adm-chip{padding:.5rem .85rem;border-radius:999px;border:1px solid var(--line);background:var(--creux);color:var(--muted);font:inherit;font-size:.85rem;cursor:pointer}
+.adm-chip.on{color:inherit;border-color:#e5484d;background:color-mix(in srgb,#e5484d 14%,var(--creux))}.adm-chip b{font-size:1rem}
+.adm-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.7rem;margin:0 0 1rem}
+.adm-mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:.5rem;margin:0 0 .6rem}
+.adm-kpi{display:flex;flex-direction:column;gap:.15rem;padding:.85rem 1rem;border-radius:14px;background:var(--creux);border:1px solid var(--line)}
+.adm-kpi small{font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.adm-kpi b{font-size:1.45rem;letter-spacing:-.01em}.adm-kpi span{font-size:.78rem;color:var(--muted)}
+.adm-mini .adm-kpi{padding:.6rem .7rem}.adm-mini .adm-kpi b{font-size:1.05rem}
+.adm-kpi.or b{color:#ffd36a}.adm-kpi.rouge b{color:#ff7b7f}
+.adm-graphes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.8rem}
+.adm-graphes h4,.adm-fiche h4{font-size:.9rem;margin:0 0 .6rem;display:flex;justify-content:space-between;gap:.5rem;align-items:baseline}
+.adm-fiche h4{margin:1.1rem 0 .45rem}
+.adm-barres{display:grid;grid-template-columns:repeat(14,1fr);gap:3px;align-items:end;height:110px}
+.adm-barre{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:3px}
+.adm-barre i{display:block;width:100%;border-radius:4px 4px 1px 1px;background:var(--p4);min-height:2px}
+.adm-barres.vert i{background:#2fbf71}.adm-barres.or i{background:#ffd36a}
+.adm-barre em{font-style:normal;font-size:.6rem;color:var(--muted)}
+.adm-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:1rem;align-items:start}
+@media (max-width:860px){.adm-split{grid-template-columns:1fr}}
+.adm-joueurs{display:grid;gap:.4rem;max-height:70vh;overflow:auto}
+.adm-ligne{display:flex;flex-wrap:wrap;gap:.2rem .5rem;align-items:baseline;text-align:left;padding:.6rem .8rem;border-radius:12px;border:1px solid var(--line);background:var(--creux);color:inherit;font:inherit;cursor:pointer}
+.adm-ligne.on{border-color:var(--p4)}.adm-ligne .sub{flex-basis:100%;font-size:.78rem}
+.adm-tag{font-size:.68rem;font-weight:800;padding:.1rem .45rem;border-radius:999px;background:var(--line)}.adm-tag.rouge{background:#e5484d;color:#fff}.adm-tag.or{background:#ffd36a;color:#2a1a00}
+.adm-fiche.vide{display:grid;place-items:center;min-height:200px}
+.adm-ecart{margin-top:.6rem;padding:.7rem .9rem;border-radius:12px;background:color-mix(in srgb,#ffd36a 10%,var(--creux));border:1px solid color-mix(in srgb,#ffd36a 40%,transparent)}.adm-ecart p{margin:0 0 .5rem}
+.adm-achats{list-style:none;padding:0;margin:0;display:grid;gap:.3rem}.adm-achats li{display:grid;grid-template-columns:1fr auto auto;gap:.6rem;font-size:.85rem}
+.adm-cartes{display:grid;gap:.7rem}.adm-alerte ul{margin:.4rem 0 .5rem;padding-left:1.1rem}.adm-alerte.classee{opacity:.6}
+.adm-table{overflow-x:auto;border-radius:12px;border:1px solid var(--line)}
+.adm-table table{width:100%;border-collapse:collapse;font-size:.84rem}.adm-table th,.adm-table td{padding:.55rem .6rem;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+.adm-table th{font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:var(--creux);position:sticky;top:0}
+.adm .plus{color:#5fe39b}.adm .moins{color:#ff8a80}.adm-table a{color:var(--p4)}
+.btn.danger{background:#e5484d;color:#fff}
+.lg-onglets{display:flex;flex-wrap:wrap;gap:.4rem;margin:0 0 1rem}
+.lg-texte{line-height:1.6;max-width:820px}.lg-texte h3{font-size:1rem;margin:1.2rem 0 .3rem}.lg-texte h3:first-child{margin-top:0}
+.lg-texte p{margin:.3rem 0 .6rem}.lg-texte a{color:var(--p4)}
+.modal .inner.lg-modal:not(.card .inner){max-width:min(720px,94vw)}
+.lg-area{width:100%;max-width:640px;min-height:120px;resize:vertical;font:inherit;padding:.6rem .7rem;border-radius:12px}
+.lg-dems{list-style:none;padding:0;margin:.4rem 0 0;display:grid;gap:.6rem}
+.lg-dem{padding:.7rem .9rem;border-radius:12px;background:var(--creux);border-left:3px solid var(--p4)}.lg-dem.ok{border-left-color:#2fbf71;opacity:.85}
+.lg-dem-t{display:flex;flex-wrap:wrap;gap:.2rem .7rem;align-items:baseline}.lg-dem p{margin:.35rem 0}.lg-rep{color:#9fe3bf}
+.lg-rep-in{flex:1;min-width:160px}
+.lg-label{display:block;font-size:.8rem;margin:.6rem 0 .25rem;opacity:.8}.lg-select{width:100%;max-width:520px;margin-bottom:.8rem}
+.rp-legal{font-size:.78rem;margin:-1rem 0 1.6rem}.rp-legal a,.shop-legal a,.rp-accord a{color:inherit;text-decoration:underline}
+.shop-legal{font-size:.78rem;text-align:center;margin:1.4rem 0 .4rem;opacity:.75}
+.cv-licence{font-size:.72rem;line-height:1.4;margin:.8rem 0 0;opacity:.75}.cv-licence a{color:inherit}
+.recharge{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin:0 0 1.6rem}
+.recharge-pack{position:relative;display:flex;flex-direction:column;align-items:center;gap:.15rem;padding:1.1rem .8rem 1rem;border-radius:18px;cursor:pointer;color:inherit;font:inherit;
+  background:radial-gradient(120% 90% at 50% 0%,#d64fa033,transparent 60%),var(--creux);border:1px solid color-mix(in srgb,#d64fa0 35%,transparent);transition:transform .15s,border-color .15s}
+.recharge-pack:hover{transform:translateY(-2px);border-color:#d64fa0}
+.recharge-pack.top{background:radial-gradient(120% 90% at 50% 0%,#ffd36a40,transparent 60%),var(--creux);border-color:#ffd36a88}
+.recharge-pack .rp-ic{font-size:1.7rem;color:#d64fa0;line-height:1}.recharge-pack.top .rp-ic{color:#ffd36a}
+.recharge-pack b{font-size:1.5rem;letter-spacing:-.01em}.recharge-pack small{opacity:.7;font-size:.75rem}
+.recharge-pack .rp-prix{margin-top:.5rem;padding:.35rem .9rem;border-radius:999px;background:#d64fa0;color:#fff;font-weight:700}
+.recharge-pack.top .rp-prix{background:#ffd36a;color:#2a1a00}
+.recharge-pack .rp-bonus{position:absolute;top:.5rem;right:.5rem;font-size:.7rem;font-weight:800;padding:.1rem .45rem;border-radius:999px;background:#2fbf71;color:#04210f}
+.rp-accord{display:flex;gap:.55rem;align-items:flex-start;font-size:.86rem;line-height:1.35;cursor:pointer}
+.rp-accord input{margin-top:.2rem;width:1.05rem;height:1.05rem;flex:none}
 .shopsolde{display:inline-flex;align-items:baseline;gap:.5rem;padding:.55rem 1rem;border-radius:999px;background:var(--creux);margin:0 0 1.2rem}
 .shopsolde span,.shopsolde small{font-size:.8rem;color:var(--muted)}
 .shopsolde b{font-family:var(--f-affiche);font-size:1.05rem}
@@ -20648,6 +21267,17 @@ body.holo-ouvert{overflow:hidden}
 .nt-champs input,.nt-champs textarea{width:100%;margin:0;font:inherit}
 .nt-champs textarea{resize:vertical;min-height:5.5rem}
 @media (max-width:560px){.nt-grille{grid-template-columns:1fr}.nt-carte{max-width:170px;margin:0 auto}}
+
+/* Boutique : des fonds qui parlent du contenu (plus de plateaux de combat) */
+.fmart-vip{background:radial-gradient(70% 90% at 78% 40%,rgba(255,210,110,.28),transparent 60%),radial-gradient(60% 80% at 15% 100%,rgba(214,79,160,.45),transparent 65%),repeating-conic-gradient(from 0deg at 78% 40%,rgba(255,220,140,.07) 0 6deg,transparent 6deg 18deg),linear-gradient(135deg,#2a0f3d 0%,#4b1a66 45%,#7a2c8f 100%)}
+.fmart-roue{background:radial-gradient(60% 90% at 80% 50%,rgba(255,214,120,.45),transparent 62%),radial-gradient(50% 70% at 10% 0%,rgba(214,79,160,.4),transparent 60%),repeating-conic-gradient(from 0deg at 80% 50%,rgba(255,255,255,.06) 0 8deg,transparent 8deg 20deg),linear-gradient(135deg,#3a1420,#6b2333 50%,#a2462a)}
+.fmart-arsenal{background:radial-gradient(55% 85% at 80% 50%,rgba(255,138,60,.45),transparent 62%),repeating-linear-gradient(135deg,rgba(255,255,255,.035) 0 14px,transparent 14px 28px),linear-gradient(135deg,#1c1412,#3a1f16 50%,#5e2a17)}
+.vit-eventail{position:absolute;right:9%;top:50%;width:clamp(150px,26vw,280px);height:clamp(150px,26vw,280px);transform:translateY(-50%);z-index:-1;pointer-events:none}
+.vit-eventail i{position:absolute;left:50%;top:50%;width:52%;aspect-ratio:63/88;border-radius:8px;background-size:cover;background-position:center 20%;box-shadow:0 0 0 2px rgba(255,215,106,.85),0 18px 40px -12px #000,0 0 40px -10px #ffd76a;transform:translate(-50%,-50%) rotate(calc(var(--k) * 14deg)) translateX(calc(var(--k) * 46%)) translateY(calc(var(--k) * var(--k) * 6%))}
+.vit-grande-couronne{position:absolute;right:10%;top:50%;transform:translateY(-50%);z-index:-1;font-size:clamp(5rem,14vw,10rem);color:#ffd76a;opacity:.9;text-shadow:0 0 50px #e7ad35}
+.cover-vs{display:grid;place-items:center;align-content:center;gap:.1em;font-size:clamp(1.6rem,4vw,2.6rem);line-height:.9;text-transform:uppercase}
+.cover-vs i{font-style:normal;font-size:.45em;letter-spacing:.2em;opacity:.7}
+@media (max-width:860px){.vit-eventail{right:4%;opacity:.55}}
 </style>
 </body>
 </html>
