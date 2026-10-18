@@ -13764,11 +13764,13 @@ function showCard(c){
       ${/\.fandom\.com\b/.test(sourceCarte(c) || "") ? `<p class="sub cv-licence">Texte : contributeurs du wiki ${esc(c.univ || "")} sur Fandom, sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a>. Image et personnage : droits réservés à leurs ayants droit. FandoMasters n'est affilié ni à Fandom ni aux ayants droit.</p>` : ""}
       <div class="row" style="margin-top:.7rem">
         ${sourceCarte(c) ? `<a class="btn small ghost" href="${esc(sourceCarte(c))}" target="_blank" rel="noopener">${/\.fandom\.com\b/.test(sourceCarte(c)) ? "Lire l'article sur Fandom" : "Visiter le site"}</a>` : ""}
+        <button class="btn small ghost" id="signaler" title="Image, nom ou texte qui pose problème (droits d'auteur, contenu choquant…)">⚑ Signaler l'image</button>
         <button class="btn small ghost" id="close">Fermer</button>
       </div>
       </div>`;
 
     m.querySelector("#close").onclick = shut;
+    m.querySelector("#signaler").onclick = ()=>{ shut(); signalerCarte(c); };
     m.querySelector("#back").onclick = shut;
     const fuse = m.querySelector("#fuse");
     if(fuse) fuse.onclick = async ()=>{
@@ -15568,7 +15570,7 @@ function legalTexte(o){
     <h3>4. Contenus et propriété intellectuelle</h3>
     <p>Les cartes sont générées à partir d'articles des wikis Fandom. Leurs textes sont publiés sous licence <a href="https://creativecommons.org/licenses/by-sa/3.0/deed.fr" target="_blank" rel="noopener">CC BY-SA</a> et chaque carte renvoie vers son article d'origine.
     Les noms, personnages, images et marques appartiennent à leurs propriétaires respectifs. FandoMasters est un projet indépendant, ni affilié, ni approuvé, ni sponsorisé par Fandom ou par ces ayants droit.
-    Un ayant droit peut demander le retrait d'un contenu via le ${LIEN_CONTACT} ; il est retiré au plus tard sous 7 jours.</p>
+    Un ayant droit peut demander le retrait d'un contenu avec le bouton « Signaler l'image » de chaque carte ou via le ${LIEN_CONTACT} ; il est retiré au plus tard sous 7 jours.</p>
     <p>Les éléments propres au Service (nom, interface, graphismes, mécaniques de jeu) appartiennent à l'éditeur. Vous restez responsable de ce que vous publiez (pseudonyme, propositions de noms ou de textes, messages) et nous accordez le droit de l'afficher dans le Service ; les textes proposés pour les cartes sont publiés sous la même licence CC BY-SA.</p>
     <h3>5. Achats et monnaie virtuelle</h3>
     <p>Le Service propose l'achat de <b>Cristaux</b>, une monnaie virtuelle utilisable uniquement dans FandoMasters, pour obtenir à prix fixe et affiché à l'avance le <b>VIP</b> (12 mois, sans renouvellement automatique) et des fournitures de campagne.
@@ -15671,6 +15673,14 @@ async function legalChargerDemandes(){
     }
   }catch(e){ legal.demandes = legal.demandes || []; }
   if(state.view === "legal" && legal.onglet === "contact") viewLegal();
+}
+/* « Signaler l'image » depuis une carte : le formulaire de support s'ouvre, carte déjà indiquée */
+function signalerCarte(c){
+  legal.sujet = "droits";
+  legal.brouillon = `Carte : ${c.title || "?"} (${c.univ || "?"}) · ${c.id || ""}${/^https?:/.test(c.img || "") ? "\nImage : " + String(c.img).slice(0, 300) : ""}\n\nCe qui pose problème (droits d'auteur, image choquante, erreur…) :\n`;
+  legal.msg = "";
+  ouvrirLegal("contact");
+  setTimeout(()=>{ const t = document.getElementById("lg-texte"); if(t){ t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 50);
 }
 /* lecture des conditions sans être connecté (écran d'inscription) */
 function legalModal(o){
@@ -20157,7 +20167,7 @@ const NOUVEAUTES = [
     "Inventaire simplifié : la barre rapide et les potions, qui ne servaient plus, ont disparu. Il ne reste que les armements, et la place libérée revient à la sacoche.",
     "Combats & campagnes : la grande bannière en double a disparu, les modes de jeu sont affichés directement.",
     "La roue de la fortune est retirée. Les cartes déjà gagnées à la roue restent livrées dans votre album.",
-    "Nouvelle page « Conditions & confidentialité » (menu Plus) : conditions d'utilisation, règles de la communauté, confidentialité, et un formulaire de contact pour le support. Chaque carte cite son article et sa licence.",
+    "Nouvelle page « Conditions & confidentialité » (menu Plus) : conditions d'utilisation, règles de la communauté, confidentialité, et un formulaire de contact pour le support. Chaque carte cite son article et sa licence, et un bouton « Signaler l'image » permet de signaler un contenu.",
     "Les polices sont désormais servies par le jeu lui-même : plus aucun appel à Google Fonts.",
     "Fin de campagne : toutes les cartes gagnées s'affichent ensemble, triées par rareté (avant, la dernière cachait les autres)."
   ]},
