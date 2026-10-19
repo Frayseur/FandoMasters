@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-YtXOselLmOkVjOiplZp5UDgdSrO+dZYjdigRJ+qO1TU='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com; frame-src 'none'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-ZEF/kk/RXkgU7M2U+6bJp8cUSyprnuMagt6jerKUg14='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com; frame-src 'none'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
@@ -4199,7 +4199,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.4";
+const BUILD = "V2.4.5";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -16237,9 +16237,9 @@ function ouvrirAdmin(){ adm.onglet = "apercu"; adm.tab = null; adm.tentatives.ap
    (fonction « stripe-webhook »), qui crédite les Cristaux. Le jeu ne voit jamais
    la carte bancaire et ne peut pas créditer lui-même. */
 const PAIEMENT_OUVERT = true; 
-/* Boutique en pause (18/10/2026) : aucun achat, ni en euros ni en Cristaux. Le serveur refuse aussi
-   (articles désactivés) et les liens de paiement Stripe sont désactivés. Remettre à false pour rouvrir. */
-const BOUTIQUE_PAUSE = true;          // false : visible des administrateurs seulement (phase de test)
+/* Boutique rouverte le 19/10/2026 (en pause depuis le 18/10). Pour la remettre en pause : true ici,
+   articles désactivés côté serveur et liens de paiement Stripe désactivés. */
+const BOUTIQUE_PAUSE = false;
 const PACKS_CRISTAUX = [
   {n:500,  prix:"4,99 €",  url:"https://buy.stripe.com/dRmfZa7GBagIbFU2z4eZ200"},
   {n:1100, prix:"9,99 €",  url:"https://buy.stripe.com/3cI4gs7GBagI6lA5LgeZ201", bonus:"+10 %"},
@@ -20669,6 +20669,9 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.5", titre:"La boutique rouvre", points:[
+    "Les recharges de Cristaux, le VIP annuel et le lot d'armements sont de nouveau disponibles.",
+  ]},
   {v:"V2.4.4", titre:"Site verrouillé", points:[
     "Le navigateur n'exécute plus que le code officiel du jeu : un pseudo, un nom de carte ou un lien piégé ne peut plus lancer de code chez les autres joueurs.",
     "Les pages des wikis sont lues dans un document inerte : rien de ce qu'elles contiennent ne s'exécute ni ne se charge.",
