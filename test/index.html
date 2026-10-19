@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-ZEF/kk/RXkgU7M2U+6bJp8cUSyprnuMagt6jerKUg14='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com; frame-src 'none'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-iKLY5+gnc7/C2tR5Ef3ZAxwkkzY30P9KuKuNh2HBZyw=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
@@ -4199,7 +4199,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.5";
+const BUILD = "V2.4.6";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4736,8 +4736,56 @@ function nuageGarde(d){
   return s;
 }
 
+/* Vérification anti-robot Cloudflare Turnstile, demandée par le serveur à l'inscription, à la
+   connexion et à la réinitialisation du mot de passe. Clé PUBLIQUE ; vide = désactivée. */
+const TURNSTILE_CLE = "";
+let turnstileCharge = null;
+function chargerTurnstile(){
+  if(window.turnstile) return Promise.resolve();
+  if(!turnstileCharge) turnstileCharge = new Promise((ok, ko)=>{
+    const sc = document.createElement("script");
+    sc.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    sc.async = true;
+    sc.onload = ()=>ok();
+    sc.onerror = ()=>{ turnstileCharge = null; sc.remove(); ko(new Error("vérification anti-robot indisponible, réessayez dans un instant")); };
+    document.head.appendChild(sc);
+  });
+  return turnstileCharge;
+}
+async function jetonCaptcha(){
+  if(!TURNSTILE_CLE) return null;
+  await chargerTurnstile();
+  return new Promise((ok, ko)=>{
+    const m = document.createElement("div");
+    m.className = "modal";
+    m.innerHTML = `<div class="inner" style="max-width:360px;text-align:center">
+      <h3 style="font-size:1.05rem">Vérification rapide</h3>
+      <p class="sub" style="margin:.3rem 0 .7rem">Une seconde : on vérifie que vous n'êtes pas un robot.</p>
+      <div id="ts-boite" style="display:flex;justify-content:center;min-height:70px"><span class="spinner"></span></div>
+      <button class="btn small ghost" id="ts-annule" style="margin-top:.5rem">Annuler</button></div>`;
+    document.body.appendChild(m);
+    let fini = false, id = null;
+    const fin = (f, v)=>{ if(fini) return; fini = true; try{ if(id != null) window.turnstile.remove(id); }catch(e){} m.remove(); f(v); };
+    try{
+      const boite = m.querySelector("#ts-boite"); boite.innerHTML = "";
+      id = window.turnstile.render(boite, {
+        sitekey:TURNSTILE_CLE, language:"fr", appearance:"interaction-only",
+        callback:t => fin(ok, t),
+        "error-callback":()=>fin(ko, new Error("vérification anti-robot échouée, réessayez")),
+        "timeout-callback":()=>fin(ko, new Error("vérification anti-robot expirée, réessayez"))
+      });
+    }catch(e){ fin(ko, new Error("vérification anti-robot indisponible")); }
+    m.querySelector("#ts-annule").onclick = ()=>fin(ko, new Error("vérification annulée"));
+  });
+}
+
 async function nuageAuth(chemin, corps){
   let r;
+  /* le rafraîchissement de session ne demande pas de vérification ; tout le reste oui */
+  if(TURNSTILE_CLE && !/grant_type=refresh_token/.test(chemin)){
+    const t = await jetonCaptcha();
+    corps = Object.assign({}, corps, {gotrue_meta_security:{captcha_token:t}});
+  }
   try{
     r = await fetch(NUAGE.url + "/auth/v1/" + chemin, {
       method:"POST",
@@ -20669,6 +20717,9 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.6", titre:"Anti-robot prêt", points:[
+    "Le jeu sait afficher la vérification anti-robot de Cloudflare à l'inscription et à la connexion. Elle reste invisible pour presque tout le monde et ne s'allume que lorsqu'elle sera activée.",
+  ]},
   {v:"V2.4.5", titre:"La boutique rouvre", points:[
     "Les recharges de Cristaux, le VIP annuel et le lot d'armements sont de nouveau disponibles.",
   ]},
