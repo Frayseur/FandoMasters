@@ -4197,7 +4197,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.1";
+const BUILD = "V2.4.2";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4531,7 +4531,7 @@ const UNIVERSES = [
   {label:"Spider-Man",         host:"spiderman.fandom.com",        cat:"Films & séries", path:""},
   {label:"Eternals",           host:"eternals.fandom.com",         cat:"Films & séries"},
   {label:"You",                host:"you-netflix.fandom.com",      cat:"Films & séries"},
-  {label:"La Casa de Papel",   host:"lacasadepapel.fandom.com",    cat:"Films & séries", path:"/es"},
+  {label:"La Casa de Papel",   host:"lacasadepapel.fandom.com",    cat:"Films & séries", path:""},
   {label:"Wednesday",          host:"wednesday.fandom.com",        cat:"Films & séries", path:""},
   {label:"Lupin",              host:"lupin-netflix.fandom.com",    cat:"Films & séries", path:""},
   {label:"Dark",               host:"dark-netflix.fandom.com",     cat:"Films & séries", path:""},
@@ -6271,12 +6271,63 @@ function illustrationDeLArticle(html){
          illustration d'article remplit son cadre. */
       const l = +im.getAttribute("width") || 0;
       const h = +im.getAttribute("height") || 0;
-      if((l && l < 80) || (h && h < 80)) continue;
+      const infobox = !!im.closest(".pi-image, .portable-infobox, .infobox");
+      const mini = infobox ? 32 : 80;      // l'image de l'infobox est l'illustration de l'article, même petite (objets de jeux)
+      if((l && l < mini) || (h && h < mini)) continue;
       if(/\/scale-to-width-down\/\d{1,2}(?:\/|$)/.test(net)) continue;
       return net;
     }
   }
   return null;
+}
+
+/* V2.4.2 : les cartes tirées sans illustration la cherchent à nouveau, en
+   arrière-plan, par petits lots (l'image de l'infobox, même petite, compte
+   désormais). Une carte déjà essayée attend une semaine avant un nouvel essai. */
+let reillustrationFaite = false;
+async function reillustrer(){
+  if(reillustrationFaite || !state.collection || !state.collection.length) return;
+  reillustrationFaite = true;
+  const CLE = "fm-local:reillus:" + (moiId() || "invite");
+  let essais = {}; try{ essais = JSON.parse(localStorage.getItem(CLE) || "{}"); }catch(e){}
+  const semaine = 7 * 864e5, maintenant = Date.now();
+  const pool = await ensurePool().catch(()=>[]) || [];
+  const parHote = new Map(pool.map(w => [w.host, w]));
+  const cibles = state.collection.filter(c => !c.img && /^[a-z0-9.-]+\.fandom\.com:\d+$/.test(c.id || "")
+    && parHote.has(c.id.split(":")[0]) && !(essais[c.id] && maintenant - essais[c.id] < semaine)).slice(0, 60);
+  if(!cibles.length) return;
+  let trouvees = 0, parse = 0;
+  const groupes = new Map();
+  for(const c of cibles){ const h = c.id.split(":")[0]; if(!groupes.has(h)) groupes.set(h, []); groupes.get(h).push(c); }
+  for(const [h, cs] of groupes){
+    const w = parHote.get(h);
+    let pages = [];
+    try{
+      const d = await api({action:"query", pageids:cs.map(c => c.id.split(":")[1]).join("|"), prop:"pageimages", piprop:"thumbnail", pithumbsize:"900"}, w);
+      pages = (d.query && d.query.pages) || [];
+    }catch(e){}
+    for(const c of cs){
+      essais[c.id] = maintenant;
+      const pg = pages.find(x => String(x.pageid) === c.id.split(":")[1]);
+      let img = pg && pg.thumbnail && !artRefusee(pg.thumbnail.source) ? pg.thumbnail.source : null;
+      if(!img && parse < 15){
+        parse++;
+        try{
+          const d = await api({action:"parse", pageid:c.id.split(":")[1], prop:"text", disabletoc:"1"}, w);
+          const raw = d.parse && d.parse.text;
+          const html = typeof raw === "string" ? raw : (raw && raw["*"]) || "";
+          img = html ? illustrationDeLArticle(html) : null;
+        }catch(e){}
+      }
+      if(img){ const k = state.collection.find(x => x.id === c.id); if(k && !k.img){ k.img = img; trouvees++; } }
+    }
+  }
+  try{ localStorage.setItem(CLE, JSON.stringify(essais)); }catch(e){}
+  if(trouvees){
+    await sset("fm:col", state.collection);
+    registrePlanifier("col");
+    if(["album", "hub", "profil"].includes(state.view) && !document.body.classList.contains("cardopen")) render();
+  }
 }
 
 async function enrich(page, w){
@@ -6477,8 +6528,8 @@ function artRefusee(u){
 const ART_VU = new Map();
 /* Le numéro change dès que le détecteur change : les verdicts rendus par
    l'ancienne version ne valent plus rien et doivent être réévalués. */
-const ART_CLE = "fm-local:artvide2";
-try{ localStorage.removeItem("fm-local:artvide"); }catch(e){}
+const ART_CLE = "fm-local:artvide3";
+try{ localStorage.removeItem("fm-local:artvide"); localStorage.removeItem("fm-local:artvide2"); }catch(e){}
 try{
   const brut = localStorage.getItem(ART_CLE);
   if(brut) for(const [k,v] of Object.entries(JSON.parse(brut))) ART_VU.set(k, v);
@@ -6540,6 +6591,18 @@ function artPresqueUnie(img){
     ec /= px.length * 3;
     teinte /= px.length;
     const part = proches / px.length;
+
+    /* Une photo, même très sombre et presque sans couleur (séries comme From),
+       garde des contours partout ; la pastille d'attente est une plaque lisse
+       avec un petit pictogramme (moins de 5 % de contours, mesuré). */
+    let bords = 0, paires = 0;
+    for(let y = 0; y < n; y++) for(let x = 1; x < n; x++){
+      const i = (y*n + x)*4, j = i - 4;
+      if(d[i+3] < 200 || d[j+3] < 200) continue;
+      paires++;
+      if(Math.abs(d[i]-d[j]) + Math.abs(d[i+1]-d[j+1]) + Math.abs(d[i+2]-d[j+2]) > 40) bords++;
+    }
+    if(paires && bords / paires > 0.08) return false;
 
     /* Les trois conditions ensemble : peu d'écart, presque pas de couleur,
        et une teinte dominante qui couvre la majorité du cadre. Une vraie
@@ -20546,6 +20609,11 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.2", titre:"Illustrations retrouvées", points:[
+    "Les photos très sombres (séries comme From) étaient prises à tort pour l'image grise « pas d'image » de Fandom et remplacées par le dessin de repli : elles s'affichent de nouveau.",
+    "L'image de l'infobox d'un article compte désormais même si elle est petite (objets et personnages de jeux en pixel art).",
+    "Les cartes tirées sans illustration la recherchent en arrière-plan, quelques dizaines par session, et la retrouvent si l'article en a une.",
+  ]},
   {v:"V2.4.1", titre:"Démarrage plus léger", points:[
     "Le jeu connaît désormais la langue de chaque wiki : il ne teste plus la version française de wikis qui n'en ont pas. Plus de 250 appels inutiles en moins au premier chargement, et la console du navigateur n'affiche plus ces erreurs en rouge.",
     "Les pages ne se redessinent plus toutes seules quand le serveur recale simplement le Mana ou l'horloge des boosters gratuits.",
@@ -20862,7 +20930,7 @@ function openSettings(){
   checkAch();
   setInterval(tick, 1000);
   setInterval(()=>sset("fm:profile", state.profile), 8000);
-  if(state.profile.pseudo){ ensurePool(); setTimeout(()=>prechaufferRangs(), 8000); }
+  if(state.profile.pseudo){ ensurePool(); setTimeout(()=>prechaufferRangs(), 8000); setTimeout(()=>{ reillustrer().catch(()=>{}); }, 25000); }
   chargerCorrectionsLive(true);
   document.addEventListener("visibilitychange", ()=>{ if(!document.hidden) chargerCorrectionsLive(); });
 })();
