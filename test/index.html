@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-bu9pgbk11B4Pe9raY5zICuR/odRQuZKHOLXLTqynDac=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-XIyyZJrj/Ad5K0KRhKV6Bbe/plqWIglmKhSulxCL5cQ=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
@@ -4199,7 +4199,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.7";
+const BUILD = "V2.4.8";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4752,8 +4752,14 @@ function chargerTurnstile(){
   });
   return turnstileCharge;
 }
-async function jetonCaptcha(){
-  if(!TURNSTILE_CLE) return null;
+/* une seule vérification à la fois : deux demandes rapprochées (Entrée + clic) partagent la même */
+let captchaEnCours = null;
+function jetonCaptcha(){
+  if(!TURNSTILE_CLE) return Promise.resolve(null);
+  if(!captchaEnCours) captchaEnCours = jetonCaptchaUnique().finally(()=>{ captchaEnCours = null; });
+  return captchaEnCours;
+}
+async function jetonCaptchaUnique(){
   await chargerTurnstile();
   return new Promise((ok, ko)=>{
     const m = document.createElement("div");
@@ -4769,11 +4775,13 @@ async function jetonCaptcha(){
     try{
       const boite = m.querySelector("#ts-boite"); boite.innerHTML = "";
       id = window.turnstile.render(boite, {
-        sitekey:TURNSTILE_CLE, language:"fr", appearance:"interaction-only",
+        sitekey:TURNSTILE_CLE, language:"fr", appearance:"always", theme:"dark",
         callback:t => fin(ok, t),
-        "error-callback":()=>fin(ko, new Error("vérification anti-robot échouée, réessayez")),
+        "error-callback":code => { diagLog("turnstile erreur " + code); fin(ko, new Error("vérification anti-robot échouée (" + code + "), réessayez")); return true; },
         "timeout-callback":()=>fin(ko, new Error("vérification anti-robot expirée, réessayez"))
       });
+      /* si rien ne se passe, on le dit au lieu de laisser attendre */
+      setTimeout(()=>{ if(!fini){ const p = m.querySelector("p.sub"); if(p) p.textContent = "Si une case apparaît, cochez-la. Sinon, annulez et réessayez."; } }, 8000);
     }catch(e){ fin(ko, new Error("vérification anti-robot indisponible")); }
     m.querySelector("#ts-annule").onclick = ()=>fin(ko, new Error("vérification annulée"));
   });
@@ -7462,6 +7470,8 @@ function viewAccueil(){
     const mdp  = view.querySelector("#c-mdp").value;
     if(!mail || !mdp) return dire("Courriel et mot de passe sont nécessaires.");
     if(mdp.length < 6) return dire("Le mot de passe fait au moins six caractères.");
+    if(entrer.enCours) return;
+    entrer.enCours = true;
     dire("");
     boutons().forEach(b => b.disabled = true);
     try{
@@ -7479,7 +7489,7 @@ function viewAccueil(){
     }catch(e){
       boutons().forEach(b => b.disabled = false);
       dire(traduireErreur(e.message || e));
-    }
+    }finally{ entrer.enCours = false; }
   }
   view.querySelector("#c-entrer").onclick = ()=>entrer(false);
   view.querySelector("#c-creer").onclick  = ()=>entrer(true);
@@ -20717,6 +20727,9 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.8", titre:"Vérification plus fiable", points:[
+    "La vérification anti-robot ne s'ouvre plus en double quand on appuie sur Entrée puis sur « Se connecter », et la case Cloudflare s'affiche directement au lieu de rester cachée.",
+  ]},
   {v:"V2.4.7", titre:"Anti-robot activé", points:[
     "Inscription, connexion et mot de passe oublié passent par une vérification anti-robot Cloudflare, invisible pour presque tout le monde.",
   ]},
