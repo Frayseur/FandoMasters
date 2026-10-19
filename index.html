@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-YfJMggGSX1UonW7yIv53Tsk1YVOcM2DOJNMXU90C/tg=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-9fCRzFL1YC0v6aQ9b+ysWTx40KKAuEFrGLrC2uPkLNE=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
 <link rel="icon" type="image/png" href="assets/f62e76609ade.png">
@@ -4198,7 +4198,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.6";
+const BUILD = "V2.4.7";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4737,7 +4737,7 @@ function nuageGarde(d){
 
 /* Vérification anti-robot Cloudflare Turnstile, demandée par le serveur à l'inscription, à la
    connexion et à la réinitialisation du mot de passe. Clé PUBLIQUE ; vide = désactivée. */
-const TURNSTILE_CLE = "";
+const TURNSTILE_CLE = "0x4AAAAAAFbmG3yV54DBWZDj";
 let turnstileCharge = null;
 function chargerTurnstile(){
   if(window.turnstile) return Promise.resolve();
@@ -20716,6 +20716,9 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.7", titre:"Anti-robot activé", points:[
+    "Inscription, connexion et mot de passe oublié passent par une vérification anti-robot Cloudflare, invisible pour presque tout le monde.",
+  ]},
   {v:"V2.4.6", titre:"Anti-robot prêt", points:[
     "Le jeu sait afficher la vérification anti-robot de Cloudflare à l'inscription et à la connexion. Elle reste invisible pour presque tout le monde et ne s'allume que lorsqu'elle sera activée.",
   ]},
