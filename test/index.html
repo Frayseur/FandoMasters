@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-XIyyZJrj/Ad5K0KRhKV6Bbe/plqWIglmKhSulxCL5cQ=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-Jw2EqTXMNcycxdnJcxN3w+EPQ7NxvhqqgctXKD0TNUQ=' https://challenges.cloudflare.com; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
@@ -4199,7 +4199,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.8";
+const BUILD = "V2.4.9";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -11918,7 +11918,7 @@ function renderStage(){
       <div class="row tiers">
         <button class="btn" id="open" ${canAfford(1)?"":"disabled"}><span class="tierx">×1</span><span class="tierl">${packLabel()}</span></button>
         <button class="btn ghost" id="open10" ${canAfford(10)?"":"disabled"}><span class="tierx">×10</span><span class="tierl">${c10.free?`${c10.free} gratuit${c10.free>1?"s":""}${c10.coins?" + ":""}`:""}${c10.coins?`${c10.coins} ◆`:""}</span></button>
-        <button class="btn ghost" id="open100" ${canAfford(100) && vipActif()?"":"disabled"}><span class="tierx">×100</span><span class="tierl">${vipActif()?(()=>{const c=costFor(100);return (c.free?`${c.free} gratuit${c.free>1?"s":""}${c.coins?" + ":""}`:"")+(c.coins?`${c.coins} ◆`:"");})():"VIP requis"}</span></button>
+        <button class="btn ghost" id="open100" ${canAfford(100)?"":"disabled"}><span class="tierx">×100</span><span class="tierl">${(()=>{const c=costFor(100);return (c.free?`${c.free} gratuit${c.free>1?"s":""}${c.coins?" + ":""}`:"")+(c.coins?`${c.coins} ◆`:"");})()}</span></button>
       </div>
       <div id="packmsg" class="sub"></div>
 
@@ -13713,10 +13713,6 @@ setTimeout(async function attendreReprise(){
 async function openPack(n, kind){
   if(state.busy) return;
   n = n || 1; kind = kind || "normal";
-  if(!estAdmin() && n > 10 && !vipActif()){
-    toast("Ouverture réservée aux VIP", "Les ouvertures groupées de plus de 10 boosters sont réservées aux membres VIP.", "lose");
-    return;
-  }
   if(kind === "fox") return openFox();
   syncFree();
   const special = state.packServeur || null;      // booster acheté au village
@@ -15741,7 +15737,7 @@ function viewBoutique(){
      titreHTML:`<span class="vit-couronne">♛</span>FandoMasters <em>VIP</em>`,
      tags:["Combats classés", "Top 100", "Profil", "Guilde"],
      bas:`<span class="vit-pilule">${vip ? "✓ VIP actif" + (fin ? " jusqu'au " + fin : "") : "Valable 12 mois"}</span>`,
-     texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres, une vitrine de 10 cartes et jusqu'à 100 paquets d'un coup.",
+     texte:"Le mode classé et le Top 100, une couronne et des polices de pseudo, 3 titres et une vitrine de 10 cartes.",
      prix:prix(vipArt.prix), bouton:vipBouton}
   ];
   for(const a of lots){ const L = lotInfo(a);
@@ -15774,7 +15770,7 @@ function viewBoutique(){
     <div class="covers">${covers.map(coverHTML).join("")}</div>
     <details class="fold shopcomp" id="comparatif"><summary>Gratuit ou VIP : le détail</summary><div class="shopcomp-in">
       <table class="shoptable"><thead><tr><th></th><th>Gratuit</th><th>VIP</th></tr></thead><tbody>
-        ${[["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], ["Ouvertures groupées", "1 ou 10", "jusqu'à 100"],
+        ${[["Ajouts de cartes par jour", "5", "10"], ["Recadrages par jour", "5", "10"], 
            ["Titres affichés", "1", "3"], ["Cartes en vitrine", "3", "10"], ["Police du pseudo", "—", "gothique, médiévale"], ["Album public", "—", "✓"],
            ["Combats classés et Top 100", "—", "✓"], ["Historique des ouvertures", "—", "✓"], ["Création de guilde", "—", "✓"], ["Vote du plateau de combat", "—", "✓"]]
           .map(([t, g, v]) => `<tr><td>${t}</td><td>${g}</td><td>${v}</td></tr>`).join("")}
@@ -20727,6 +20723,9 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.9", titre:"100 boosters pour tous", points:[
+    "L'ouverture de 100 boosters d'un coup n'est plus réservée aux VIP : tout le monde peut l'utiliser.",
+  ]},
   {v:"V2.4.8", titre:"Vérification plus fiable", points:[
     "La vérification anti-robot ne s'ouvre plus en double quand on appuie sur Entrée puis sur « Se connecter », et la case Cloudflare s'affiche directement au lieu de rester cachée.",
   ]},
