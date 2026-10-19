@@ -2,6 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'sha256-YtXOselLmOkVjOiplZp5UDgdSrO+dZYjdigRJ+qO1TU='; script-src-attr 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://lnhjgbqhfnwotzuxkxhh.supabase.co wss://lnhjgbqhfnwotzuxkxhh.supabase.co https://*.fandom.com https://*.wikia.org https://api.github.com; frame-src 'none'; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self' https://buy.stripe.com https://checkout.stripe.com">
 <meta name="robots" content="noindex,nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#201B18">
@@ -4198,7 +4199,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.3";
+const BUILD = "V2.4.4";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -5066,8 +5067,10 @@ async function regPersister(){
 }
 function regDepuisStock(c){ return {version:c.version, etat:c.etat || {}, cartes:regMap(c.cartes)}; }
 const regRpc = (nom, corps)=>nuageRest("rpc/" + nom, {method:"POST", body:JSON.stringify(corps || {})});
-const regRefus = e => /FM_REFUS/.test(String(e && e.message || e));
-const regRaison = e => String(e && e.message || e).replace(/^.*FM_REFUS:/, "").trim();
+/* « LENT » n'est pas un refus : le serveur demande seulement d'attendre, l'envoi est gardé et repart */
+const regRefus = e => /FM_REFUS/.test(String(e && e.message || e)) && !/FM_REFUS:LENT:/.test(String(e && e.message || e));
+const regRaison = e => String(e && e.message || e).replace(/^.*FM_REFUS:/, "").replace(/^LENT:/, "").trim();
+const regLent = e => /FM_REFUS:LENT:/.test(String(e && e.message || e));
 
 /* Gains qui ne se touchent qu'une fois (échange réglé, succès, mission du
    jour…). Appelé JUSTE AVANT de créditer : ce qui était déjà en attente part
@@ -5194,7 +5197,13 @@ async function registreEnvoyer(){
     nuageEtat = "repos";
     encore = true;
   }catch(e){
-    if(regRefus(e)){
+    if(regLent(e)){
+      /* trop de demandes d'un coup : rien n'est perdu, le même envoi repart un peu plus tard */
+      diagLog("serveur : ralentir");
+      nuageEtat = "repos";
+      clearTimeout(REG.minuteur);
+      REG.minuteur = setTimeout(()=>{ REG.minuteur = null; registreEnvoyer(); }, 20000);
+    }else if(regRefus(e)){
       /* Le serveur a refusé (solde insuffisant, carte déjà partie…) : rien n'a
          été appliqué. On reprend son état ; ce qui a été refusé disparaît. */
       const raison = regRaison(e);
@@ -6162,8 +6171,8 @@ function isRelic(title){
 }
 
 function stripHtml(html){
-  const d = document.createElement("div");
-  d.innerHTML = html;
+  /* document inerte : rien ne s'y exécute ni ne s'y charge (pas d'images, pas d'attributs on…) */
+  const d = new DOMParser().parseFromString(String(html || ""), "text/html").body;
   d.querySelectorAll("table,.infobox,.portable-infobox,style,script,sup,.navbox,.toc,figure,aside").forEach(n=>n.remove());
   const p = [...d.querySelectorAll("p")].map(n=>n.textContent.trim()).filter(t=>t.length>40);
   return (p[0]||d.textContent||"").replace(/\s+/g," ").trim();
@@ -6248,8 +6257,7 @@ async function drawPages(n, w){
    drapeaux. Prendre la première image venue ramenait régulièrement une
    icône de modèle ou une vignette de pied de page à la place du sujet. */
 function illustrationDeLArticle(html){
-  const doc = document.createElement("div");
-  doc.innerHTML = html;
+  const doc = new DOMParser().parseFromString(String(html || ""), "text/html").body;
 
   doc.querySelectorAll(
     ".navbox, .navbox-inner, .nav, .navigation, .toc, #toc, " +
@@ -6456,7 +6464,7 @@ function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, m=>({"&":"&amp;
 /* Une URL placée dans du CSS ne doit PAS être échappée en HTML : « &amp; » y reste
    littéral et casse les liens Fandom du type ?cb=…&path-prefix=fr. On échappe
    seulement ce qui romprait la chaîne CSS. */
-function cssUrl(u){ return String(u==null?"":u).replace(/[\\']/g, m=>"\\"+m).replace(/[\r\n]/g,""); }
+function cssUrl(u){ return String(u==null?"":u).replace(/[\\']/g, m=>"\\"+m).replace(/[\r\n]/g,"").replace(/"/g,"%22").replace(/</g,"%3C").replace(/>/g,"%3E"); }
 
 function varName(k){
   const v = (typeof VARIANTS !== "undefined") && VARIANTS.find(x=>x.key===k);
@@ -6850,12 +6858,11 @@ function cardHTML(c, opts={}){
   const cadre = styleCadrage(cadrageDe(c));
   const art = src
     ? `<img src="${esc(src)}" alt="" loading="lazy" ${cadre ? `style="${cadre}"` : ""}
-         onload="artVerif(this)"
-         onerror="this.closest('.art').insertAdjacentHTML('beforeend','&lt;div class=&quot;noart&quot;&gt;&lt;/div&gt;');this.remove()">`
+         data-art="1">`
     : `<div class="noart"></div>`;
   const n = opts.count != null ? opts.count : (c.count || owned(c));
   if(opts.compact){
-    return `<article class="card compact ${c.stars?("st"+c.stars):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
+    return `<article class="card compact ${c.stars?("st"+(+c.stars||0)):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
       <div class="inner">
         <div class="plate">${plateName(c)}</div>
         <div class="art">
@@ -6874,13 +6881,13 @@ function cardHTML(c, opts={}){
   }
   const relicStyle = c.rarity==="Relique" && c.ra
     ? ` style="--g1:${esc(c.ra)};--g2:${esc(c.rb)};--t1:${esc(c.t1||"rgba(20,14,0,.7)")};--t2:${esc(c.t2||"rgba(6,4,0,.9)")};--aura:${esc(c.aura||c.ra)};--spark:${esc(c.spark||c.ra)}"` : "";
-  return `<article class="card ${c.stars?("st"+c.stars):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""}${relicStyle} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
+  return `<article class="card ${c.stars?("st"+(+c.stars||0)):""}" data-r="${esc(c.rarity)}" ${c.variant?`data-v="${esc(c.variant)}"`:""}${relicStyle} ${opts.click?`data-id="${esc(c.id)}" role="button" tabindex="0"`:""}>
     <div class="inner">
       <div class="plate">${plateName(c)}</div>
       <div class="art">
         ${n>1?`<span class="dupe">×${n}</span>`:""}
         ${art}
-        ${c.stars? `<span class="stars">${"★".repeat(c.stars)}</span>`:""}
+        ${c.stars? `<span class="stars">${"★".repeat(Math.max(0, Math.min(10, +c.stars || 0)))}</span>`:""}
         ${c.rarity==="Relique"? `<span class="sparks ${c.fall?"fall":""}">${
           Array.from({length:5},(_,k)=>`<i style="left:${9+k*19}%;animation-duration:${2.8+((k*37)%16)/10}s;animation-delay:${(k*0.62).toFixed(2)}s">${esc(c.glyph||"")}</i>`).join("")
         }</span>`:""}
@@ -9602,7 +9609,23 @@ function ajusterZoom(im){
       `width:${pw.toFixed(3)}%;height:${ph.toFixed(3)}%;left:${((100 - pw) * x / 100).toFixed(3)}%;top:${((100 - ph) * y / 100).toFixed(3)}%`;
   }catch(e){}
 }
-document.addEventListener("load", ev => { const t = ev.target; if(t && t.tagName === "IMG" && t.style && t.style.getPropertyValue("--cz")) ajusterZoom(t); }, true);
+document.addEventListener("load", ev => {
+  const t = ev.target; if(!t || t.tagName !== "IMG") return;
+  if(t.dataset && t.dataset.art) artVerif(t);
+  if(t.style && t.style.getPropertyValue("--cz")) ajusterZoom(t);
+}, true);
+/* Les réactions aux images manquantes passent par ici plutôt que par des attributs
+   onerror="…" : la politique de sécurité du site interdit tout code écrit dans le HTML. */
+document.addEventListener("error", ev => {
+  const t = ev.target; if(!t || !t.dataset) return;
+  try{
+    if(t.dataset.art){ const a = t.closest(".art"); if(a) a.insertAdjacentHTML("beforeend", '<div class="noart"></div>'); t.remove(); return; }
+    const q = t.dataset.err; if(!q) return;
+    if(q === "retirer") t.remove();
+    else if(q === "cacher") t.style.display = "none";
+    else if(q === "photo"){ const ph = t.closest(".photo"); if(ph) ph.remove(); }
+  }catch(e){}
+}, true);
 /* les raretés corrigées s'appliquent aux cartes déjà possédées */
 function appliquerCorrections(col){
   let n = majCartesPerso(col);
@@ -10928,7 +10951,7 @@ function parseWiki(raw){
       s = "https://"+s;
     }
     const u = new URL(s);
-    if(!/fandom\.com$|wikia\.org$/i.test(u.hostname)) return null;
+    if(!/(^|\.)(fandom\.com|wikia\.org)$/i.test(u.hostname) || u.protocol !== "https:" && u.protocol !== "http:") return null;
     return {label:u.hostname.split(".")[0], host:u.hostname};
   }catch(e){ return null; }
 }
@@ -14551,7 +14574,7 @@ function cbImage(p){
 /* illustration d'une carte, ou à défaut un monogramme sur fond travaillé */
 function cbArtHTML(p, cadre){
   const img = cbImage(p);
-  if(img && !artRefusee(img)) return `<img src="${cbEsc(img)}" alt="" loading="lazy" draggable="false" ${cadre ? `style="${cadre}"` : ""} onerror="this.remove()">`;
+  if(img && !artRefusee(img)) return `<img src="${cbEsc(img)}" alt="" loading="lazy" draggable="false" ${cadre ? `style="${cadre}"` : ""} data-err="retirer">`;
   return `<span class="cbvide">${p.type === "sort" ? "✦" : p.type === "arme" ? "⚔" : cbEsc((p.nom || "?").slice(0, 1).toUpperCase())}</span>`;
 }
 /* carte complète : main, mulligan, deck, agrandissement */
@@ -14583,11 +14606,11 @@ function cbPortrait(moi, cote){
   if(moi){
     let img = state.profile.avatarImg || null;
     if(!img && state.profile.avatar){ const c = state.collection.find(x => x.id === state.profile.avatar); img = c && c.img; }
-    if(img && !artRefusee(img)) return `<span class="vip-avatar-wrap"><img src="${cbEsc(img)}" alt="" draggable="false" onerror="this.remove()">${moi && vipActif() || profilVIPActif(cote)?vipCouronne():""}</span>`;
+    if(img && !artRefusee(img)) return `<span class="vip-avatar-wrap"><img src="${cbEsc(img)}" alt="" draggable="false" data-err="retirer">${moi && vipActif() || profilVIPActif(cote)?vipCouronne():""}</span>`;
   }
   const nom = cote.pseudo || (moi ? "Vous" : "Adversaire");
   const imgAdv = cote.avatarImg || cote.avatar_img || cote.photo || cote.avatar_url || cote.photo_profil || null;
-  if(!moi && imgAdv && !artRefusee(imgAdv)) return `<span class="vip-avatar-wrap"><img src="${cbEsc(imgAdv)}" alt="Photo de ${cbEsc(nom)}" draggable="false" onerror="this.style.display='none'"><span class="cbmono" hidden>${cbEsc(nom.slice(0,1).toUpperCase()||"?")}</span>${profilVIPActif(cote)?vipCouronne():""}</span>`;
+  if(!moi && imgAdv && !artRefusee(imgAdv)) return `<span class="vip-avatar-wrap"><img src="${cbEsc(imgAdv)}" alt="Photo de ${cbEsc(nom)}" draggable="false" data-err="cacher"><span class="cbmono" hidden>${cbEsc(nom.slice(0,1).toUpperCase()||"?")}</span>${profilVIPActif(cote)?vipCouronne():""}</span>`;
   return `<span class="vip-avatar-wrap"><span class="cbmono">${cote.bot ? "⚙" : cbEsc(nom.replace(/^Bot\s*/i, "").slice(0, 1).toUpperCase() || "?")}</span>${moi && vipActif() || profilVIPActif(cote)?vipCouronne():""}</span>`;
 }
 function cbHerosHTML(cote, k, moi, opts = {}){
@@ -16476,7 +16499,7 @@ function viewSoon(){
     <h2 class="vuetitre">${esc(d.title)}</h2>
     <div class="worksite">
       <video class="siteclip" autoplay loop muted playsinline
-             poster="" onerror="this.remove()"
+             poster="" data-err="retirer"
              src="https://images-ext-1.discordapp.net/external/x_st11QgB8R0qbXgGokQK0JABJsuLtapXmHjnHDDp-c/https/i.giphy.com/media/Ti1dpOjRAGEbcf7cOG/giphy.mp4"></video>
       <svg viewBox="0 0 220 140" class="crane" aria-hidden="true">
         <rect x="0" y="126" width="220" height="14" fill="#4A3F38"/>
@@ -19352,7 +19375,7 @@ function pickPhoto(onPick){
       .filter(c=>(!q||(c.title+" "+c.univ).toLowerCase().includes(q)) && (!u || c.univ === u))
       .slice(0, 150)
       .map(c=>`<button class="photo" data-id="${esc(c.id)}" title="${esc(c.title)}">
-        <img src="${esc(c.img)}" alt="" loading="lazy" onerror="this.closest('.photo').remove()">
+        <img src="${esc(c.img)}" alt="" loading="lazy" data-err="photo">
         <span>${esc(c.title)}</span>
       </button>`).join("");
     pg.querySelectorAll(".photo").forEach(el=>el.onclick = ()=>{
@@ -20646,6 +20669,11 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.4", titre:"Site verrouillé", points:[
+    "Le navigateur n'exécute plus que le code officiel du jeu : un pseudo, un nom de carte ou un lien piégé ne peut plus lancer de code chez les autres joueurs.",
+    "Les pages des wikis sont lues dans un document inerte : rien de ce qu'elles contiennent ne s'exécute ni ne se charge.",
+    "Le serveur freine les rafales de demandes (scripts, spam de messages ou de votes). Une partie normale n'est jamais concernée, et rien n'est perdu : l'envoi repart tout seul un peu plus tard.",
+  ]},
   {v:"V2.4.3", titre:"Toutes les cartes corrigeables", points:[
     "« Proposer une rareté » et « Modifier plusieurs raretés » montrent désormais toutes les cartes que des joueurs possèdent dans l'univers, même celles qui ne sont plus dans le palmarès du wiki.",
     "Les pages du wiki lui-même (« X Wiki », renvois vers Wikipédia) ne sortent plus des boosters, et celles déjà tirées passent Commun.",
