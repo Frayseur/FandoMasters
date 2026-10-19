@@ -4198,7 +4198,7 @@ body.cbjeu .nav,body.cbjeu .topbar,body.cbjeu header{visibility:hidden}
 
 <script>
 /* Numéro de version : augmenté à chaque nouveau fichier livré. */
-const BUILD = "V2.4.2";
+const BUILD = "V2.4.3";
 /* =========================================================
    FandoMasters — TCG multi-univers sur l'API MediaWiki de Fandom
    ========================================================= */
@@ -4935,6 +4935,7 @@ function regUid(){
 const regObjet = x => !!x && typeof x === "object" && !Array.isArray(x);
 function regInv(inv){ const m = {}; for(const s of (Array.isArray(inv) ? inv : [])) if(s && s.key) m[s.key] = (m[s.key] || 0) + (+s.n || 0); return m; }
 function regMap(list){ const m = new Map(); for(const c of (Array.isArray(list) ? list : [])) if(c && c.id) m.set(c.id, c); return m; }
+function regFicheSansRar(c){ const f = regFiche(c); delete f.rarity; return f; }
 function regFiche(c){
   const f = Object.assign({}, c);
   delete f.count; delete f.text; delete f.id;
@@ -5013,7 +5014,9 @@ function regDiffCartes(A, B){
     const a = A.get(id), b = B.get(id);
     const na = a ? Math.max(1, a.count || 1) : 0, nb = b ? Math.max(1, b.count || 1) : 0, op = {};
     if(nb !== na) op.d = nb - na;
-    if(b && (!a || stable(regFiche(a)) !== stable(regFiche(b)))) op.f = regFiche(b);
+    /* la rareté d'une carte déjà possédée est figée côté serveur ; une rareté corrigée
+       par la communauté ne s'applique qu'à l'affichage et ne doit pas relancer de synchro */
+    if(b && (!a || stable(regFicheSansRar(a)) !== stable(regFicheSansRar(b)))) op.f = regFiche(b);
     if(Object.keys(op).length) d[id] = op;
   }
   return d;
@@ -5103,7 +5106,7 @@ function regRebaser(ancien, nouv){
   for(const k of Object.keys(state.profile)) if(!(k in p)) delete state.profile[k];
   Object.assign(state.profile, p);
   state.collection.length = 0; for(const c of col) state.collection.push(c);
-  try{ majCartesPerso(state.collection); colVueDepuis(state.collection); }catch(e){}
+  try{ appliquerCorrections(state.collection); colVueDepuis(state.collection); }catch(e){}
   if(ongletFige) return;
   ecrireEspace(acct(), "fm:profile", state.profile);
   ecrireEspace(acct(), "fm:col", allegerCol(state.collection));
@@ -6138,9 +6141,15 @@ const RELIC_TITLES = new Set(RELICS.flatMap(r=>r.titles.map(t=>t.toLowerCase()))
 const FILLER_RE = new RegExp(
   "(^|\\s|\\()(saison|season|épisode|episode|tome|volume|chapitre|chapter|arc|partie|part|liste|list of|série|series)\\s*\\d*(\\)|$|\\s)"
   + "|^(liste|list)\\b|^(19|20)\\d\\d$", "i");
+/* Pages du wiki lui-même (accueil, « X Wiki », renvois vers Wikipédia) : ce ne sont
+   pas des éléments de l'univers. Elles ne sortent plus et celles déjà tirées passent Commun. */
+const META_RE = /(^|\s)(wiki|wikia|fandom)(\s|$)|wikip[ée]dia|^(main page|accueil|page d'accueil)$/i;
+function estPageMeta(univ, title){
+  return META_RE.test(String(title || "").trim());
+}
 function isFiller(title){
   const t = (title||"").trim();
-  return /^\d+$/.test(t) || FILLER_RE.test(t);
+  return /^\d+$/.test(t) || FILLER_RE.test(t) || META_RE.test(t);
 }
 function capFiller(page, rarity){
   if(!isFiller(page.title)) return rarity;
@@ -9549,7 +9558,7 @@ function rarTitre(univ, titre){
    Ainsi une carte possédée sous un autre identifiant prend bien sa nouvelle couleur. */
 function rareteEffective(c){
   if(!c || c.variant || c.rarity === "Relique") return null;
-  const r = (c.univ && c.title ? rarTitre(c.univ, c.title) : null) || rareteDe(c.id);
+  const r = (c.univ && c.title ? rarTitre(c.univ, c.title) : null) || rareteDe(c.id) || (estPageMeta(c.univ, c.title) ? "Commun" : null);
   return r && RARITIES.indexOf(r) >= 0 ? r : null;
 }
 
@@ -9775,6 +9784,26 @@ async function cartesCatalogue(w){
   if(out.length) catalogueCartes.set(k, out);
   return out;
 }
+/* toutes les cartes encore possédées d'un univers, chez n'importe quel joueur (titre, image, rareté) */
+const possedeesUnivers = new Map();
+async function cartesPossedeesUnivers(univ){
+  const k = possedeesUnivers.get(univ);
+  if(k && Date.now() - k.t < 5 * 60e3) return k.l;
+  let l = [];
+  try{
+    const r = await nuageRest("rpc/cartes_de_l_univers", {method:"POST", body:JSON.stringify({p_univ:univ})});
+    l = (Array.isArray(r) ? r : []).filter(x => x && x.id && x.title).map(x => {
+      const c = {id:String(x.id), univ, title:String(x.title), rarity:RARITIES.indexOf(x.rarity) >= 0 ? x.rarity : "Commun",
+                 img:x.img && !artRefusee(x.img) ? x.img : null, count:0, role:null};
+      const r2 = rareteEffective(c) || (estPageMeta(univ, c.title) ? "Commun" : null);
+      if(r2) c.rarity = r2;
+      c.atk = c.def = ATK_RARETE[c.rarity] || 1500;
+      return c;
+    });
+  }catch(e){}
+  possedeesUnivers.set(univ, {t:Date.now(), l});
+  return l;
+}
 /* Fenêtre de choix sur l'ensemble du catalogue. Renvoie la carte choisie (la
    vôtre si vous la possédez), ou null. */
 function choisirDansCatalogue({titre, univ, filtre, multi, max}){
@@ -9848,12 +9877,19 @@ function choisirDansCatalogue({titre, univ, filtre, multi, max}){
       const mon = ++jeton;
       if(!multi){ choix = null; m.querySelector("#ok").disabled = true; }
       pg.innerHTML = `<p class="sub" style="grid-column:1/-1"><span class="spinner"></span> lecture du catalogue…</p>`;
-      const cat = await cartesCatalogue(courant).catch(()=>[]);
+      const [cat, possedees] = await Promise.all([
+        cartesCatalogue(courant).catch(()=>[]),
+        cartesPossedeesUnivers(courant.label)
+      ]);
       if(mon !== jeton) return;
       const mine = new Map(state.collection.filter(c => c.univ === courant.label).map(c => [c.id, c]));
       const tout = new Map();
       for(const c of cat) tout.set(c.id, mine.get(c.id) || c);
       for(const c of mine.values()) if(!tout.has(c.id)) tout.set(c.id, c);
+      /* les cartes que d'autres joueurs possèdent, même sorties du palmarès du wiki :
+         sans elles, une carte tirée autrefois restait impossible à corriger */
+      const titres = new Set([...tout.values()].map(c => c.title));
+      for(const c of possedees) if(!tout.has(c.id) && !titres.has(c.title)) tout.set(c.id, c);
       cartes = new Map([...tout].filter(([, c]) => !filtre || filtre(c)));
       vues = 150;
       peindre();
@@ -11381,7 +11417,7 @@ async function listeParTaille(w){
 async function palmaresRestreint(w){
   const key = "fm:mlr:" + cleUnivers(w);
   const c = await sget(key, true);
-  if(c && c.list && c.list.length && (Date.now() - c.t) < 7 * 864e5) return c.list;
+  if(c && c.list && c.list.length && (Date.now() - c.t) < 7 * 864e5) return c.list.filter(x => !META_RE.test(x.t));
   const permis = (await titresAutorises(w).catch(()=>null)) || [];
   const ok = [...new Set(permis)].filter(t => !HORS_SUJET.test(t) && !isRelic(t) && !isFiller(t) && !/\(homonymie\)|disambiguation/i.test(t)).slice(0, 800);
   if(!ok.length) return [];
@@ -11411,7 +11447,7 @@ async function mostLinked(w){
   const c = await sget(key, true);
   const restreint = !!(w && Array.isArray(w.pages) && w.pages.length);
   const permis = await titresAutorises(w).catch(()=>null);
-  const filtre = l => restreint ? ((permis && permis.length) ? l.filter(x => permis.indexOf(x.t) >= 0 && !HORS_SUJET.test(x.t)) : []) : l;
+  const filtre = l => (restreint ? ((permis && permis.length) ? l.filter(x => permis.indexOf(x.t) >= 0 && !HORS_SUJET.test(x.t)) : []) : l).filter(x => !META_RE.test(x.t));
   if(c && c.list && c.list.length && (Date.now()-c.t) < 7*864e5) return filtre(c.list);
   let list = [];
   for(const page of ["Mostlinked","Mostrevisions"]){
@@ -20610,6 +20646,10 @@ function viewCollection(){
 
 /* ---- Nouveautés : ce qui a changé, version par version (la plus récente en haut) ---- */
 const NOUVEAUTES = [
+  {v:"V2.4.3", titre:"Toutes les cartes corrigeables", points:[
+    "« Proposer une rareté » et « Modifier plusieurs raretés » montrent désormais toutes les cartes que des joueurs possèdent dans l'univers, même celles qui ne sont plus dans le palmarès du wiki.",
+    "Les pages du wiki lui-même (« X Wiki », renvois vers Wikipédia) ne sortent plus des boosters, et celles déjà tirées passent Commun.",
+  ]},
   {v:"V2.4.2", titre:"Illustrations retrouvées", points:[
     "Les photos très sombres (séries comme From) étaient prises à tort pour l'image grise « pas d'image » de Fandom et remplacées par le dessin de repli : elles s'affichent de nouveau.",
     "L'image de l'infobox d'un article compte désormais même si elle est petite (objets et personnages de jeux en pixel art).",
